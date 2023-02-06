@@ -10,15 +10,20 @@ contract TestConstants {
     bytes6 public constant ETH = 0x303000000000;
     bytes6 public constant DAI = 0x303100000000;
     bytes6 public constant USDC = 0x303200000000;
+    bytes6 public constant WBTC = 0x303300000000;
     bytes6 public constant WSTETH = 0x303400000000;
     bytes6 public constant STETH = 0x303500000000;
+    bytes6 public constant LINK = 0x303600000000;
+    bytes6 public constant ENS = 0x303700000000;
     bytes6 public constant YVDAI = 0x303800000000;
     bytes6 public constant YVUSDC = 0x303900000000;
+    bytes6 public constant UNI = 0x313000000000;
     bytes6 public constant CVX3CRV = 0x313000000000;
     bytes6 public constant FRAX = 0x313800000000;
-    bytes6 public constant OSQTH = 0x313900000000;
-    bytes6 public constant CRAB = 0x323900000000;
     bytes6 public constant ZENBULL = 0x324000000000;
+    bytes6 public constant RETH = 0xE03016000000;
+    bytes6 public constant CRAB = 0x333800000000;
+    bytes6 public constant OSQTH = 0x333900000000;
 
     bytes6 public constant FYETH2206 = bytes6("0006");
     bytes6 public constant FYDAI2206 = bytes6("0106");
@@ -29,10 +34,13 @@ contract TestConstants {
 
     uint32 public constant EOJUN22 = 1656039600;
 
+    string public constant CI = "CI";
+    string public constant RPC = "RPC";
     string public constant LOCALHOST = "LOCALHOST";
     string public constant MAINNET = "MAINNET";
     string public constant ARBITRUM = "ARBITRUM";
-    string public constant TENDERLY = "TENDERLY";
+    string public constant HARNESS = "HARNESS";
+    string public constant UNIT_TESTS = "UNIT_TESTS";
     string public constant MOCK = "MOCK";
     string public constant NETWORK = "NETWORK";
 

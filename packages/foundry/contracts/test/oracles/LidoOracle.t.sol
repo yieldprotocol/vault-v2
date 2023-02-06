@@ -2,16 +2,18 @@
 pragma solidity >=0.8.13;
 
 import "forge-std/src/Test.sol";
-import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import "../../oracles/chainlink/ChainlinkMultiOracle.sol";
-import "../../oracles/composite/CompositeMultiOracle.sol";
-import "../../oracles/lido/LidoOracle.sol";
-import "../../mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol";
-import "../../mocks/oracles/lido/WstETHMock.sol";
-import "../../mocks/ERC20Mock.sol";
-import "../../mocks/USDCMock.sol";
-import "../../mocks/WETH9Mock.sol";
-import "../utils/TestConstants.sol";
+import { AccessControl } from "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
+import { IOracle } from "../../interfaces/IOracle.sol";
+import { IWstETH } from "../../oracles/lido/IWstETH.sol";
+import { ChainlinkMultiOracle } from "../../oracles/chainlink/ChainlinkMultiOracle.sol";
+import { CompositeMultiOracle } from "../../oracles/composite/CompositeMultiOracle.sol";
+import { LidoOracle } from "../../oracles/lido/LidoOracle.sol";
+import { ChainlinkAggregatorV3Mock } from "../../mocks/oracles/chainlink/ChainlinkAggregatorV3MockEx.sol";
+import { ERC20Mock } from "../../mocks/ERC20Mock.sol";
+import { WETH9Mock } from "../../mocks/WETH9Mock.sol";
+import { USDCMock } from "../../mocks/USDCMock.sol";
+import { WstETHMock } from "../../mocks/oracles/lido/WstETHMock.sol";
+import { TestConstants } from "../utils/TestConstants.sol";
 
 contract LidoOracleTest is Test, TestConstants, AccessControl {
     WETH9Mock public weth;
@@ -26,7 +28,23 @@ contract LidoOracleTest is Test, TestConstants, AccessControl {
 
     bytes6 public mockBytes6 = 0xd1eaa762fae7;
 
-    function setUp() public {
+    // Harness vars
+    bytes6 public base;
+    bytes6 public quote;
+    uint128 public unitForBase;
+    uint128 public unitForQuote;
+
+    modifier onlyMock() {
+        if (vm.envOr(MOCK, true))
+        _;
+    }
+
+    modifier onlyHarness() {
+        if (vm.envOr(MOCK, true)) return;
+        _;
+    }
+
+    function setUpMock() public {
         lidoMock = new WstETHMock();
         // amount of wstETH that you get for 1e18 stETH
         uint256 stethToWstethPrice = 1008339308050006006;
@@ -67,7 +85,24 @@ contract LidoOracleTest is Test, TestConstants, AccessControl {
         compositeMultiOracle.setPath(WSTETH, USDC, paths);
     }
 
-    function testGetConversion() public {
+    function setUpHarness() public {
+        string memory rpc = vm.envOr(RPC, MAINNET);
+        vm.createSelectFork(rpc);
+
+        lidoOracle = LidoOracle(vm.envAddress("ORACLE"));
+
+        base = bytes6(vm.envBytes32("BASE"));
+        quote = bytes6(vm.envBytes32("QUOTE"));
+        unitForBase = uint128(10 ** ERC20Mock(address(vm.envAddress("BASE_ADDRESS"))).decimals());
+        unitForQuote = uint128(10 ** ERC20Mock(address(vm.envAddress("QUOTE_ADDRESS"))).decimals());
+    }
+
+    function setUp() public {
+        if (vm.envOr(MOCK, true)) setUpMock();
+        else setUpHarness();
+    }
+
+    function testGetConversion() public onlyMock {
         (uint256 stethWstethAmount,) = lidoOracle.get(STETH, WSTETH, WAD);
         uint256 stethToWstethPrice = 991729660855795538; // Amount of wstEth recieved for 1 stETH
         assertEq(stethWstethAmount, stethToWstethPrice);
@@ -77,12 +112,12 @@ contract LidoOracleTest is Test, TestConstants, AccessControl {
         assertEq(wstethStethAmount, wstethToStethPrice);
     }
 
-    function testRevertOnUnknownSource() public {
+    function testRevertOnUnknownSource() public onlyMock {
         vm.expectRevert("Source not found");
         lidoOracle.get(bytes32(DAI), bytes32(mockBytes6), WAD);
     }
 
-    function testRetrieveDirectPairConversion() public {
+    function testRetrieveDirectPairConversion() public onlyMock {
         (uint256 wstethStethAmount,) = compositeMultiOracle.peek(WSTETH, STETH, WAD);  
         uint256 wstethToStethPrice = 1008339308050006006; // Amount of stETH received for 1 wstETH
         assertEq(wstethStethAmount, wstethToStethPrice);
@@ -108,7 +143,7 @@ contract LidoOracleTest is Test, TestConstants, AccessControl {
         assertEq(usdcEthAmount, usdcToEthPrice);
     }
 
-    function testRetrieveWSTETHToETHConversionAndReverse() public {
+    function testRetrieveWSTETHToETHConversionAndReverse() public onlyMock {
         (uint256 wstethEthAmount,) = compositeMultiOracle.peek(WSTETH, ETH, WAD);
         uint256 wstethToEthPrice = 1000691679256332845; // Amount of ETH received for 1 wstETH 
         assertEq(wstethEthAmount, wstethToEthPrice);
@@ -118,7 +153,7 @@ contract LidoOracleTest is Test, TestConstants, AccessControl {
         assertEq(ethWstethAmount, ethToWstethPrice);
     }
 
-    function testRetrieveWSTETHToUSDCConversionAndReverse() public {
+    function testRetrieveWSTETHToUSDCConversionAndReverse() public onlyMock {
         (uint256 wstethUsdcAmount,) = compositeMultiOracle.peek(WSTETH, USDC, WAD);
         uint256 wstethToUsdcPrice = 4002766717; // Amount of USDC received for 1 wstETH
         assertEq(wstethUsdcAmount, wstethToUsdcPrice);
@@ -128,4 +163,12 @@ contract LidoOracleTest is Test, TestConstants, AccessControl {
         assertEq(usdcWstethAmount, usdcToWstethPrice);
     }
 
+    function testConversionHarness() public onlyHarness {
+        uint256 amount;
+        uint256 updateTime;
+        (amount, updateTime) = lidoOracle.peek(base, quote, unitForBase);
+        assertGt(updateTime, 0, "Update time below lower bound");
+        assertLt(updateTime, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, "Update time above upper bound");
+        assertApproxEqRel(amount, 1e18, 1e18);
+    }
 }
