@@ -5,7 +5,6 @@ import "../interfaces/IJoin.sol";
 import "../interfaces/IOracle.sol";
 import "../interfaces/DataTypes.sol";
 import "./interfaces/IVRCauldron.sol";
-import "@yield-protocol/yieldspace-tv/src/interfaces/IPool.sol";
 import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
 import "@yield-protocol/utils-v2/contracts/token/IERC2612.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";

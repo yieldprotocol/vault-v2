@@ -345,8 +345,107 @@ contract BorrowedStateTests is BorrowedState {
 }
 
 contract PermitTests is CompleteSetup {
+    struct Permit {
+        address owner;
+        address spender;
+        uint256 value;
+    }
+
+    function getDaiPermitDigest(bytes memory name, address contractAddress, uint256 chainId, Permit memory permit, uint nonce, uint deadline, bool allowed) internal view returns (bytes32) {
+        bytes32 DOMAIN_SEPARATOR = getDomainSeparator(name, contractAddress, chainId);
+        return keccak256(
+            abi.encodePacked(
+                "\x19\x01",
+                DOMAIN_SEPARATOR,
+                keccak256(
+                    abi.encode(
+                        keccak256("Permit(address holder,address spender,uint256 nonce,uint256 expiry,bool allowed)"),
+                        permit.owner,
+                        permit.spender,
+                        nonce,
+                        deadline,
+                        allowed
+                    )
+                )
+            )
+        );
+    }
+
+    function getPermitDigest(bytes memory name, address contractAddress, uint256 chainId, Permit memory permit, uint nonce, uint deadline) internal view returns (bytes32) {
+        bytes32 DOMAIN_SEPARATOR = getDomainSeparator(name, contractAddress, chainId);
+        return keccak256(
+            abi.encodePacked(
+                "\x19\x01",
+                DOMAIN_SEPARATOR,
+                keccak256(
+                    abi.encode(
+                        keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"),
+                        permit.owner,
+                        permit.spender,
+                        permit.value,
+                        nonce,
+                        deadline
+                    )
+                )
+            )
+        );
+    }
+
+    function getDomainSeparator(bytes memory name, address contractAddress, uint256 chainId) internal view returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                keccak256(('EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)')),
+                keccak256(bytes(IERC20Metadata(contractAddress).name())),
+                keccak256(('1')),
+                chainId,
+                contractAddress
+            )
+        );
+    }
+
     function testCanUseLadleToExecutePermit() public {
-        
+        uint256 chainId;
+        assembly {
+            chainId := chainid()
+        }
+        bytes32 permitDigest = getDaiPermitDigest(
+            abi.encode(keccak256(bytes(IERC20Metadata(address(dai)).name()))),//name
+            address(dai),//contractAddress
+            chainId,//chainId
+            Permit(
+                user,//owner
+                address(ladle.joins(daiId)),//spender
+                100),//value
+            0,//nonce
+            block.timestamp,//deadline
+            true);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(uint256(keccak256(abi.encodePacked("user"))), permitDigest);
+        vm.startPrank(user);
+        vm.expectEmit(true, true, true, true);
+        emit Approval(user, address(ladle.joins(daiId)), type(uint256).max);
+        ladle.forwardDaiPermit(DaiAbstract(address(dai)), address(ladle.joins(daiId)), 0, block.timestamp, true, v,r,s);
+    }
+
+    function testCanUseLadleToExecutePermitUnk() public {
+        uint256 chainId;
+        assembly {
+            chainId := chainid()
+        }
+        bytes32 permitDigest = getDaiPermitDigest(
+            abi.encode(keccak256(bytes(IERC20Metadata(address(restrictedERC20Mock)).name()))),//name
+            address(restrictedERC20Mock),//contractAddress
+            chainId,//chainId
+            Permit(
+                user,//owner
+                address(ladle.joins(daiId)),//spender
+                100),//value
+            0,//nonce
+            block.timestamp,//deadline
+            true);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(uint256(keccak256(abi.encodePacked("user"))), permitDigest);
+        vm.startPrank(user);
+        vm.expectRevert("Unknown token");
+        ladle.forwardDaiPermit(DaiAbstract(address(restrictedERC20Mock)), address(ladle.joins(daiId)), 0, block.timestamp, true, v,r,s);
     }
 }
 
@@ -414,4 +513,77 @@ contract TokensAndIntegrationTests is WithTokensAndIntegrationState {
         vm.expectRevert("Access denied");
         ladle.route(address(restrictedERC20Mock), abi.encodeWithSelector(RestrictedERC20Mock.mint.selector, address(this), WAD));
     }
+}
+
+// TODO: batch tests
+
+contract ETHTests is ETHVaultBuiltState {
+    function testCanTransferETHThenPour() public {
+        ladle.joinEther{value: INK}(wethId);
+        vm.expectEmit(true, true, true, true);
+        emit VaultPoured(ethVaultId, baseId, wethId, INK.i128(), 0);
+        ladle.pour(ethVaultId, address(this), INK.i128(), 0);
+        
+        assertEq(weth.balanceOf(address(ladle.joins(wethId))), INK);
+        (uint128 art, uint128 ink) = cauldron.balances(ethVaultId);
+        assertEq(ink, INK);
+        assertEq(art, 0);
+    }
+
+    function testCanTransferETHAndPourInBatch() public {
+        bytes[] memory calls = new bytes[](2);
+        calls[0] = abi.encodeWithSelector(VRLadle.joinEther.selector, wethId);
+        calls[1] = abi.encodeWithSelector(VRLadle.pour.selector, ethVaultId, address(this), INK.i128(), 0);
+
+        vm.expectEmit(true, true, true, true);
+        emit VaultPoured(ethVaultId, baseId, wethId, INK.i128(), 0);
+        ladle.batch{ value: INK}(calls);
+
+        assertEq(weth.balanceOf(address(ladle.joins(wethId))), INK);
+        (uint128 art, uint128 ink) = cauldron.balances(ethVaultId);
+        assertEq(ink, INK);
+        assertEq(art, 0);
+    }
+
+    function testReceiveETHFromOnlyWETH() public {
+        (bool sent, bytes memory data) = address(ladle).call{ value: INK }("");
+        assertTrue(!sent);
+    }
+}
+
+contract ETHVaultPouredStateTest is ETHVaultPouredState {
+    function testPourToWithdraw() public {
+        ladle.pour(ethVaultId, address(this), -INK.i128(), 0);
+
+        assertEq(weth.balanceOf(address(ladle.joins(wethId))), 0);
+        assertEq(weth.balanceOf(address(this)), INK);
+        (uint128 art, uint128 ink) = cauldron.balances(ethVaultId);
+        assertEq(ink, 0);
+        assertEq(art, 0);
+    }
+
+    function testWithdrawAndUnwrap() public {
+        uint initialBalance = address(this).balance;
+        bytes[] memory calls = new bytes[](2);
+        calls[0] = abi.encodeWithSelector(VRLadle.pour.selector, ethVaultId, address(ladle), -INK.i128(), 0);
+        calls[1] = abi.encodeWithSelector(VRLadle.exitEther.selector, address(this));
+
+        ladle.batch(calls);
+
+        assertEq(weth.balanceOf(address(ladle.joins(wethId))), 0);
+        assertEq(weth.balanceOf(address(this)), 0);
+        (uint128 art, uint128 ink) = cauldron.balances(ethVaultId);
+        assertEq(ink, 0);
+        assertEq(art, 0);
+        assertEq(INK, address(this).balance - initialBalance);
+    }
+
+    function testRepayETH() public {
+        ladle.pour(ethVaultId, address(this), 0, ART.i128());
+
+        // ladle.joinEther{value: INK}(wethId);
+        ladle.repay{value: INK}(ethVaultId, address(this), address(this), INK.i128());
+    }
+
+    receive() external payable {}
 }

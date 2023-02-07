@@ -23,6 +23,7 @@ abstract contract AssetAddedState is ZeroState {
         super.setUp();
         addAsset(usdcId, address(usdc), usdcJoin);
         addAsset(daiId, address(dai), daiJoin);
+        addAsset(wethId, address(weth), wethJoin);
     }
 }
 
@@ -31,9 +32,10 @@ abstract contract IlkAddedState is AssetAddedState {
         super.setUp();
         cauldron.setRateOracle(usdcId, IOracle(address(chiRateOracle)));
 
-        ilkIds = new bytes6[](2);
+        ilkIds = new bytes6[](3);
         ilkIds[0] = usdcId;
         ilkIds[1] = daiId;
+        ilkIds[2] = wethId;
     }
 }
 
@@ -53,6 +55,7 @@ abstract contract CompleteSetup is IlkAddedState, RateOracleAddedState {
         super.setUp();
         cauldron.setSpotOracle(baseId, usdcId, spotOracle, 1000000);
         cauldron.setSpotOracle(baseId, daiId, spotOracle, 1000000);
+        cauldron.setSpotOracle(baseId, wethId, spotOracle, 1000000);
         cauldron.addIlks(baseId, ilkIds);
         cauldron.setDebtLimits(
             baseId,
@@ -64,6 +67,13 @@ abstract contract CompleteSetup is IlkAddedState, RateOracleAddedState {
         cauldron.setDebtLimits(
             baseId,
             daiId,
+            uint96(WAD * 20),
+            uint24(1e3),
+            18
+        );
+        cauldron.setDebtLimits(
+            baseId,
+            wethId,
             uint96(WAD * 20),
             uint24(1e3),
             18
@@ -102,5 +112,27 @@ abstract contract WithTokensAndIntegrationState is CompleteSetup {
         ladle.addIntegration(address(dai), true);
         ladle.addIntegration(user, true);
         ladle.addIntegration(address(restrictedERC20Mock), true);
+    }
+}
+
+abstract contract ETHVaultBuiltState is CompleteSetup {
+    function setUp() public override virtual{
+        super.setUp();
+        (ethVaultId,) = ladle.build(baseId, wethId, 9);
+    }
+}
+
+abstract contract ETHVaultPouredState is ETHVaultBuiltState {
+    function setUp() public override virtual{
+        super.setUp();
+        ladle.joinEther{value: INK}(wethId);
+        ladle.pour(ethVaultId, address(this), INK.i128(), 0);
+    }
+}
+
+abstract contract ETHVaultPouredAndDebtState is ETHVaultPouredState {
+    function setUp() public override virtual{
+        super.setUp();
+        ladle.pour(ethVaultId, address(this), 0, ART.i128());
     }
 }

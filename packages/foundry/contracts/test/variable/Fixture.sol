@@ -46,9 +46,9 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
     FlashJoin public wethJoin;
     FlashJoin public daiJoin;
     FlashJoin public baseJoin;
-    bytes6 public usdcId = bytes6("USDC");
-    bytes6 public wethId = bytes6("WETH");
-    bytes6 public daiId = bytes6("DAI");
+    bytes6 public usdcId = USDC;
+    bytes6 public wethId = ETH;
+    bytes6 public daiId = DAI;
     bytes6 public otherIlkId = bytes6("OTHER");
     bytes6 public baseId = bytes6("BASE");
     VYToken public usdcYToken;
@@ -67,6 +67,7 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
     bytes12 public vaultId = 0x000000000000000000000001;
     bytes12 public zeroVaultId = 0x000000000000000000000000;
     bytes12 public otherVaultId = 0x000000000000000000000002;
+    bytes12 public ethVaultId;
 
     bytes6 public zeroId = 0x000000000000;
     bytes6[] public ilkIds;
@@ -76,6 +77,11 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
     uint256 public FEE = 1000;
 
     function setUp() public virtual {
+        usdc = new USDCMock();
+        weth = new WETH9Mock();
+        dai = new DAIMock();
+        base = new ERC20Mock("Base", "BASE");
+
         cauldron = new VRCauldron();
         ladle = new VRLadle(
             IVRCauldron(address(cauldron)),
@@ -83,10 +89,7 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
         );
         witch = new Witch(ICauldron(address(cauldron)), ILadle(address(ladle)));
 
-        usdc = new USDCMock();
-        weth = new WETH9Mock();
-        dai = new DAIMock();
-        base = new ERC20Mock("Base", "BASE");
+        
         restrictedERC20Mock = new RestrictedERC20Mock("Restricted", "RESTRICTED");
 
         usdcJoin = new FlashJoin(address(usdc));

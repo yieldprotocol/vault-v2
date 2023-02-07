@@ -83,6 +83,7 @@ contract IlkAddition is IlkAddedState {
     function testAddIlkAndSpotOracle() public {
         cauldron.setSpotOracle(baseId, usdcId, spotOracle, 1000000);
         cauldron.setSpotOracle(baseId, daiId, spotOracle, 1000000);
+        cauldron.setSpotOracle(baseId, wethId, spotOracle, 1000000);
         (IOracle oracle, ) = cauldron.spotOracles(baseId, usdcId);
         assertEq(address(oracle), address(spotOracle));
 
@@ -211,6 +212,7 @@ contract CauldronTestOnBuiltVault is VaultBuiltState {
         chiRateOracle.setSource(daiId, CHI, WAD, WAD * 2);
         makeBase(daiId, address(dai), daiJoin, address(chiRateOracle), 12);
         cauldron.setSpotOracle(daiId, usdcId, spotOracle, 1000000);
+        cauldron.setSpotOracle(daiId, wethId, spotOracle, 1000000);
         cauldron.addIlks(daiId, ilkIds);
 
         vm.expectRevert("Only with no debt");
@@ -270,3 +272,4 @@ contract CauldronStirTests is CauldronPouredState {
         cauldron.stir(vaultId, otherVaultId, uint128(INK), 0);
     }
 }
+
