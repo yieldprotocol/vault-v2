@@ -299,7 +299,7 @@ contract VRCauldron is AccessControl, Constants {
         external
         returns (uint128 base)
     {
-        _debtToBase(baseId, art);
+        base = _debtToBase(baseId, art);
     }
 
     /// @dev Convert a debt amount for a to base terms

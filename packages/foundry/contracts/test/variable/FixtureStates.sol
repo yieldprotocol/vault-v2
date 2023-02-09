@@ -128,6 +128,8 @@ abstract contract ETHVaultPouredState is ETHVaultBuiltState {
         ladle.joinEther{value: INK}(wethId);
         ladle.pour(ethVaultId, address(this), INK.i128(), 0);
     }
+
+    receive() external payable {}
 }
 
 abstract contract ETHVaultPouredAndDebtState is ETHVaultPouredState {

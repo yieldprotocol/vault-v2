@@ -515,8 +515,6 @@ contract TokensAndIntegrationTests is WithTokensAndIntegrationState {
     }
 }
 
-// TODO: batch tests
-
 contract ETHTests is ETHVaultBuiltState {
     function testCanTransferETHThenPour() public {
         ladle.joinEther{value: INK}(wethId);
@@ -528,6 +526,12 @@ contract ETHTests is ETHVaultBuiltState {
         (uint128 art, uint128 ink) = cauldron.balances(ethVaultId);
         assertEq(ink, INK);
         assertEq(art, 0);
+    }
+
+    function testPourWithoutSendingETHReverts() public {
+        weth.approve(address(wethJoin), 0 );
+        vm.expectRevert("ERC20: Insufficient approval");
+        ladle.pour(ethVaultId, address(this), INK.i128(), 0);
     }
 
     function testCanTransferETHAndPourInBatch() public {
@@ -579,11 +583,15 @@ contract ETHVaultPouredStateTest is ETHVaultPouredState {
     }
 
     function testRepayETH() public {
-        ladle.pour(ethVaultId, address(this), 0, ART.i128());
-
-        // ladle.joinEther{value: INK}(wethId);
-        ladle.repay{value: INK}(ethVaultId, address(this), address(this), INK.i128());
+        ladle.pour(ethVaultId, address(this), 0, (ART*1000).i128());
+        uint128 debtToBase = cauldron.debtToBase(baseId, uint128(ART * 1000));
+        deal(address(base), address(this),  debtToBase );
+        IERC20(address(base)).approve(address(ladle.joins(baseId)), debtToBase);
+        ladle.repay(ethVaultId, address(this), address(this), 0);
+        (uint128 art, uint128 ink) = cauldron.balances(ethVaultId);
+        assertEq(ink, INK);
+        assertEq(art, 0);
     }
-
-    receive() external payable {}
 }
+
+// TODO: batch tests
