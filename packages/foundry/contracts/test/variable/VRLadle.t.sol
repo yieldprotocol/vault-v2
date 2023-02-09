@@ -594,4 +594,61 @@ contract ETHVaultPouredStateTest is ETHVaultPouredState {
     }
 }
 
-// TODO: batch tests
+contract BatchTests is CompleteSetup {
+    function testBuildTweakGive() public {
+        bytes[] memory calls = new bytes[](3);
+        calls[0] = abi.encodeWithSelector(VRLadle.build.selector, baseId, usdcId, 9);
+        calls[1] = abi.encodeWithSelector(VRLadle.tweak.selector, bytes12(0), baseId, daiId);
+        calls[2] = abi.encodeWithSelector(VRLadle.give.selector, bytes12(0), admin);
+        
+        ladle.batch(calls);
+        
+        (address owner, bytes6 baseId_, bytes6 ilkId_) = cauldron.vaults(bytes12(keccak256(abi.encodePacked(address(this), block.timestamp, uint8(10)))));
+        assertEq(baseId_, baseId);
+        assertEq(ilkId_, daiId);
+        assertEq(owner, admin);
+    }
+
+    function testBuildAndGiveTwice() public {
+        bytes[] memory calls = new bytes[](4);
+        calls[0] = abi.encodeWithSelector(VRLadle.build.selector, baseId, usdcId, 9);
+        calls[1] = abi.encodeWithSelector(VRLadle.give.selector, bytes12(0), admin);
+        calls[2] = abi.encodeWithSelector(VRLadle.build.selector, baseId, usdcId, 9);
+        calls[3] = abi.encodeWithSelector(VRLadle.give.selector, bytes12(0), admin);
+        
+        ladle.batch(calls);
+
+        (address owner, bytes6 baseId_, bytes6 ilkId_) = cauldron.vaults(bytes12(keccak256(abi.encodePacked(address(this), block.timestamp, uint8(10)))));
+        assertEq(baseId_, baseId);
+        assertEq(ilkId_, usdcId);
+        assertEq(owner, admin);
+
+        ( owner,  baseId_,  ilkId_) = cauldron.vaults(bytes12(keccak256(abi.encodePacked(address(this), block.timestamp, uint8(11)))));
+        assertEq(baseId_, baseId);
+        assertEq(ilkId_, usdcId);
+        assertEq(owner, admin);
+    }
+
+    function testBuildAndDestroyVault() public {
+        bytes[] memory calls = new bytes[](2);
+        calls[0] = abi.encodeWithSelector(VRLadle.build.selector, baseId, usdcId, 9);
+        calls[1] = abi.encodeWithSelector(VRLadle.destroy.selector, bytes12(0));
+
+        ladle.batch(calls);
+
+        (address owner, bytes6 baseId_, bytes6 ilkId_) = cauldron.vaults(bytes12(keccak256(abi.encodePacked(address(this), block.timestamp, uint8(10)))));
+        assertEq(baseId_, bytes6(0));
+        assertEq(ilkId_, bytes6(0));
+        assertEq(owner, address(0));
+    }
+
+    function testCantTweakAfterGive() public {
+        bytes[] memory calls = new bytes[](3);
+        calls[0] = abi.encodeWithSelector(VRLadle.build.selector, baseId, usdcId, 9);
+        calls[1] = abi.encodeWithSelector(VRLadle.give.selector, bytes12(0), admin);
+        calls[2] = abi.encodeWithSelector(VRLadle.tweak.selector, bytes12(0), baseId, daiId);
+        
+        vm.expectRevert("Only vault owner");
+        ladle.batch(calls);
+    }
+}
