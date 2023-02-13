@@ -18,7 +18,6 @@ abstract contract VYTokenZeroState is ZeroState {
 
         borrower = new FlashBorrower(vyToken);
         unit = uint128(10**ERC20Mock(address(vyToken)).decimals());
-        user = address(this);
         deal(address(vyToken), address(this), unit);
         deal(address(vyToken.underlying()), address(this), unit);
     }
@@ -52,24 +51,28 @@ contract VYTokenTest is VYTokenZeroState {
 
     function testMintWithUnderlying() public {
         console.log("can mint with underlying");
-        track("userTokenBalance", vyToken.balanceOf(user));
+        track("userTokenBalance", vyToken.balanceOf(address(this)));
 
         IERC20(vyToken.underlying()).approve(
             address(ladle.joins(vyToken.underlyingId())),
             unit
         );
 
-        vyToken.mint(user, unit);
+        vyToken.mint(address(this), unit);
 
-        assertTrackPlusEq("userTokenBalance", unit, vyToken.balanceOf(user));
+        assertTrackPlusEq(
+            "userTokenBalance",
+            unit,
+            vyToken.balanceOf(address(this))
+        );
     }
 
     function testDepositToMint() public {
         console.log("can deposit to mint");
-        track("userTokenBalance", vyToken.balanceOf(user));
+        track("userTokenBalance", vyToken.balanceOf(address(this)));
         track(
             "userUnderlyingBalance",
-            IERC20(vyToken.underlying()).balanceOf(user)
+            IERC20(vyToken.underlying()).balanceOf(address(this))
         );
 
         IERC20(vyToken.underlying()).approve(
@@ -77,13 +80,17 @@ contract VYTokenTest is VYTokenZeroState {
             unit
         );
 
-        vyToken.deposit(user, unit);
+        vyToken.deposit(address(this), unit);
 
-        assertTrackPlusEq("userTokenBalance", unit, vyToken.balanceOf(user));
+        assertTrackPlusEq(
+            "userTokenBalance",
+            unit,
+            vyToken.balanceOf(address(this))
+        );
         assertTrackMinusEq(
             "userUnderlyingBalance",
             unit,
-            IERC20(vyToken.underlying()).balanceOf(user)
+            IERC20(vyToken.underlying()).balanceOf(address(this))
         );
     }
 
@@ -134,22 +141,50 @@ contract VYTokenTest is VYTokenZeroState {
 
     function testRedeem() public {
         console.log("can redeem underlying");
-        track("userTokenBalance", vyToken.balanceOf(user));
+        track("userTokenBalance", vyToken.balanceOf(address(this)));
         track(
             "userUnderlyingBalance",
-            IERC20(vyToken.underlying()).balanceOf(user)
+            IERC20(vyToken.underlying()).balanceOf(address(this))
         );
 
         IERC20(vyToken.underlying()).approve(
             address(ladle.joins(vyToken.underlyingId())),
             unit
         );
-        vyToken.mint(user, unit);
+        vyToken.mint(address(this), unit);
 
-        vyToken.redeem(unit, user, user);
+        vyToken.redeem(unit, address(this), address(this));
 
-        assertTrackPlusEq("userTokenBalance", 0, vyToken.balanceOf(user));
+        assertTrackPlusEq(
+            "userTokenBalance",
+            0,
+            vyToken.balanceOf(address(this))
+        );
         assertEq(unit, IERC20(vyToken.underlying()).balanceOf(address(this)));
+    }
+
+    function testRedeemToSender() public {
+        console.log("can redeem underlying to another user");
+        track("userTokenBalance", vyToken.balanceOf(address(this)));
+        track(
+            "userUnderlyingBalance",
+            IERC20(vyToken.underlying()).balanceOf(address(this))
+        );
+
+        IERC20(vyToken.underlying()).approve(
+            address(ladle.joins(vyToken.underlyingId())),
+            unit
+        );
+        vyToken.mint(address(this), unit);
+
+        vyToken.redeem(user, unit);
+
+        assertTrackPlusEq(
+            "userTokenBalance",
+            0,
+            vyToken.balanceOf(address(this))
+        );
+        assertEq(unit, IERC20(vyToken.underlying()).balanceOf(user));
     }
 
     function testFlashFeeFactor() public {
@@ -184,7 +219,7 @@ contract FlashLoanEnabledStateTests is FlashLoanEnabledState {
             FlashBorrower.Action.NORMAL
         );
 
-        assertEq(vyToken.balanceOf(user), 0);
+        assertEq(vyToken.balanceOf(address(this)), unit);
         assertEq(borrower.flashBalance(), unit);
         assertEq(borrower.flashToken(), address(vyToken));
         assertEq(borrower.flashAmount(), unit);
@@ -201,7 +236,7 @@ contract FlashLoanEnabledStateTests is FlashLoanEnabledState {
             FlashBorrower.Action.TRANSFER
         );
 
-        assertEq(vyToken.balanceOf(user), 0);
+        assertEq(vyToken.balanceOf(address(this)), unit);
         assertEq(borrower.flashBalance(), unit);
         assertEq(borrower.flashToken(), address(vyToken));
         assertEq(borrower.flashAmount(), unit);
@@ -211,7 +246,7 @@ contract FlashLoanEnabledStateTests is FlashLoanEnabledState {
 
     function testApproveNonInitiator() public {
         vm.expectRevert("ERC20: Insufficient approval");
-        vm.prank(user);
+        vm.prank(address(this));
         vyToken.flashLoan(
             borrower,
             address(vyToken),
@@ -222,7 +257,7 @@ contract FlashLoanEnabledStateTests is FlashLoanEnabledState {
 
     function testEnoughFundsForLoanRepay() public {
         vm.expectRevert("ERC20: Insufficient balance");
-        vm.prank(user);
+        vm.prank(address(this));
         borrower.flashBorrow(
             address(vyToken),
             unit,
@@ -236,7 +271,7 @@ contract FlashLoanEnabledStateTests is FlashLoanEnabledState {
             unit,
             FlashBorrower.Action.REENTER
         );
-        vm.prank(user);
+        vm.prank(address(this));
         assertEq(borrower.flashBalance(), unit * 3);
     }
 }
