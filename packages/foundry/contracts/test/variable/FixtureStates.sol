@@ -16,6 +16,10 @@ abstract contract ZeroState is Fixture {
     event TokenAdded(address indexed token, bool indexed set);
     event IntegrationAdded(address indexed integration, bool indexed set);
     event Approval(address indexed owmer, address indexed spender, uint256 value);
+    event Point(bytes32 indexed param, address value);
+    event SeriesMatured(uint256 chiAtMaturity);
+    event Redeemed(address indexed from, address indexed to, uint256 amount, uint256 redeemed);
+    uint128 public unit;
 }
 
 abstract contract AssetAddedState is ZeroState {

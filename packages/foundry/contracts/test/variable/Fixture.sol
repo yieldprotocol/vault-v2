@@ -51,9 +51,9 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
     bytes6 public daiId = DAI;
     bytes6 public otherIlkId = bytes6("OTHER");
     bytes6 public baseId = bytes6("BASE");
-    VYToken public usdcYToken;
-    VYToken public wethYToken;
-    VYToken public daiYToken;
+    VYToken public vyToken;
+    VYToken public wethVYToken;
+    VYToken public daiVYToken;
     CTokenRateMock public cTokenRateMock;
     CTokenChiMock public cTokenChiMock;
     RestrictedERC20Mock public restrictedERC20Mock;
@@ -97,6 +97,8 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
         daiJoin = new FlashJoin(address(dai));
         baseJoin = new FlashJoin(address(base));
 
+        
+
         setUpOracles();
         // Setting permissions
         ladleGovAuth();
@@ -104,6 +106,13 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
         cauldronGovAuth(address(this));
         addAsset(baseId, address(base), baseJoin);
         makeBase(baseId, address(base), baseJoin, address(chiRateOracle), 9);
+
+        vyToken = new VYToken(baseId, IOracle(address(chiRateOracle)), IJoin(baseJoin),base.name(), base.symbol());
+
+        bytes4[] memory roles = new bytes4[](2);
+        roles[0] = Join.join.selector;
+        roles[1] = Join.exit.selector;
+        baseJoin.grantRoles(roles, address(vyToken));
     }
 
     function setUpOracles() internal {

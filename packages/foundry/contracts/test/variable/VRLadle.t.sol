@@ -5,9 +5,11 @@ import "./FixtureStates.sol";
 import "../../mocks/ERC20Mock.sol";
 using CastU256I128 for uint256;
 using CastI128U128 for int128;
+
 contract VRLadleAdminTests is ZeroState {
     // @notice Test ability to set borrowing fee
     function testSetBorrowingFee() public {
+        console.log('admin can set borrowing fee');
         ladle.setFee(1000);
         assertEq(ladle.borrowingFee(), 1000);
     }
@@ -16,12 +18,14 @@ contract VRLadleAdminTests is ZeroState {
 contract VRLadleJoinAdminTests is ZeroState {
     // @notice Test not able to add join before adding ilk
     function testNoAddJoinWithoutIlk() public {
+        console.log('cannot add join without asset being added first');
         vm.expectRevert("Asset not found");
         ladle.addJoin(usdcId, IJoin(address(usdcJoin)));
     }
 
     // @notice Test not able to add join with a mismatched ilk
     function testAddJoinMismatch() public {
+        console.log('cannot add join with mismatched asset');
         cauldron.addAsset(usdcId, address(usdc));
         vm.expectRevert("Mismatched asset and join");
         ladle.addJoin(usdcId, IJoin(address(daiJoin)));
@@ -29,6 +33,7 @@ contract VRLadleJoinAdminTests is ZeroState {
 
     // @notice Test ability to add join
     function testAddJoin() public {
+        console.log('can add join for an asset which is present');
         cauldron.addAsset(usdcId, address(usdc));
         ladle.addJoin(usdcId, IJoin(address(usdcJoin)));
         assertEq(address(ladle.joins(usdcId)), address(usdcJoin));
@@ -36,6 +41,7 @@ contract VRLadleJoinAdminTests is ZeroState {
 
     // @notice Test the same join for a second ilk of the same asset
     function testAddJoinSameAsset() public {
+        console.log('can add the same join for different asset');
         cauldron.addAsset(usdcId, address(usdc));
         ladle.addJoin(usdcId, IJoin(address(usdcJoin)));
         cauldron.addAsset(otherIlkId, address(usdc));
@@ -47,6 +53,7 @@ contract VRLadleJoinAdminTests is ZeroState {
 
 contract VaultTests is VaultBuiltState {
     function testBuildVault() public {
+        console.log('can build a vault');
         (bytes12 vaultId_, ) = ladle.build(baseId, usdcId, 123);
         (address owner, bytes6 baseId_, bytes6 ilkId_) = cauldron.vaults(vaultId_);
         assertEq(baseId_, baseId);
@@ -55,23 +62,27 @@ contract VaultTests is VaultBuiltState {
     }
 
     function testZeroIlkId() public {
+        console.log('cannot build a vault with zero ilk id');
         vm.expectRevert("Ilk id is zero");
         ladle.build(baseId, bytes6(0), 123);
     }
 
     function testTweakOnlyOwner() public {
+        console.log('cannot tweak a vault with a different owner');
         vm.expectRevert("Only vault owner");
         vm.prank(admin);
         ladle.tweak(vaultId, baseId, usdcId);
     }
 
     function testDestroyVault() public {
+        console.log('can destroy a vault');
         vm.expectEmit(true, false, false, false);
         emit VaultDestroyed(vaultId);
         ladle.destroy(vaultId);
     }
 
     function testChangeVault() public {
+        console.log('can change a vault');
         vm.expectEmit(true, true, true, false);
         emit VaultTweaked(vaultId, baseId, daiId);
         ladle.tweak(vaultId, baseId, daiId);
@@ -83,6 +94,7 @@ contract VaultTests is VaultBuiltState {
     }
 
     function testGiveVault() public {
+        console.log('can give a vault');
         vm.expectEmit(true, true, false, false);
         emit VaultGiven(vaultId, admin);
         ladle.give(vaultId, admin);
@@ -94,18 +106,21 @@ contract VaultTests is VaultBuiltState {
     }
 
     function testOtherCantChangeOwnerOfVault() public {
+        console.log('cannot change owner of a vault with a different owner');
         vm.expectRevert("Only vault owner");
         vm.prank(admin);
         ladle.give(vaultId, admin);
     }
 
     function testOnlyOwnerCouldMove() public {
+        console.log('cannot move a vault with a different owner');
         vm.prank(admin);
         vm.expectRevert("Only origin vault owner");
         ladle.stir(vaultId, otherVaultId, 1, 1);
     }
 
     function testOnlyDestinationVaultOwner() public {
+
         vm.prank(admin);
         vm.expectRevert("Only destination vault owner");
         ladle.stir(vaultId, otherVaultId, 0, 1);
@@ -122,34 +137,49 @@ contract PourTests is VaultBuiltState {
         token.approve(address(ladle.joins(ilkId)),INK);
     }
     function testOnlyOwnerCanPour() public {
+        console.log("other users can't pour into a vault");
         vm.expectRevert("Only vault owner");
         vm.prank(admin);
         ladle.pour(vaultId, address(this), 1000, 1000);
     }
 
     function testPourToPostCollateral() public {
-        
-        ladle.pour(vaultId, address(this), 1000, 0);
+        console.log('can pour collateral into a vault');
+        ladle.pour(vaultId, address(this), INK.i128(), 0);
+         (uint128 art, uint128 ink) = cauldron.balances(vaultId);
+        assertEq(ink, INK);
+        assertEq(art, 0);
     }
 
     function testPourToPostAndBorrow() public {
+        console.log('can pour collateral into a vault and borrow');
         (, bytes6 baseId, bytes6 ilkId) = cauldron.vaults(vaultId);
 
         ladle.pour(vaultId, address(this), INK.i128(), ART.i128());
         assertEq(IERC20(cauldron.assets(baseId)).balanceOf(address(this)), ART);
+
+        (uint128 art, uint128 ink) = cauldron.balances(vaultId);
+        assertEq(ink, INK);
+        assertEq(art, ART);
     }
 
     function testPourToPostAndBorrowToOther() public {
+        console.log('can pour collateral into a vault and send the borrowed amount to other address');
         (, bytes6 baseId, bytes6 ilkId) = cauldron.vaults(vaultId);
 
         ladle.pour(vaultId, admin, INK.i128(), ART.i128());
         assertEq(IERC20(cauldron.assets(baseId)).balanceOf(admin), ART);
+
+        (uint128 art, uint128 ink) = cauldron.balances(vaultId);
+        assertEq(ink, INK);
+        assertEq(art, ART);
     }
 }
 
 contract PouredStateTests is CauldronPouredState {
 
     function testPourToWithdraw() public {
+        console.log('can pour to withdraw');
         (, , bytes6 ilkId) = cauldron.vaults(vaultId);
         
         assertEq(IERC20(cauldron.assets(ilkId)).balanceOf(address(this)), 0);
@@ -164,6 +194,7 @@ contract PouredStateTests is CauldronPouredState {
     }
 
     function testPourToWithdrawToOther() public {
+        console.log('can pour to withdraw to other address');
         (, , bytes6 ilkId) = cauldron.vaults(vaultId);
         
         assertEq(IERC20(cauldron.assets(ilkId)).balanceOf(address(this)), 0);
@@ -178,15 +209,22 @@ contract PouredStateTests is CauldronPouredState {
     }
 
     function testCannotBorrowUnderLimit() public {
+        console.log('cannot borrow under the min debt');
         vm.expectRevert("Min debt not reached");
         ladle.pour(vaultId, address(this), 0, 1);
     }
 
     function testPourToBorrowBase() public {
+        console.log('can pour to borrow base');
         ladle.pour(vaultId, address(this), 0, (ART).i128());
+
+        (uint128 art, uint128 ink) = cauldron.balances(vaultId);
+        assertEq(ink, INK);
+        assertEq(art, ART);
     }
 
     function testFeeChargeOnBorrow() public {
+        console.log('fee can be charged on borrow');
         ladle.setFee(FEE);
         ladle.pour(vaultId, address(this), 0, (ART).i128());
 
@@ -196,6 +234,7 @@ contract PouredStateTests is CauldronPouredState {
     }
 
     function testMoveDebt() public{
+        console.log('can move debt from one vault to another');
         (bytes12 otherVaultId, ) = ladle.build(baseId, usdcId, 123);
         (address owner, , bytes6 ilkId) = cauldron.vaults(vaultId);
         deal(cauldron.assets(ilkId), owner, INK);
@@ -218,6 +257,7 @@ contract PouredStateTests is CauldronPouredState {
     }
 
     function testMoveCollateral() public {
+        console.log('can move collateral from one vault to another');
         (bytes12 otherVaultId, ) = ladle.build(baseId, usdcId, 123);
         (uint128 art, uint128 ink) = cauldron.balances(vaultId);
         
@@ -235,6 +275,7 @@ contract PouredStateTests is CauldronPouredState {
     }
 
     function testMoveDebtAndCollateral() public {
+        console.log('can move debt and collateral from one vault to another');
         (bytes12 otherVaultId, ) = ladle.build(baseId, usdcId, 123);
         ladle.pour(vaultId, address(this), 0, (ART).i128());
         (uint128 art, uint128 ink) = cauldron.balances(vaultId);
@@ -253,6 +294,7 @@ contract PouredStateTests is CauldronPouredState {
     }
 
     function testMoveCollateralInABatch() public {
+        console.log('can move collateral from one vault to another in a batch');
         (bytes12 otherVaultId, ) = ladle.build(baseId, usdcId, 123);
         (uint128 art, uint128 ink) = cauldron.balances(vaultId);
 
@@ -273,6 +315,7 @@ contract PouredStateTests is CauldronPouredState {
     }
 
     function testMoveDebtInABatch() public {
+        console.log('can move debt from one vault to another in a batch');
         (bytes12 otherVaultId, ) = ladle.build(baseId, usdcId, 123);
         (address owner, , bytes6 ilkId) = cauldron.vaults(vaultId);
         deal(cauldron.assets(ilkId), owner, INK);
@@ -306,6 +349,7 @@ contract BorrowedStateTests is BorrowedState {
         token = IERC20(cauldron.assets(baseId));
     }
     function testRepayDebt() public {
+        console.log('can repay debt by pouring');
         token.approve(address(ladle.joins(baseId)), ART);
         ladle.pour(vaultId, address(this), 0, -(ART.i128()));
 
@@ -316,6 +360,7 @@ contract BorrowedStateTests is BorrowedState {
     }
 
     function testRepayDebtWithTransfer() public {
+        console.log('can repay debt by transferring before pouring');
         token.transfer(address(ladle.joins(baseId)), ART);
         ladle.pour(vaultId, admin, 0, -(ART).i128());
 
@@ -326,12 +371,14 @@ contract BorrowedStateTests is BorrowedState {
     }
 
     function testCantRepayMoreThanDebt() public {
+        console.log('cannot repay more than debt');
         token.approve(address(ladle.joins(baseId)), ART + 10);
         vm.expectRevert("Result below zero");
         ladle.pour(vaultId, admin, 0, -(ART + 10).i128());
     }
 
     function testBorrowWhileUnderGlobalDebtLimit() public {
+        console.log('can borrow while under global debt limit');
         ladle.pour(vaultId, address(this), 0, (ART).i128());
         (uint128 art, uint128 ink) = cauldron.balances(vaultId);
         assertEq(ink, INK);
@@ -339,6 +386,7 @@ contract BorrowedStateTests is BorrowedState {
     }
 
     function testCantBorrowOverGlobalDebtLimit() public {
+        console.log('cannot borrow over global debt limit');
         vm.expectRevert("Max debt exceeded");
         ladle.pour(vaultId, address(this), 0, (ART * 20 * 1e6).i128());
     }
@@ -451,6 +499,7 @@ contract PermitTests is CompleteSetup {
 
 contract RouteAndIntegrationTests is CompleteSetup {
     function testTokenAdditionAndRemoval() public {
+        console.log('can add and remove tokens');
         vm.expectEmit(true, true, true, true);
         emit TokenAdded(address(usdc), true);
         ladle.addToken(address(usdc), true);
@@ -463,6 +512,7 @@ contract RouteAndIntegrationTests is CompleteSetup {
     }
 
     function testIntegrationAdditionAndRemoval() public {
+        console.log('can add and remove integrations');
         vm.expectEmit(true, true, true, true);
         emit IntegrationAdded(address(usdc), true);
         ladle.addIntegration(address(usdc), true);
@@ -475,6 +525,7 @@ contract RouteAndIntegrationTests is CompleteSetup {
     }
 
     function testOnlyCauldronCanUseRouter() public {
+        console.log('router can be called only by cauldron');
         Router router = ladle.router();
         vm.expectRevert("Only owner");
         router.route(address(cauldron),'0x00000000');
@@ -483,33 +534,39 @@ contract RouteAndIntegrationTests is CompleteSetup {
 
 contract TokensAndIntegrationTests is WithTokensAndIntegrationState {
     function testCantRouteToEOA() public {
+        console.log("can't route to an EOA");
         vm.expectRevert("Target is not a contract");
         ladle.route(user, '0x00000000');
     }
 
     function testUnknownToken() public {
+        console.log("can't use transfer on a token not added to ladle");
         vm.expectRevert("Unknown token");
         ladle.transfer(IERC20(makeAddr('0x12')), user, uint128(WAD));
     }
 
     function testTransferTokenThroughLadle() public {
+        console.log("can transfer token through ladle");
         deal(address(usdc), address(this), WAD);
         usdc.approve(address(ladle), WAD);
         ladle.transfer(usdc, admin, uint128(WAD));
     }
 
     function testFunctionCallOnIntegration() public {
+        console.log("can call function on integration");
         vm.expectEmit(true, true, true, true);
         emit Approval(address(ladle.router()), address(this), WAD);
         ladle.route(address(dai), abi.encodeWithSelector(IERC20.approve.selector, address(this), WAD));
     }
 
     function testUnknownIntegrationCantBeCalled() public {
+        console.log("can't call function on unknown integration");
         vm.expectRevert("Unknown integration");
         ladle.route(address(usdc), abi.encodeWithSelector(IERC20.approve.selector, address(this), WAD));
     }
 
     function testAuthorizationStripping() public {
+        console.log("can't call function on integration without authorization");
         vm.expectRevert("Access denied");
         ladle.route(address(restrictedERC20Mock), abi.encodeWithSelector(RestrictedERC20Mock.mint.selector, address(this), WAD));
     }
@@ -517,6 +574,7 @@ contract TokensAndIntegrationTests is WithTokensAndIntegrationState {
 
 contract ETHTests is ETHVaultBuiltState {
     function testCanTransferETHThenPour() public {
+        console.log("can transfer eth and then pour");
         ladle.joinEther{value: INK}(wethId);
         vm.expectEmit(true, true, true, true);
         emit VaultPoured(ethVaultId, baseId, wethId, INK.i128(), 0);
@@ -529,12 +587,14 @@ contract ETHTests is ETHVaultBuiltState {
     }
 
     function testPourWithoutSendingETHReverts() public {
+        console.log("pour without sending eth reverts");
         weth.approve(address(wethJoin), 0 );
         vm.expectRevert("ERC20: Insufficient approval");
         ladle.pour(ethVaultId, address(this), INK.i128(), 0);
     }
 
     function testCanTransferETHAndPourInBatch() public {
+        console.log("can transfer eth and pour in batch");
         bytes[] memory calls = new bytes[](2);
         calls[0] = abi.encodeWithSelector(VRLadle.joinEther.selector, wethId);
         calls[1] = abi.encodeWithSelector(VRLadle.pour.selector, ethVaultId, address(this), INK.i128(), 0);
@@ -550,6 +610,7 @@ contract ETHTests is ETHVaultBuiltState {
     }
 
     function testReceiveETHFromOnlyWETH() public {
+        console.log("can't receive eth from non-weth");
         (bool sent, bytes memory data) = address(ladle).call{ value: INK }("");
         assertTrue(!sent);
     }
@@ -557,6 +618,7 @@ contract ETHTests is ETHVaultBuiltState {
 
 contract ETHVaultPouredStateTest is ETHVaultPouredState {
     function testPourToWithdraw() public {
+        console.log("can pour to withdraw");
         ladle.pour(ethVaultId, address(this), -INK.i128(), 0);
 
         assertEq(weth.balanceOf(address(ladle.joins(wethId))), 0);
@@ -567,6 +629,7 @@ contract ETHVaultPouredStateTest is ETHVaultPouredState {
     }
 
     function testWithdrawAndUnwrap() public {
+        console.log("can withdraw and unwrap in a batch");
         uint initialBalance = address(this).balance;
         bytes[] memory calls = new bytes[](2);
         calls[0] = abi.encodeWithSelector(VRLadle.pour.selector, ethVaultId, address(ladle), -INK.i128(), 0);
@@ -583,6 +646,7 @@ contract ETHVaultPouredStateTest is ETHVaultPouredState {
     }
 
     function testRepayETH() public {
+        console.log("can repay eth");
         ladle.pour(ethVaultId, address(this), 0, (ART*1000).i128());
         uint128 debtToBase = cauldron.debtToBase(baseId, uint128(ART * 1000));
         deal(address(base), address(this),  debtToBase );
@@ -596,6 +660,7 @@ contract ETHVaultPouredStateTest is ETHVaultPouredState {
 
 contract BatchTests is CompleteSetup {
     function testBuildTweakGive() public {
+        console.log("can build tweak and give in a batch");
         bytes[] memory calls = new bytes[](3);
         calls[0] = abi.encodeWithSelector(VRLadle.build.selector, baseId, usdcId, 9);
         calls[1] = abi.encodeWithSelector(VRLadle.tweak.selector, bytes12(0), baseId, daiId);
@@ -610,6 +675,7 @@ contract BatchTests is CompleteSetup {
     }
 
     function testBuildAndGiveTwice() public {
+        console.log("can build and give twice in a batch");
         bytes[] memory calls = new bytes[](4);
         calls[0] = abi.encodeWithSelector(VRLadle.build.selector, baseId, usdcId, 9);
         calls[1] = abi.encodeWithSelector(VRLadle.give.selector, bytes12(0), admin);
@@ -630,6 +696,7 @@ contract BatchTests is CompleteSetup {
     }
 
     function testBuildAndDestroyVault() public {
+        console.log("can build and destroy vault in a batch");
         bytes[] memory calls = new bytes[](2);
         calls[0] = abi.encodeWithSelector(VRLadle.build.selector, baseId, usdcId, 9);
         calls[1] = abi.encodeWithSelector(VRLadle.destroy.selector, bytes12(0));
@@ -643,6 +710,7 @@ contract BatchTests is CompleteSetup {
     }
 
     function testCantTweakAfterGive() public {
+        console.log("can't tweak after give");
         bytes[] memory calls = new bytes[](3);
         calls[0] = abi.encodeWithSelector(VRLadle.build.selector, baseId, usdcId, 9);
         calls[1] = abi.encodeWithSelector(VRLadle.give.selector, bytes12(0), admin);
