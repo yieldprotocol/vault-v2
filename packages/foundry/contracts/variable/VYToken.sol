@@ -151,7 +151,7 @@ contract VYToken is IERC3156FlashLender, AccessControl, ERC20Permit, Constants {
     }
 
     ///@dev returns the maximum mintable amount for the address holder in terms of the principal
-    function maxMint(address holder) external returns (uint256 maxPrincipalAmount) {
+    function maxMint(address holder) external view returns (uint256 maxPrincipalAmount) {
         return type(uint256).max - _totalSupply;
     }
 

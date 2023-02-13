@@ -15,8 +15,8 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           node-version: 14.14.x
-          registry-url: 'https://registry.npmjs.org'
-      
+          registry-url: "https://registry.npmjs.org"
+
       - id: yarn-cache
         run: echo "::set-output name=dir::$(yarn cache dir)"
 
@@ -40,7 +40,7 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           node-version: 14.14.x
-          registry-url: 'https://registry.npmjs.org'
+          registry-url: "https://registry.npmjs.org"
 
       - id: yarn-cache
         run: echo "::set-output name=dir::$(yarn cache dir)"
@@ -65,7 +65,7 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           node-version: 14.14.x
-          registry-url: 'https://registry.npmjs.org'
+          registry-url: "https://registry.npmjs.org"
 
       - id: yarn-cache
         run: echo "::set-output name=dir::$(yarn cache dir)"
@@ -99,6 +99,11 @@ jobs:
 
       - name: Run tests
         run: yarn workspace @yield-protocol/vault-v2 forge:test
+        env:
+          ARBITRUM_RPC: $${{ secrets.ARBITRUM_RPC}}
+          MAINNET_RPC: ${{ secrets.MAINNET_RPC }}
+      - name: Coverage
+        run: yarn workspace @yield-protocol/vault-v2 forge:coverage
         env:
           ARBITRUM_RPC: $${{ secrets.ARBITRUM_RPC}}
           MAINNET_RPC: ${{ secrets.MAINNET_RPC }}
