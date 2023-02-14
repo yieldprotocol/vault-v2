@@ -336,3 +336,22 @@ contract CauldronSlurpTests is BorrowedState {
         assertEq(art, 0);
     }
 }
+
+contract UtilityFunctionTests is BorrowedState {
+    function testDebtFromBase() public {
+        console.log("can get debt from base");
+        uint128 art  = cauldron.debtFromBase(baseId, INK.u128());
+        assertEq(art, ART.u128() * 1e5);
+    }
+
+    function testDebtToBase() public {
+        console.log("can get debt to base");
+        uint128 base  = cauldron.debtToBase(baseId, ART.u128());
+        assertEq(base, 1e18);
+    }
+    function testLevel() public {
+        console.log("can get level");
+        int256 level = cauldron.level(vaultId);
+        assertGt(level, 1);
+    }
+}
