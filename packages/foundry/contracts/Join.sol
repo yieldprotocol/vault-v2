@@ -29,7 +29,7 @@ contract Join is IJoin, AccessControl {
     }
 
     /// @dev Take `amount` `asset` from `user` using `transferFrom`, minus any unaccounted `asset` in this contract.
-    function _join(address user, uint128 amount) internal returns (uint128) {
+    function _join(address user, uint128 amount) internal virtual returns (uint128) {
         IERC20 token = IERC20(asset);
         uint256 _storedBalance = storedBalance;
         uint256 available = token.balanceOf(address(this)) - _storedBalance; // Fine to panic if this underflows
@@ -46,7 +46,7 @@ contract Join is IJoin, AccessControl {
     }
 
     /// @dev Transfer `amount` `asset` to `user`
-    function _exit(address user, uint128 amount) internal returns (uint128) {
+    function _exit(address user, uint128 amount) internal virtual returns (uint128) {
         IERC20 token = IERC20(asset);
         storedBalance -= amount;
         token.safeTransfer(user, amount);
@@ -54,7 +54,7 @@ contract Join is IJoin, AccessControl {
     }
 
     /// @dev Retrieve any tokens other than the `asset`. Useful for airdropped tokens.
-    function retrieve(IERC20 token, address to) external override auth {
+    function retrieve(IERC20 token, address to) external virtual override auth {
         require(address(token) != address(asset), "Use exit for asset");
         token.safeTransfer(to, token.balanceOf(address(this)));
     }
