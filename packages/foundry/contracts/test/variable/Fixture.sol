@@ -179,7 +179,7 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
     }
 
     function cauldronGovAuth(address govAuth) public {
-        bytes4[] memory roles = new bytes4[](12);
+        bytes4[] memory roles = new bytes4[](13);
         roles[0] = VRCauldron.addAsset.selector;
         roles[1] = VRCauldron.addIlks.selector;
         roles[2] = VRCauldron.setDebtLimits.selector;
@@ -192,6 +192,7 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
         roles[9] = VRCauldron.give.selector;
         roles[10] = VRCauldron.tweak.selector;
         roles[11] = VRCauldron.stir.selector;
+        roles[12] = VRCauldron.slurp.selector;
         cauldron.grantRoles(roles, govAuth);
     }
 
