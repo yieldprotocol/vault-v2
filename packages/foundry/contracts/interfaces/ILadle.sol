@@ -136,7 +136,7 @@ interface ILadle {
 
     /// @dev Create a new vault, linked to a series (and therefore underlying) and a collateral
     function build(bytes6 seriesId, bytes6 ilkId, uint8 salt)
-        external virtual payable
+        external payable
         returns(bytes12, DataTypes.Vault memory);
 
     /// @dev Change a vault series or collateral.
