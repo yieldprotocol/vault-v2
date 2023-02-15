@@ -111,3 +111,4 @@ jobs:
         uses: romeovs/lcov-reporter-action@v0.2.11
         with:
           lcov-file: ./packages/foundry/lcov.info
+          github-token: ${{ secrets.TOKEN }}
