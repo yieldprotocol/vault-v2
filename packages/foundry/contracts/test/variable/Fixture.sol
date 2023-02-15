@@ -76,7 +76,7 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
     uint256 public INK = WAD * 100000;
     uint256 public ART = WAD;
     uint256 public FEE = 1000;
-
+    uint128 public unit;
     function setUp() public virtual {
         usdc = new USDCMock();
         weth = new WETH9Mock();

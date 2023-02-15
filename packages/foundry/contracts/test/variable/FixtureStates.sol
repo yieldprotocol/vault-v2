@@ -4,6 +4,7 @@ pragma solidity >=0.8.13;
 import "./Fixture.sol";
 using CastU256I128 for uint256;
 abstract contract ZeroState is Fixture {
+    // Events we are testing
     event VaultPoured(bytes12 indexed vaultId, bytes6 indexed baseId, bytes6 indexed ilkId, int128 ink, int128 art);
     event VaultStirred(bytes12 indexed from, bytes12 indexed to, uint128 ink, uint128 art);
     event VaultDestroyed(bytes12 indexed vaultId);
@@ -19,7 +20,6 @@ abstract contract ZeroState is Fixture {
     event Point(bytes32 indexed param, address value);
     event SeriesMatured(uint256 chiAtMaturity);
     event Redeemed(address indexed from, address indexed to, uint256 amount, uint256 redeemed);
-    uint128 public unit;
 }
 
 abstract contract AssetAddedState is ZeroState {
@@ -35,7 +35,6 @@ abstract contract IlkAddedState is AssetAddedState {
     function setUp() public virtual override {
         super.setUp();
         cauldron.setRateOracle(usdcId, IOracle(address(chiRateOracle)));
-
         ilkIds = new bytes6[](3);
         ilkIds[0] = usdcId;
         ilkIds[1] = daiId;
