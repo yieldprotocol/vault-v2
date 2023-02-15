@@ -13,3 +13,6 @@
 [submodule "packages/foundry/lib/yield-utils-v2"]
 	path = packages/foundry/lib/yield-utils-v2
 	url = https://github.com/yieldprotocol/yield-utils-v2
+[submodule "packages/foundry/lib/solmate"]
+	path = packages/foundry/lib/solmate
+	url = https://github.com/transmissions11/solmate
