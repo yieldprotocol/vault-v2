@@ -42,6 +42,7 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
     WETH9Mock public weth;
     DAIMock public dai;
     ERC20Mock public base;
+    ERC20Mock public otherERC20;
     FlashJoin public usdcJoin;
     FlashJoin public wethJoin;
     FlashJoin public daiJoin;
@@ -81,6 +82,7 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
         weth = new WETH9Mock();
         dai = new DAIMock();
         base = new ERC20Mock("Base", "BASE");
+        otherERC20 = new ERC20Mock("Other ERC20", "OTHERERC20");
 
         cauldron = new VRCauldron();
         ladle = new VRLadle(
@@ -97,18 +99,16 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
         daiJoin = new FlashJoin(address(dai));
         baseJoin = new FlashJoin(address(base));
 
-        
-
         setUpOracles();
+        vyToken = new VYToken(baseId, IOracle(address(chiRateOracle)), IJoin(baseJoin),base.name(), base.symbol());
         // Setting permissions
         ladleGovAuth();
         cauldronGovAuth(address(ladle));
         cauldronGovAuth(address(this));
+        // Adding assets & making base
         addAsset(baseId, address(base), baseJoin);
         makeBase(baseId, address(base), baseJoin, address(chiRateOracle), 9);
-
-        vyToken = new VYToken(baseId, IOracle(address(chiRateOracle)), IJoin(baseJoin),base.name(), base.symbol());
-
+        // Setting permission for vyToken
         bytes4[] memory roles = new bytes4[](2);
         roles[0] = Join.join.selector;
         roles[1] = Join.exit.selector;

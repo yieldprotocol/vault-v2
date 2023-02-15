@@ -420,7 +420,15 @@ contract PermitTests is CompleteSetup {
     }
 
     function getPermitDigest(bytes memory name, address contractAddress, uint256 chainId, Permit memory permit, uint nonce, uint deadline) internal view returns (bytes32) {
-        bytes32 DOMAIN_SEPARATOR = getDomainSeparator(name, contractAddress, chainId);
+        bytes32 DOMAIN_SEPARATOR = keccak256(
+            abi.encode(
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                keccak256(bytes(name)),
+                keccak256(bytes(ERC20Permit(contractAddress).version())),
+                chainId,
+                contractAddress
+            )
+        );
         return keccak256(
             abi.encodePacked(
                 "\x19\x01",
@@ -474,27 +482,26 @@ contract PermitTests is CompleteSetup {
         ladle.forwardDaiPermit(DaiAbstract(address(dai)), address(ladle.joins(daiId)), 0, block.timestamp, true, v,r,s);
     }
 
-    //TODO: Fix this test
-    function testCanUseLadleToExecutePermitUnk() public {
-        // uint256 chainId;
-        // assembly {
-        //     chainId := chainid()
-        // }
-        // bytes32 permitDigest = getDaiPermitDigest(
-        //     abi.encode(keccak256(bytes(IERC20Metadata(address(restrictedERC20Mock)).name()))),//name
-        //     address(restrictedERC20Mock),//contractAddress
-        //     chainId,//chainId
-        //     Permit(
-        //         user,//owner
-        //         address(ladle.joins(daiId)),//spender
-        //         100),//value
-        //     0,//nonce
-        //     block.timestamp,//deadline
-        //     true);
-        // (uint8 v, bytes32 r, bytes32 s) = vm.sign(uint256(keccak256(abi.encodePacked("user"))), permitDigest);
-        // vm.startPrank(user);
-        // vm.expectRevert("Unknown token");
-        // ladle.forwardDaiPermit(DaiAbstract(address(restrictedERC20Mock)), address(ladle.joins(daiId)), 0, block.timestamp, true, v,r,s);
+    function testCantUseLadleToExecutePermitOnUnknownToken() public {
+        uint256 chainId;
+        assembly {
+            chainId := chainid()
+        }
+        bytes32 permitDigest = getPermitDigest(
+            abi.encode(keccak256(bytes(IERC20Metadata(address(otherERC20)).name()))),//name
+            address(otherERC20),//contractAddress
+            chainId,//chainId
+            Permit(
+                user,//owner
+                address(ladle.joins(daiId)),//spender
+                100),//value
+            0,//nonce
+            block.timestamp//deadline
+        );
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(uint256(keccak256(abi.encodePacked("user"))), permitDigest);
+        vm.startPrank(user);
+        vm.expectRevert("Unknown token");
+        ladle.forwardPermit(otherERC20, address(0), 0, block.timestamp, v, r, s);
     }
 }
 
