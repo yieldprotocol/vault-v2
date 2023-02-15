@@ -104,6 +104,10 @@ jobs:
           MAINNET_RPC: ${{ secrets.MAINNET_RPC }}
       - name: Coverage
         run: yarn workspace @yield-protocol/vault-v2 forge:coverage
+        uses: romeovs/lcov-reporter-action@v0.2.11
+        with:
+          lcov-file: ./lcov.info
         env:
           ARBITRUM_RPC: $${{ secrets.ARBITRUM_RPC}}
           MAINNET_RPC: ${{ secrets.MAINNET_RPC }}
+
