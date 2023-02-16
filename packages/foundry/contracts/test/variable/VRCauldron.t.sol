@@ -363,7 +363,7 @@ contract UtilityFunctionTests is BorrowedState {
 }
 
 contract FuzzTests is CauldronPouredState {
-    function testFuzzPouring(int128 amount) public {
+    function testFuzz_Pouring(int128 amount) public {
         int256 startLevel = cauldron.level(vaultId);
         vm.assume(amount>1 );
         (address owner, , bytes6 ilkId) = cauldron.vaults(vaultId);
@@ -373,7 +373,7 @@ contract FuzzTests is CauldronPouredState {
         assertGt(cauldron.level(vaultId), 1);
     }
 
-    function testFuzzLevelGoesDownAsArtGoesUp(int128 art) public {
+    function testFuzz_LevelGoesDownAsArtGoesUp(int128 art) public {
         // Level goes down as art goes up
         (uint128 dust, ) = giveMeDustAndLine(vaultId);
 
@@ -388,8 +388,8 @@ contract FuzzTests is CauldronPouredState {
     }
 }
 
-contract FuzzTests2 is BorrowedState {
-    function testFuzzLevelGoesUpAsArtComesDown(int128 art) public {
+contract FuzzLevelTestsOnBorrowedState is BorrowedState {
+    function testFuzz_levelGoesUpAsArtComesDown(int128 art) public {
         vm.assume(art < 0);// Since we are paying back
         // Level goes up as art comes down
         (uint128 currentArt,) = cauldron.balances(vaultId);
@@ -403,7 +403,7 @@ contract FuzzTests2 is BorrowedState {
         assertLt(startLevel,cauldron.level(vaultId));
     }
 
-    function testFuzzLevelGoesUpAsInkGoesUp(int128 ink) public {
+    function testFuzz_levelGoesUpAsInkGoesUp(int128 ink) public {
         // Level goes up as ink goes up
         vm.assume(ink > 0);// Since we want to add collateral
 
@@ -416,7 +416,7 @@ contract FuzzTests2 is BorrowedState {
         assertLt(startLevel,cauldron.level(vaultId));
     }
 
-    function testFuzzLevelGoesDownAsInkGoesDown(int128 ink) public {
+    function testFuzz_levelGoesDownAsInkGoesDown(int128 ink) public {
         // Level goes down as ink goes down
         vm.assume(ink < 0);// Since we want to remove collateral
         (uint128 currentArt, uint128 currentInk) = cauldron.balances(vaultId);
@@ -428,7 +428,7 @@ contract FuzzTests2 is BorrowedState {
         assertGt(startLevel,cauldron.level(vaultId));
     }
 
-    function testFuzzLevelGoesDownAsRatioGoesUp(uint32 ratio) public {
+    function testFuzz_levelGoesDownAsRatioGoesUp(uint32 ratio) public {
         // Level goes down as ratio goes up
         (, bytes6 baseId, bytes6 ilkId) = cauldron.vaults(vaultId);
 
@@ -439,7 +439,7 @@ contract FuzzTests2 is BorrowedState {
         assertGt(startLevel,cauldron.level(vaultId));
     }
 
-    function testFuzzLevelGoesUpAsRatioGoesDown(uint32 ratio) public {
+    function testFuzz_levelGoesUpAsRatioGoesDown(uint32 ratio) public {
         // Level goes up as ratio goes down
         (, bytes6 baseId, bytes6 ilkId) = cauldron.vaults(vaultId);
 
@@ -450,7 +450,7 @@ contract FuzzTests2 is BorrowedState {
         assertLt(startLevel, cauldron.level(vaultId));
     }
 
-    function testFuzzLevelGoesDownAsPriceGoesUp(int256 price) public {
+    function testFuzz_levelGoesDownAsPriceGoesUp(int256 price) public {
         vm.assume(price > 0);
         (, bytes6 baseId, ) = cauldron.vaults(vaultId);
         (, int256 currentPrice, , ,) = usdcAggregator.latestRoundData();
@@ -462,7 +462,7 @@ contract FuzzTests2 is BorrowedState {
         assertGt(startLevel,cauldron.level(vaultId));
     }
 
-    function testFuzzLevelGoesupAsPriceGoesDown(int256 price) public {
+    function testFuzz_levelGoesupAsPriceGoesDown(int256 price) public {
         // Level goes up as price goes down
         vm.assume(price > 0);
         (, bytes6 baseId, ) = cauldron.vaults(vaultId);

@@ -194,7 +194,7 @@ contract VYTokenTest is VYTokenZeroState {
         assertEq(vyToken.flashFeeFactor(), 1);
     }
 
-    function testFuzzConvertToUnderlying(uint128 newRate) public {
+    function testFuzz_convertToUnderlyingWithIncreasingRates(uint256 newRate) public {
         console.log(
             "amount of underlying received should increase as rate goes up"
         );
@@ -217,7 +217,7 @@ contract VYTokenTest is VYTokenZeroState {
         assertLt(underlyingAmount, vyToken.convertToUnderlying(INK));
     }
 
-    function testFuzzConvertToUnderlying2(uint128 newRate) public {
+    function testFuzz_convertToUnderlyingWithDecreasingRates(uint256 newRate) public {
         console.log(
             "amount of underlying received should decrease as rate goes down"
         );
@@ -236,7 +236,7 @@ contract VYTokenTest is VYTokenZeroState {
         assertLt(underlyingAmount, vyToken.convertToUnderlying(INK));
     }
 
-    function testFuzzConvertToPrincipal(uint256 newRate) public {
+    function testFuzz_convertToPrincipalIncreasingRates(uint256 newRate) public {
         console.log("amount of principal should go down as rates go up");
         uint256 principalAmount = vyToken.convertToPrincipal(INK);
         (uint256 oldPerSecondRate, , ) = chiRateOracle.sources(
@@ -253,7 +253,7 @@ contract VYTokenTest is VYTokenZeroState {
         assertGt(principalAmount, vyToken.convertToPrincipal(INK));
     }
 
-    function testFuzzConvertToPrincipal2(uint256 newRate) public {
+    function testFuzz_convertToPrincipalDecreasingRates(uint256 newRate) public {
         console.log("amount of principal should go up as rates go down");
         uint256 principalAmount = vyToken.convertToPrincipal(INK);
         (uint256 oldPerSecondRate, , ) = chiRateOracle.sources(
