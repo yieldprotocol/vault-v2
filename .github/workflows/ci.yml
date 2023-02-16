@@ -107,8 +107,3 @@ jobs:
         env:
           ARBITRUM_RPC: $${{ secrets.ARBITRUM_RPC}}
           MAINNET_RPC: ${{ secrets.MAINNET_RPC }}
-      - name: Code Coverage Report
-        uses: romeovs/lcov-reporter-action@v0.2.11
-        with:
-          lcov-file: ./packages/foundry/lcov.info
-          github-token: ${{ secrets.TOKEN }}

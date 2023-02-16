@@ -30,8 +30,11 @@ import "../../mocks/ERC20Mock.sol";
 import "../../mocks/RestrictedERC20Mock.sol";
 import "@yield-protocol/utils-v2/contracts/interfaces/IWETH9.sol";
 import "@yield-protocol/utils-v2/contracts/token/IERC20Metadata.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastU256I256.sol";
+import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
 using CastU256I128 for uint256;
-
+using CastU256I256 for uint256;
+using WMul for uint256;
 abstract contract Fixture is Test, TestConstants, TestExtensions {
     address public admin = makeAddr("admin");
     address public user = makeAddr("user");
@@ -238,5 +241,26 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
         IERC20(assetAddress).approve(address(join),INK * 10);
         deal(assetAddress, address(this), INK * 10);
         ladle.pour(vaultId_, address(this), (INK * 10).i128(), 0);
+    }
+
+    function getAbove(int128 ink,int128 art, bytes12 vault) internal returns(bool){
+        (, bytes6 baseId, bytes6 ilkId) = cauldron.vaults(vault);
+
+        (IOracle oracle, uint32 ratio1) = cauldron.spotOracles(baseId, ilkId);
+        uint256 ratio = uint256(ratio1) * 1e12; // Normalized to 18 decimals
+        (uint256 inkValue, ) = oracle.get(
+            ilkId,
+            baseId,
+            uint256(int(ink))
+        ); // ink * spot
+        uint256 baseValue = cauldron.debtToBase(baseId, uint128(art));
+        return inkValue.i256() - baseValue.wmul(ratio).i256() >=0;
+    }
+
+    function giveMeDustAndLine(bytes12 vault) internal returns (uint128 dust, uint128 line) {
+        (, bytes6 baseId, bytes6 ilkId) = cauldron.vaults(vault);
+        (uint96 max, uint24 min, uint8 dec,) = cauldron.debt(baseId,ilkId);
+        dust = min * uint128(10)**dec;
+        line = max * uint128(10)**dec;
     }
 }

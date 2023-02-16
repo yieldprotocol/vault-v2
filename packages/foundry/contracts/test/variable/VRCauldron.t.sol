@@ -2,9 +2,14 @@
 pragma solidity >=0.8.13;
 
 import "./FixtureStates.sol";
+
 using CastU256I128 for uint256;
 using CastU256U128 for uint256;
 using CastI128U128 for int128;
+using CastU256I256 for uint256;
+using CastU128I128 for uint128;
+using WMul for uint256;
+using CauldronMath for uint128;
 
 contract AssetAndBaseAdditionTests is ZeroState {
     function testZeroIdentifier() public {
@@ -353,5 +358,72 @@ contract UtilityFunctionTests is BorrowedState {
         console.log("can get level");
         int256 level = cauldron.level(vaultId);
         assertGt(level, 1);
+    }
+}
+
+contract FuzzTests is CauldronPouredState {
+    function testFuzzPouring(int128 amount) public {
+        int256 startLevel = cauldron.level(vaultId);
+        vm.assume(amount>1 );
+        (address owner, , bytes6 ilkId) = cauldron.vaults(vaultId);
+        deal(cauldron.assets(ilkId), owner, uint(int(amount)));
+        IERC20(cauldron.assets(ilkId)).approve(address(ladle.joins(ilkId)), uint(int(amount)));
+        ladle.pour(vaultId,msg.sender,amount,0);
+        assertGt(cauldron.level(vaultId), 1);
+    }
+
+    function testFuzzLevelGoesDownAsArtGoesUp(int128 art) public {
+        // Level goes down as art goes up
+        (uint128 dust, ) = giveMeDustAndLine(vaultId);
+
+        vm.assume(art > 0); // Since we want to borrow
+        vm.assume(getAbove(INK.i128(), art, vaultId)); // Check if not undercollateralized
+        vm.assume(art.u128() >= dust); // Check if min debt is achieved
+
+        int256 startLevel = cauldron.level(vaultId);
+        ladle.pour(vaultId,msg.sender, 0, art);
+        
+        assertGt(startLevel,cauldron.level(vaultId));
+    }
+}
+
+contract FuzzTests2 is BorrowedState {
+    function testFuzzLevelGoesUpAsArtComesDown(int128 art) public {
+        vm.assume(art < 0);// Since we are paying back
+        // Level goes up as art comes down
+        (uint128 currentArt,) = cauldron.balances(vaultId);
+        vm.assume(currentArt.i128() + art >= 0);// Prevent paying back more than borrowed
+
+        int256 startLevel = cauldron.level(vaultId);
+        (, bytes6 baseId, ) = cauldron.vaults(vaultId);
+        IERC20(cauldron.assets(baseId)).approve(address(ladle.joins(baseId)), uint(int(art)));
+        ladle.pour(vaultId,msg.sender, 0, art);
+        
+        assertLt(startLevel,cauldron.level(vaultId));
+    }
+
+    function testFuzzLevelGoesUpAsInkGoesUp(int128 ink) public {
+        // Level goes up as ink goes up
+        vm.assume(ink > 0);// Since we want to add collateral
+
+        int256 startLevel = cauldron.level(vaultId);
+        (address owner, ,bytes6 ilkId ) = cauldron.vaults(vaultId);
+        deal(cauldron.assets(ilkId), owner, uint(int(ink)));
+        IERC20(cauldron.assets(ilkId)).approve(address(ladle.joins(ilkId)), uint(int(ink)));
+        ladle.pour(vaultId,msg.sender, ink, 0);
+        
+        assertLt(startLevel,cauldron.level(vaultId));
+    }
+
+    function testFuzzLevelGoesDownAsInkGoesDown(int128 ink) public {
+        // Level goes down as ink goes down
+        vm.assume(ink < 0);// Since we want to remove collateral
+        (uint128 currentArt, uint128 currentInk) = cauldron.balances(vaultId);
+        vm.assume(currentInk.i128() + ink >= 0);// Prevent removing more than collateral
+        vm.assume(getAbove(currentInk.add(ink).i128(), currentArt.i128(), vaultId));
+        int256 startLevel = cauldron.level(vaultId);
+        ladle.pour(vaultId,msg.sender, ink, 0);
+        
+        assertGt(startLevel,cauldron.level(vaultId));
     }
 }
