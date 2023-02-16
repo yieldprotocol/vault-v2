@@ -16,7 +16,7 @@
     "forge:build": "forge build",
     "forge:test": "forge test -vvv",
     "forge:snapshot": "forge snapshot",
-    "forge:coverage": "forge coverage --report lcov"
+    "forge:coverage": "forge coverage"
   },
   "repository": {
     "url": "git+https://github.com/yieldprotocol/vault-v2.git",

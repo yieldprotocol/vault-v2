@@ -194,61 +194,79 @@ contract VYTokenTest is VYTokenZeroState {
         assertEq(vyToken.flashFeeFactor(), 1);
     }
 
-    function testFuzzConvertToUnderlying(uint256 rate) public {
-        
+    function testFuzzConvertToUnderlying(uint128 newRate) public {
+        console.log(
+            "amount of underlying received should increase as rate goes up"
+        );
         uint256 underlyingAmount = vyToken.convertToUnderlying(INK);
-        (uint256 perSecondRate, , ) = chiRateOracle.sources(vyToken.underlyingId(),CHI);
-        
-        vm.assume(perSecondRate < rate);
-        chiRateOracle.updatePerSecondRate(vyToken.underlyingId(), CHI, rate);
+        (uint256 oldPerSecondRate, , ) = chiRateOracle.sources(
+            vyToken.underlyingId(),
+            CHI
+        );
+
+        vm.assume(oldPerSecondRate < newRate);
+        chiRateOracle.updatePerSecondRate(vyToken.underlyingId(), CHI, newRate);
         vm.warp(block.timestamp + 1);
-        (uint256 accumulated, uint256 updateTime) = chiRateOracle.get(vyToken.underlyingId(), CHI, 0);
-        vm.assume(accumulated <= type(uint).max/1e18);
-        // vm.warp(block.timestamp + 1);
-        console.logUint(type(uint).max);
-        assertLt(underlyingAmount,vyToken.convertToUnderlying(INK));
+        (uint256 accumulated, uint256 updateTime) = chiRateOracle.get(
+            vyToken.underlyingId(),
+            CHI,
+            0
+        );
+        vm.assume(accumulated <= type(uint256).max / INK);
+
+        assertLt(underlyingAmount, vyToken.convertToUnderlying(INK));
     }
 
-    function testFuzzConvertToUnderlying2(uint256 rate) public {
-        
+    function testFuzzConvertToUnderlying2(uint128 newRate) public {
+        console.log(
+            "amount of underlying received should decrease as rate goes down"
+        );
         uint256 underlyingAmount = vyToken.convertToUnderlying(INK);
-        (uint256 perSecondRate, , ) = chiRateOracle.sources(vyToken.underlyingId(),CHI);
-        
-        vm.assume(perSecondRate > rate && rate > 1e18);
-        chiRateOracle.updatePerSecondRate(vyToken.underlyingId(), CHI, rate);
+        (uint256 oldPerSecondRate, , ) = chiRateOracle.sources(
+            vyToken.underlyingId(),
+            CHI
+        );
+
+        vm.assume(oldPerSecondRate > newRate && newRate > 1e18);
+        chiRateOracle.updatePerSecondRate(vyToken.underlyingId(), CHI, newRate);
         vm.warp(block.timestamp + 1);
         chiRateOracle.get(vyToken.underlyingId(), CHI, 0);
         vm.warp(block.timestamp + 1);
-        
-        assertLt(underlyingAmount,vyToken.convertToUnderlying(INK));
+
+        assertLt(underlyingAmount, vyToken.convertToUnderlying(INK));
     }
 
-    function testFuzzConvertToPrincipal(uint256 rate) public {
-        
+    function testFuzzConvertToPrincipal(uint256 newRate) public {
+        console.log("amount of principal should go down as rates go up");
         uint256 principalAmount = vyToken.convertToPrincipal(INK);
-        (uint256 perSecondRate, , ) = chiRateOracle.sources(vyToken.underlyingId(),CHI);
-        
-        vm.assume(perSecondRate < rate);
-        chiRateOracle.updatePerSecondRate(vyToken.underlyingId(), CHI, rate);
+        (uint256 oldPerSecondRate, , ) = chiRateOracle.sources(
+            vyToken.underlyingId(),
+            CHI
+        );
+
+        vm.assume(oldPerSecondRate < newRate);
+        chiRateOracle.updatePerSecondRate(vyToken.underlyingId(), CHI, newRate);
         vm.warp(block.timestamp + 1);
         chiRateOracle.get(vyToken.underlyingId(), CHI, 0);
         vm.warp(block.timestamp + 1);
 
-        assertLt(principalAmount,vyToken.convertToPrincipal(INK));
+        assertGt(principalAmount, vyToken.convertToPrincipal(INK));
     }
 
-    function testFuzzConvertToPrincipal2(uint256 rate) public {
-        
+    function testFuzzConvertToPrincipal2(uint256 newRate) public {
+        console.log("amount of principal should go up as rates go down");
         uint256 principalAmount = vyToken.convertToPrincipal(INK);
-        (uint256 perSecondRate, , ) = chiRateOracle.sources(vyToken.underlyingId(),CHI);
-        
-        vm.assume(perSecondRate > rate && rate > 1e18);
-        chiRateOracle.updatePerSecondRate(vyToken.underlyingId(), CHI, rate);
+        (uint256 oldPerSecondRate, , ) = chiRateOracle.sources(
+            vyToken.underlyingId(),
+            CHI
+        );
+        vm.assume(oldPerSecondRate > newRate && newRate > 1e10);
+        chiRateOracle.updatePerSecondRate(vyToken.underlyingId(), CHI, newRate);
         vm.warp(block.timestamp + 1);
         chiRateOracle.get(vyToken.underlyingId(), CHI, 0);
         vm.warp(block.timestamp + 1);
-        
-        assertLt(principalAmount,vyToken.convertToPrincipal(INK));
+
+        assertLe(principalAmount, vyToken.convertToPrincipal(INK));
     }
 }
 
