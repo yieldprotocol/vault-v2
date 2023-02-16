@@ -193,6 +193,63 @@ contract VYTokenTest is VYTokenZeroState {
         vyToken.setFlashFeeFactor(1);
         assertEq(vyToken.flashFeeFactor(), 1);
     }
+
+    function testFuzzConvertToUnderlying(uint256 rate) public {
+        
+        uint256 underlyingAmount = vyToken.convertToUnderlying(INK);
+        (uint256 perSecondRate, , ) = chiRateOracle.sources(vyToken.underlyingId(),CHI);
+        
+        vm.assume(perSecondRate < rate);
+        chiRateOracle.updatePerSecondRate(vyToken.underlyingId(), CHI, rate);
+        vm.warp(block.timestamp + 1);
+        (uint256 accumulated, uint256 updateTime) = chiRateOracle.get(vyToken.underlyingId(), CHI, 0);
+        vm.assume(accumulated <= type(uint).max/1e18);
+        // vm.warp(block.timestamp + 1);
+        console.logUint(type(uint).max);
+        assertLt(underlyingAmount,vyToken.convertToUnderlying(INK));
+    }
+
+    function testFuzzConvertToUnderlying2(uint256 rate) public {
+        
+        uint256 underlyingAmount = vyToken.convertToUnderlying(INK);
+        (uint256 perSecondRate, , ) = chiRateOracle.sources(vyToken.underlyingId(),CHI);
+        
+        vm.assume(perSecondRate > rate && rate > 1e18);
+        chiRateOracle.updatePerSecondRate(vyToken.underlyingId(), CHI, rate);
+        vm.warp(block.timestamp + 1);
+        chiRateOracle.get(vyToken.underlyingId(), CHI, 0);
+        vm.warp(block.timestamp + 1);
+        
+        assertLt(underlyingAmount,vyToken.convertToUnderlying(INK));
+    }
+
+    function testFuzzConvertToPrincipal(uint256 rate) public {
+        
+        uint256 principalAmount = vyToken.convertToPrincipal(INK);
+        (uint256 perSecondRate, , ) = chiRateOracle.sources(vyToken.underlyingId(),CHI);
+        
+        vm.assume(perSecondRate < rate);
+        chiRateOracle.updatePerSecondRate(vyToken.underlyingId(), CHI, rate);
+        vm.warp(block.timestamp + 1);
+        chiRateOracle.get(vyToken.underlyingId(), CHI, 0);
+        vm.warp(block.timestamp + 1);
+
+        assertLt(principalAmount,vyToken.convertToPrincipal(INK));
+    }
+
+    function testFuzzConvertToPrincipal2(uint256 rate) public {
+        
+        uint256 principalAmount = vyToken.convertToPrincipal(INK);
+        (uint256 perSecondRate, , ) = chiRateOracle.sources(vyToken.underlyingId(),CHI);
+        
+        vm.assume(perSecondRate > rate && rate > 1e18);
+        chiRateOracle.updatePerSecondRate(vyToken.underlyingId(), CHI, rate);
+        vm.warp(block.timestamp + 1);
+        chiRateOracle.get(vyToken.underlyingId(), CHI, 0);
+        vm.warp(block.timestamp + 1);
+        
+        assertLt(principalAmount,vyToken.convertToPrincipal(INK));
+    }
 }
 
 abstract contract FlashLoanEnabledState is VYTokenZeroState {

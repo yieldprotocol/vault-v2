@@ -8,6 +8,7 @@ using CastU256U128 for uint256;
 using CastI128U128 for int128;
 using CastU256I256 for uint256;
 using CastU128I128 for uint128;
+
 using WMul for uint256;
 using CauldronMath for uint128;
 
@@ -425,5 +426,53 @@ contract FuzzTests2 is BorrowedState {
         ladle.pour(vaultId,msg.sender, ink, 0);
         
         assertGt(startLevel,cauldron.level(vaultId));
+    }
+
+    function testFuzzLevelGoesDownAsRatioGoesUp(uint32 ratio) public {
+        // Level goes down as ratio goes up
+        (, bytes6 baseId, bytes6 ilkId) = cauldron.vaults(vaultId);
+
+        (IOracle oracle, uint32 currentRatio) = cauldron.spotOracles(baseId, ilkId);
+        vm.assume(ratio > currentRatio);
+        int256 startLevel = cauldron.level(vaultId);
+        cauldron.setSpotOracle(baseId, ilkId, oracle, ratio);
+        assertGt(startLevel,cauldron.level(vaultId));
+    }
+
+    function testFuzzLevelGoesUpAsRatioGoesDown(uint32 ratio) public {
+        // Level goes up as ratio goes down
+        (, bytes6 baseId, bytes6 ilkId) = cauldron.vaults(vaultId);
+
+        (IOracle oracle, uint32 currentRatio) = cauldron.spotOracles(baseId, ilkId);
+        vm.assume(ratio < currentRatio);
+        int256 startLevel = cauldron.level(vaultId);
+        cauldron.setSpotOracle(baseId, ilkId, oracle, ratio);
+        assertLt(startLevel, cauldron.level(vaultId));
+    }
+
+    function testFuzzLevelGoesDownAsPriceGoesUp(int256 price) public {
+        vm.assume(price > 0);
+        (, bytes6 baseId, ) = cauldron.vaults(vaultId);
+        (, int256 currentPrice, , ,) = usdcAggregator.latestRoundData();
+        
+        // Level goes down as price goes up
+        vm.assume(price > currentPrice);
+        int256 startLevel = cauldron.level(vaultId);
+        usdcAggregator.set(uint256(price));
+        assertGt(startLevel,cauldron.level(vaultId));
+    }
+
+    function testFuzzLevelGoesupAsPriceGoesDown(int256 price) public {
+        // Level goes up as price goes down
+        vm.assume(price > 0);
+        (, bytes6 baseId, ) = cauldron.vaults(vaultId);
+        (, int256 currentPrice, , ,) = usdcAggregator.latestRoundData();
+        
+        vm.assume(price < currentPrice);
+        int256 startLevel = cauldron.level(vaultId);
+        usdcAggregator.set(uint256(price));
+        console.logInt(startLevel);
+        console.logInt(cauldron.level(vaultId));
+        assertLt(startLevel,cauldron.level(vaultId));
     }
 }

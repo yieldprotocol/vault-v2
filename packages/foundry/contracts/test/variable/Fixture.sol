@@ -125,6 +125,10 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
             AccumulatorMultiOracle.setSource.selector,
             address(this)
         );
+        chiRateOracle.grantRole(
+            AccumulatorMultiOracle.updatePerSecondRate.selector,
+            address(this)
+        );
         chiRateOracle.setSource(baseId, RATE, WAD, WAD * 2);
         chiRateOracle.setSource(baseId, CHI, WAD, WAD * 2);
 
