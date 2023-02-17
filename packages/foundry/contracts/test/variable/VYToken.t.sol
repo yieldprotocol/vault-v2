@@ -2,26 +2,6 @@
 pragma solidity >=0.8.13;
 
 import "./FixtureStates.sol";
-import {FlashBorrower} from "../../mocks/FlashBorrower.sol";
-
-abstract contract VYTokenZeroState is ZeroState {
-    address public timelock;
-    FlashBorrower public borrower;
-
-    function setUp() public virtual override {
-        super.setUp();
-        timelock = address(1);
-        vyToken.grantRole(VYToken.point.selector, address(timelock));
-        vyToken.grantRole(VYToken.mint.selector, address(this));
-        vyToken.grantRole(VYToken.deposit.selector, address(this));
-        vyToken.grantRole(VYToken.setFlashFeeFactor.selector, address(this));
-
-        borrower = new FlashBorrower(vyToken);
-        unit = uint128(10**ERC20Mock(address(vyToken)).decimals());
-        deal(address(vyToken), address(this), unit);
-        deal(address(vyToken.underlying()), address(this), unit);
-    }
-}
 
 contract VYTokenTest is VYTokenZeroState {
     function testChangeOracle() public {
@@ -206,7 +186,7 @@ contract VYTokenTest is VYTokenZeroState {
             CHI
         );
 
-        vm.assume(oldPerSecondRate < newRate);
+        newRate = uint128(bound(newRate, oldPerSecondRate, type(uint128).max));
         chiRateOracle.updatePerSecondRate(vyToken.underlyingId(), CHI, newRate);
         vm.warp(block.timestamp + 1);
         (uint256 accumulated, uint256 updateTime) = chiRateOracle.get(
@@ -230,7 +210,7 @@ contract VYTokenTest is VYTokenZeroState {
             CHI
         );
 
-        vm.assume(oldPerSecondRate > newRate && newRate > 1e18);
+        newRate = bound(newRate, 1e18, type(uint256).max);
         chiRateOracle.updatePerSecondRate(vyToken.underlyingId(), CHI, newRate);
         chiRateOracle.get(vyToken.underlyingId(), CHI, 0);
 
@@ -247,7 +227,7 @@ contract VYTokenTest is VYTokenZeroState {
             CHI
         );
 
-        vm.assume(oldPerSecondRate < newRate);
+        newRate = uint128(bound(newRate, oldPerSecondRate, type(uint128).max));
         chiRateOracle.updatePerSecondRate(vyToken.underlyingId(), CHI, newRate);
         vm.warp(block.timestamp + 1);
         chiRateOracle.get(vyToken.underlyingId(), CHI, 0);
@@ -264,20 +244,12 @@ contract VYTokenTest is VYTokenZeroState {
             vyToken.underlyingId(),
             CHI
         );
-        vm.assume(oldPerSecondRate > newRate && newRate > 1e10);
+
+        newRate = bound(newRate, 1e10, oldPerSecondRate - 1);
         chiRateOracle.updatePerSecondRate(vyToken.underlyingId(), CHI, newRate);
         chiRateOracle.get(vyToken.underlyingId(), CHI, 0);
 
         assertLe(principalAmount, vyToken.convertToPrincipal(INK));
-    }
-}
-
-abstract contract FlashLoanEnabledState is VYTokenZeroState {
-    event Transfer(address indexed src, address indexed dst, uint256 wad);
-
-    function setUp() public override {
-        super.setUp();
-        vyToken.setFlashFeeFactor(0);
     }
 }
 

@@ -2,7 +2,9 @@
 pragma solidity >=0.8.13;
 
 import "./Fixture.sol";
+import {FlashBorrower} from "../../mocks/FlashBorrower.sol";
 using CastU256I128 for uint256;
+
 abstract contract ZeroState is Fixture {
     // Events we are testing
     event VaultPoured(bytes12 indexed vaultId, bytes6 indexed baseId, bytes6 indexed ilkId, int128 ink, int128 art);
@@ -139,5 +141,33 @@ abstract contract ETHVaultPouredAndDebtState is ETHVaultPouredState {
     function setUp() public override virtual{
         super.setUp();
         ladle.pour(ethVaultId, address(this), 0, ART.i128());
+    }
+}
+
+abstract contract VYTokenZeroState is ZeroState {
+    address public timelock;
+    FlashBorrower public borrower;
+
+    function setUp() public virtual override {
+        super.setUp();
+        timelock = address(1);
+        vyToken.grantRole(VYToken.point.selector, address(timelock));
+        vyToken.grantRole(VYToken.mint.selector, address(this));
+        vyToken.grantRole(VYToken.deposit.selector, address(this));
+        vyToken.grantRole(VYToken.setFlashFeeFactor.selector, address(this));
+
+        borrower = new FlashBorrower(vyToken);
+        unit = uint128(10**ERC20Mock(address(vyToken)).decimals());
+        deal(address(vyToken), address(this), unit);
+        deal(address(vyToken.underlying()), address(this), unit);
+    }
+}
+
+abstract contract FlashLoanEnabledState is VYTokenZeroState {
+    event Transfer(address indexed src, address indexed dst, uint256 wad);
+
+    function setUp() public override {
+        super.setUp();
+        vyToken.setFlashFeeFactor(0);
     }
 }

@@ -362,7 +362,7 @@ contract UtilityFunctionTests is BorrowedState {
     }
 }
 
-contract FuzzTests is CauldronPouredState {
+contract FuzzTestsOnCauldronPouredState is CauldronPouredState {
     function testFuzz_Pouring(int128 amount) public {
         int256 startLevel = cauldron.level(vaultId);
         vm.assume(amount>1 );
