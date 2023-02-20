@@ -29,6 +29,13 @@ interface ICauldron {
         view
         returns (DataTypes.Balances memory);
 
+
+    // @dev Assets that are approved as collateral for a series
+    function ilks(bytes6 seriesId, bytes6 assetId)
+        external
+        view
+        returns (bool);
+
     /// @dev Max, min and sum of debt per underlying and collateral.
     function debt(bytes6 baseId, bytes6 ilkId)
         external

@@ -68,7 +68,7 @@ contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl {
     /// @dev Advertising through ERC165 the available functions
     function supportsInterface(bytes4 interfaceID)
         external
-        view
+        pure
         returns (bool)
     {
         // ERC-165 support = `bytes4(keccak256('supportsInterface(bytes4)'))`.
@@ -87,7 +87,7 @@ contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl {
         uint256 id,
         uint256,
         bytes calldata
-    ) external override returns (bytes4) {
+    ) external view override returns (bytes4) {
         require(id == fCashId, "Token fCashId not accepted");
         return ERC1155TokenReceiver.onERC1155Received.selector;
     }
@@ -99,7 +99,7 @@ contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl {
         uint256[] calldata ids,
         uint256[] calldata,
         bytes calldata
-    ) external override returns (bytes4) {
+    ) external view override returns (bytes4) {
         uint256 length = ids.length;
         for (uint256 i; i < length; ++i)
             require(ids[i] == fCashId, "Token fCashId not accepted");

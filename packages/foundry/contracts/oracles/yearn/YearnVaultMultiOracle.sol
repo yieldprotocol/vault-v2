@@ -86,7 +86,7 @@ contract YearnVaultMultiOracle is IOracle, AccessControl {
         bytes32 baseId,
         bytes32 quoteId,
         uint256 amountBase
-    ) external override returns (uint256 amountQuote, uint256 updateTime) {
+    ) external view override returns (uint256 amountQuote, uint256 updateTime) {
         return _peek(baseId.b6(), quoteId.b6(), amountBase);
     }
 
