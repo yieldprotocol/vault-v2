@@ -145,12 +145,10 @@ abstract contract ETHVaultPouredAndDebtState is ETHVaultPouredState {
 }
 
 abstract contract VYTokenZeroState is ZeroState {
-    address public timelock;
     FlashBorrower public borrower;
 
     function setUp() public virtual override {
         super.setUp();
-        timelock = address(1);
         vyToken.grantRole(VYToken.point.selector, address(timelock));
         vyToken.grantRole(VYToken.mint.selector, address(this));
         vyToken.grantRole(VYToken.deposit.selector, address(this));

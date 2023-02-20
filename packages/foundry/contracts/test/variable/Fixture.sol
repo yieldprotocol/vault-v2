@@ -35,9 +35,11 @@ import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
 using CastU256I128 for uint256;
 using CastU256I256 for uint256;
 using WMul for uint256;
+
 abstract contract Fixture is Test, TestConstants, TestExtensions {
     address public admin = makeAddr("admin");
     address public user = makeAddr("user");
+    address public immutable timelock;
     VRCauldron public cauldron;
     VRLadle public ladle;
     Witch public witch;
@@ -80,10 +82,21 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
     uint256 public ART = WAD;
     uint256 public FEE = 1000;
     uint128 public unit;
+
+    address USDC_JOIN = address(0x0d9A1A773be5a83eEbda23bf98efB8585C3ae4f4);
+    address DAI_JOIN = address(0x4fE92119CDf873Cf8826F4E6EcfD4E578E3D44Dc);
+    address WETH_JOIN = address(0x3bDb887Dc46ec0E964Df89fFE2980db0121f0fD0);
+
+    constructor(){
+        timelock = addresses[MAINNET][TIMELOCK];
+    }
+
     function setUp() public virtual {
-        usdc = new USDCMock();
-        weth = new WETH9Mock();
-        dai = new DAIMock();
+        vm.createSelectFork(MAINNET, 16668354);
+        
+        usdc = USDCMock(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
+        weth = WETH9Mock(payable(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2));
+        dai = DAIMock(0x6B175474E89094C44Da98b954EedeAC495271d0F);
         base = new ERC20Mock("Base", "BASE");
         otherERC20 = new ERC20Mock("Other ERC20", "OTHERERC20");
 
@@ -93,13 +106,23 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
             IWETH9(address(weth))
         );
         witch = new Witch(ICauldron(address(cauldron)), ILadle(address(ladle)));
-
         
         restrictedERC20Mock = new RestrictedERC20Mock("Restricted", "RESTRICTED");
 
-        usdcJoin = new FlashJoin(address(usdc));
-        wethJoin = new FlashJoin(address(weth));
-        daiJoin = new FlashJoin(address(dai));
+        usdcJoin = FlashJoin(USDC_JOIN);
+        wethJoin = FlashJoin(WETH_JOIN);
+        daiJoin = FlashJoin(DAI_JOIN);
+
+        bytes4 role = 0x00000000;
+        vm.startPrank(timelock);
+        AccessControl access = AccessControl(address(usdcJoin));
+        access.grantRole(role, address(this));
+        access = AccessControl(address(wethJoin));
+        access.grantRole(role, address(this));
+        access = AccessControl(address(daiJoin));
+        access.grantRole(role, address(this));
+        vm.stopPrank();
+
         baseJoin = new FlashJoin(address(base));
 
         setUpOracles();
@@ -144,7 +167,11 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
         baseAggregator = new ChainlinkAggregatorV3Mock();
         baseAggregator.set(1e18 / 2);
 
-        spotOracle = new ChainlinkMultiOracle();
+        spotOracle = ChainlinkMultiOracle(0xcDCe5C87f691058B61f3A65913f1a3cBCbAd9F52);
+
+        bytes4 role = 0x00000000;
+        AccessControl access = AccessControl(address(spotOracle));
+        vm.prank(timelock);
         spotOracle.grantRole(
             ChainlinkMultiOracle.setSource.selector,
             address(this)
@@ -153,23 +180,9 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
         spotOracle.setSource(
             ETH,
             IERC20Metadata(address(weth)),
-            usdcId,
-            IERC20Metadata(address(usdc)),
-            address(usdcAggregator)
-        );
-        spotOracle.setSource(
-            ETH,
-            IERC20Metadata(address(weth)),
             baseId,
             IERC20Metadata(address(base)),
             address(ethAggregator)
-        );
-        spotOracle.setSource(
-            ETH,
-            IERC20Metadata(address(weth)),
-            daiId,
-            IERC20Metadata(address(dai)),
-            address(daiAggregator)
         );
     }
 

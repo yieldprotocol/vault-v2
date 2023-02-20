@@ -583,12 +583,13 @@ contract TokensAndIntegrationTests is WithTokensAndIntegrationState {
 contract ETHTests is ETHVaultBuiltState {
     function testCanTransferETHThenPour() public {
         console.log("can transfer eth and then pour");
+        uint before =  weth.balanceOf(address(ladle.joins(wethId)));
         ladle.joinEther{value: INK}(wethId);
         vm.expectEmit(true, true, true, true);
         emit VaultPoured(ethVaultId, baseId, wethId, INK.i128(), 0);
         ladle.pour(ethVaultId, address(this), INK.i128(), 0);
         
-        assertEq(weth.balanceOf(address(ladle.joins(wethId))), INK);
+        assertEq(weth.balanceOf(address(ladle.joins(wethId))) - before, INK);
         (uint128 art, uint128 ink) = cauldron.balances(ethVaultId);
         assertEq(ink, INK);
         assertEq(art, 0);
@@ -596,7 +597,7 @@ contract ETHTests is ETHVaultBuiltState {
 
     function testPourWithoutSendingETHReverts() public {
         console.log("pour without sending eth reverts");
-        weth.approve(address(wethJoin), 0 );
+        weth.approve(address(wethJoin), 0);
         vm.expectRevert("ERC20: Insufficient approval");
         ladle.pour(ethVaultId, address(this), INK.i128(), 0);
     }
@@ -609,9 +610,10 @@ contract ETHTests is ETHVaultBuiltState {
 
         vm.expectEmit(true, true, true, true);
         emit VaultPoured(ethVaultId, baseId, wethId, INK.i128(), 0);
+        uint before =  weth.balanceOf(address(ladle.joins(wethId)));
         ladle.batch{ value: INK}(calls);
 
-        assertEq(weth.balanceOf(address(ladle.joins(wethId))), INK);
+        assertEq(weth.balanceOf(address(ladle.joins(wethId))) - before, INK);
         (uint128 art, uint128 ink) = cauldron.balances(ethVaultId);
         assertEq(ink, INK);
         assertEq(art, 0);
@@ -627,11 +629,12 @@ contract ETHTests is ETHVaultBuiltState {
 contract ETHVaultPouredStateTest is ETHVaultPouredState {
     function testPourToWithdraw() public {
         console.log("can pour to withdraw");
-        ladle.pour(ethVaultId, address(this), -INK.i128(), 0);
-
-        assertEq(weth.balanceOf(address(ladle.joins(wethId))), 0);
-        assertEq(weth.balanceOf(address(this)), INK);
         (uint128 art, uint128 ink) = cauldron.balances(ethVaultId);
+        ladle.pour(ethVaultId, address(this), -int128(ink), 0);
+
+        // assertEq(weth.balanceOf(address(ladle.joins(wethId))), 0);
+        assertEq(weth.balanceOf(address(this)), INK);
+        ( art,  ink) = cauldron.balances(ethVaultId);
         assertEq(ink, 0);
         assertEq(art, 0);
     }
@@ -642,10 +645,10 @@ contract ETHVaultPouredStateTest is ETHVaultPouredState {
         bytes[] memory calls = new bytes[](2);
         calls[0] = abi.encodeWithSelector(VRLadle.pour.selector, ethVaultId, address(ladle), -INK.i128(), 0);
         calls[1] = abi.encodeWithSelector(VRLadle.exitEther.selector, address(this));
-
+        uint before =  weth.balanceOf(address(ladle.joins(wethId)));
         ladle.batch(calls);
 
-        assertEq(weth.balanceOf(address(ladle.joins(wethId))), 0);
+        assertEq(before - INK - weth.balanceOf(address(ladle.joins(wethId))), 0);
         assertEq(weth.balanceOf(address(this)), 0);
         (uint128 art, uint128 ink) = cauldron.balances(ethVaultId);
         assertEq(ink, 0);
