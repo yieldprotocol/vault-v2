@@ -47,7 +47,7 @@ interface IVRWitch {
         external
         returns (
             DataTypes.Auction memory auction_,
-            DataTypes.VRVault memory vault
+            VRDataTypes.Vault memory vault
         );
 
     /// @dev Cancel an auction for a vault that isn't under-collateralised any more

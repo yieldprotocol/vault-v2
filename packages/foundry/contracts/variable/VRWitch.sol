@@ -194,7 +194,7 @@ contract VRWitch is AccessControl {
         external
         returns (
             DataTypes.Auction memory auction_,
-            DataTypes.VRVault memory vault
+            VRDataTypes.Vault memory vault
         )
     {
         // If the world has not turned to ashes and darkness, auctions will malfunction on
@@ -245,7 +245,7 @@ contract VRWitch is AccessControl {
         bytes12 vaultId,
         DataTypes.Auction memory auction_,
         DataTypes.Line memory line
-    ) internal virtual returns (DataTypes.VRVault memory vault) {
+    ) internal virtual returns (VRDataTypes.Vault memory vault) {
         // The Witch is now in control of the vault under auction
         vault = cauldron.give(vaultId, address(this));
         emit Auctioned(
@@ -266,7 +266,7 @@ contract VRWitch is AccessControl {
     /// @return auction_ Auction data
     /// @return line Line data
     function _calcAuction(
-        DataTypes.VRVault memory vault,
+        VRDataTypes.Vault memory vault,
         address to,
         DataTypes.Balances memory balances,
         DataTypes.Debt memory debt
@@ -621,7 +621,7 @@ contract VRWitch is AccessControl {
         )
     {
         DataTypes.Auction memory auction_ = auctions[vaultId];
-        DataTypes.VRVault memory vault = cauldron.vaults(vaultId);
+        VRDataTypes.Vault memory vault = cauldron.vaults(vaultId);
 
         // If the vault hasn't been auctioned yet, we calculate what values it'd have if it was started right now
         if (auction_.start == 0) {

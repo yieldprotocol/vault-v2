@@ -123,7 +123,7 @@ library Mocks  {
             abi.encode(returned1)
         );
     }
-    function mock(function (bytes12) external view returns(DataTypes.VRVault memory) f, bytes12 param1, DataTypes.VRVault memory returned1) internal {
+    function mock(function (bytes12) external view returns(VRDataTypes.Vault memory) f, bytes12 param1, VRDataTypes.Vault memory returned1) internal {
         vm.mockCall(
             f.address,
             abi.encodeWithSelector(f.selector, param1),
@@ -131,7 +131,7 @@ library Mocks  {
         );
     }
 
-    function mock(function (bytes12, address) external returns(DataTypes.VRVault memory) f, bytes12 param1, address param2, DataTypes.VRVault memory returned1) internal {
+    function mock(function (bytes12, address) external returns(VRDataTypes.Vault memory) f, bytes12 param1, address param2, VRDataTypes.Vault memory returned1) internal {
         vm.mockCall(
             f.address,
             abi.encodeWithSelector(f.selector, param1, param2),
@@ -163,7 +163,7 @@ library Mocks  {
         );
     }
     
-    function mock(function (address, bytes12, bytes6, bytes6) external returns(DataTypes.VRVault memory) f, address p1, bytes12 p2, bytes6 p3, bytes6 p4, DataTypes.VRVault memory r1) internal {
+    function mock(function (address, bytes12, bytes6, bytes6) external returns(VRDataTypes.Vault memory) f, address p1, bytes12 p2, bytes6 p3, bytes6 p4, VRDataTypes.Vault memory r1) internal {
         vm.mockCall(
             f.address,
             abi.encodeWithSelector(f.selector, p1, p2, p3, p4),
@@ -249,7 +249,7 @@ library Mocks  {
         );
     }
 
-    function verify(function (bytes12, address) external returns(DataTypes.VRVault memory) f, bytes12 param1, address param2) internal {
+    function verify(function (bytes12, address) external returns(VRDataTypes.Vault memory) f, bytes12 param1, address param2) internal {
         vm.expectCall(
             f.address,
             abi.encodeWithSelector(f.selector, param1, param2)
@@ -284,7 +284,7 @@ library Mocks  {
         );
     }
 
-    function verify(function (address, bytes12, bytes6, bytes6) external returns(DataTypes.VRVault memory) f, address p1, bytes12 p2, bytes6 p3, bytes6 p4) internal {
+    function verify(function (address, bytes12, bytes6, bytes6) external returns(VRDataTypes.Vault memory) f, address p1, bytes12 p2, bytes6 p3, bytes6 p4) internal {
         vm.expectCall(
             f.address,
             abi.encodeWithSelector(f.selector, p1, p2, p3, p4)

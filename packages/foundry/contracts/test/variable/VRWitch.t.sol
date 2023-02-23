@@ -228,7 +228,7 @@ contract WitchStateZeroTest is WitchStateZero {
 abstract contract WitchWithMetadata is WitchStateZero {
     using Mocks for *;
 
-    DataTypes.VRVault vault;
+    VRDataTypes.Vault vault;
     DataTypes.Balances balances;
     DataTypes.Debt debt;
 
@@ -242,7 +242,7 @@ abstract contract WitchWithMetadata is WitchStateZero {
     function setUp() public virtual override {
         super.setUp();
 
-        vault = DataTypes.VRVault({owner: bob, baseId: BASE_ID, ilkId: ILK_ID});
+        vault = VRDataTypes.Vault({owner: bob, baseId: BASE_ID, ilkId: ILK_ID});
 
         balances = DataTypes.Balances({art: 100_000e6, ink: 100 ether});
 
@@ -485,7 +485,7 @@ contract WitchWithAuction is WitchWithMetadata {
 
         cauldron.level.mock(VAULT_ID, -1);
 
-        DataTypes.VRVault memory givenVault = vault;
+        VRDataTypes.Vault memory givenVault = vault;
         givenVault.owner = address(witch);
         cauldron.give.mock(VAULT_ID, address(witch), givenVault);
 
@@ -503,7 +503,7 @@ contract WitchWithAuction is WitchWithMetadata {
     }
 
     function _stubVault(StubVault memory params) internal {
-        DataTypes.VRVault memory v = DataTypes.VRVault({
+        VRDataTypes.Vault memory v = VRDataTypes.Vault({
             owner: bob,
             baseId: BASE_ID,
             ilkId: ILK_ID
