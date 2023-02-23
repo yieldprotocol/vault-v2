@@ -160,4 +160,34 @@ contract WitchBase is AccessControl {
         auctioneerReward = auctioneerReward_;
         emit AuctioneerRewardSet(auctioneerReward_);
     }
+
+    /// @dev Logs that a certain amount of a vault was liquidated
+    /// Useful as a method so it can be overridden by specialised witches that may need to do extra accounting or notify 3rd parties
+    /// @param vaultId Id of the liquidated vault
+    /// @param buyer Who liquidated the vault
+    /// @param ink How much collateral was sold
+    /// @param art How much debt was repaid
+    function _collateralBought(
+        bytes12 vaultId,
+        address buyer,
+        uint256 ink,
+        uint256 art
+    ) internal virtual {
+        emit Bought(vaultId, buyer, ink, art);
+    }
+
+    /// @dev Loads the auction data for a given `vaultId` (if valid)
+    /// @param vaultId Id of the vault for which we need the auction data
+    /// @return auction_ Auction data for `vaultId`
+    function _auction(bytes12 vaultId)
+        internal
+        view
+        returns (DataTypes.Auction memory auction_)
+    {
+        auction_ = auctions[vaultId];
+
+        if (auction_.start == 0) {
+            revert VaultNotUnderAuction(vaultId);
+        }
+    }
 }
