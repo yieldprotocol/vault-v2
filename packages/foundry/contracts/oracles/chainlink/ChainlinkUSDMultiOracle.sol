@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity >=0.8.13;
 
-import '@yield-protocol/utils-v2/contracts/access/AccessControl.sol';
-import '@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol';
-import '@yield-protocol/utils-v2/contracts/token/IERC20Metadata.sol';
+import '@yield-protocol/utils-v2/src/access/AccessControl.sol';
+import '@yield-protocol/utils-v2/src/utils/Cast.sol';
+import '@yield-protocol/utils-v2/src/token/IERC20Metadata.sol';
 import '../../interfaces/IOracle.sol';
 import '../../constants/Constants.sol';
 import './AggregatorV3Interface.sol';
@@ -14,7 +14,7 @@ import './FlagsInterface.sol';
  * @notice Chainlink only uses USD or ETH as a quote in the aggregators, and we will use only USD
  */
 contract ChainlinkUSDMultiOracle is IOracle, AccessControl, Constants {
-    using CastBytes32Bytes6 for bytes32;
+    using Cast for bytes32;
 
     event SourceSet(bytes6 indexed baseId, IERC20Metadata base, address indexed source);
 

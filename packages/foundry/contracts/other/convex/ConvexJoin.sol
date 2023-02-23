@@ -3,16 +3,16 @@
 pragma solidity >=0.8.13;
 
 import "../../interfaces/ICauldron.sol";
-import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
-import "@yield-protocol/utils-v2/contracts/token/TransferHelper.sol";
-import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
+import "@yield-protocol/utils-v2/src/token/IERC20.sol";
+import "@yield-protocol/utils-v2/src/token/TransferHelper.sol";
+import "@yield-protocol/utils-v2/src/utils/Cast.sol";
 import "./interfaces/IRewardStaking.sol";
 import "./CvxMining.sol";
 import "../../Join.sol";
 
 /// @notice Wrapper used to manage staking of Convex tokens
 contract ConvexJoin is Join {
-    using CastU256U128 for uint256;
+    using Cast for uint256;
 
     struct EarnedData {
         address token;

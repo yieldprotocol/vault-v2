@@ -13,7 +13,7 @@ import { ILadle } from "../../../interfaces/ILadle.sol";
 import { Join } from "../../../Join.sol";
 import { NotionalJoin } from "../../../other/notional/NotionalJoin.sol";
 import { ERC1155 } from "../../../other/notional/ERC1155.sol";
-import { IWETH9 } from "@yield-protocol/utils-v2/contracts/interfaces/IWETH9.sol";
+import { IWETH9 } from "@yield-protocol/utils-v2/src/interfaces/IWETH9.sol";
 import "./NotionalTypes.sol";
 
 using stdStorage for StdStorage;

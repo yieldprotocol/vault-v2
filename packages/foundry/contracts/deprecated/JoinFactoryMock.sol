@@ -2,7 +2,7 @@
 pragma solidity >=0.8.13;
 
 import "../interfaces/IJoinFactory.sol";
-import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
+import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
 import "../Join.sol";
 
 

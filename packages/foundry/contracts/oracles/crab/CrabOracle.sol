@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity >=0.8.13;
 
-import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
-import "@yield-protocol/utils-v2/contracts/token/IERC20Metadata.sol";
+import "@yield-protocol/utils-v2/src/utils/Cast.sol";
+import "@yield-protocol/utils-v2/src/token/IERC20Metadata.sol";
 import "../../interfaces/IOracle.sol";
 
 interface ICrabStrategy {
@@ -31,7 +31,7 @@ interface ICrabStrategy {
  * @notice Oracle to fetch Crab-ETH exchange amounts
  */
 contract CrabOracle is IOracle {
-    using CastBytes32Bytes6 for bytes32;
+    using Cast for bytes32;
     ICrabStrategy immutable crabStrategy;
     IOracle immutable uniswapV3Oracle;
     bytes6 immutable ethId;

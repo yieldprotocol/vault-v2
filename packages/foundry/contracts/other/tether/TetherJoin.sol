@@ -4,10 +4,10 @@ pragma solidity >=0.8.13;
 
 import "./IUSDT.sol";
 import "../../FlashJoin.sol";
-import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
-import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import "@yield-protocol/utils-v2/contracts/token/TransferHelper.sol";
-import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";
+import "@yield-protocol/utils-v2/src/token/IERC20.sol";
+import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
+import "@yield-protocol/utils-v2/src/token/TransferHelper.sol";
+import "@yield-protocol/utils-v2/src/utils/Math.sol";
 
 /// @dev Tether includes code in its contract to apply a fee to transfers. In developing this contract,
 /// we took a selfish approach. The TetherJoin will only care about the amount that USDT that it receives,
@@ -18,7 +18,7 @@ import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";
 /// on receival due to fees. This aproach extends to flash loans.
 contract TetherJoin is FlashJoin {
     using TransferHelper for IERC20;
-    using WDiv for uint256;
+    using Math for *;
 
     constructor(address asset_) FlashJoin(asset_) {}
 

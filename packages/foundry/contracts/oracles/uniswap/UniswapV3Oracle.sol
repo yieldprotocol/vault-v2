@@ -2,9 +2,9 @@
 pragma solidity >=0.8.13;
 
 import "../../interfaces/IOracle.sol";
-import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
-import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
+import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
+import "@yield-protocol/utils-v2/src/utils/Cast.sol";
+import "@yield-protocol/utils-v2/src/utils/Cast.sol";
 import "./uniswapv0.8/OracleLibrary.sol";
 import "./uniswapv0.8/pool/IUniswapV3PoolImmutables.sol";
 
@@ -12,8 +12,7 @@ import "./uniswapv0.8/pool/IUniswapV3PoolImmutables.sol";
  * @title UniswapV3Oracle
  */
 contract UniswapV3Oracle is IOracle, AccessControl {
-    using CastBytes32Bytes6 for bytes32;
-    using CastU256U128 for uint256;
+    using Cast for *;
 
     event SourceSet(bytes6 indexed base, bytes6 indexed quote, address indexed pool, uint32 twapInterval);
 

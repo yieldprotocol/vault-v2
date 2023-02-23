@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity >=0.8.0;
-import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
+import "@yield-protocol/utils-v2/src/utils/Math.sol";
 import "../../mocks/ERC20Mock.sol";
 import "./ERC1155.sol"; // TODO: Move to yield-utils-v2
 import "./interfaces/IBatchAction.sol";
 
 contract FCashMock is ERC1155 {
-    using WMul for uint256;
+    using Math for *;
+
 
     ERC20Mock public immutable underlying;
     uint256 public immutable fCashId;

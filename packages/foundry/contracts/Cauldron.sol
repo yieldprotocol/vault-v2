@@ -3,15 +3,9 @@ pragma solidity >=0.8.13;
 import "./interfaces/IFYToken.sol";
 import "./interfaces/IOracle.sol";
 import "./interfaces/DataTypes.sol";
-import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
-import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";
-import "@yield-protocol/utils-v2/contracts/math/WDivUp.sol";
-import "@yield-protocol/utils-v2/contracts/cast/CastU128I128.sol";
-import "@yield-protocol/utils-v2/contracts/cast/CastI128U128.sol";
-import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
-import "@yield-protocol/utils-v2/contracts/cast/CastU256U32.sol";
-import "@yield-protocol/utils-v2/contracts/cast/CastU256I256.sol";
+import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
+import "@yield-protocol/utils-v2/src/utils/Math.sol";
+import "@yield-protocol/utils-v2/src/utils/Cast.sol";
 import "./constants/Constants.sol";
 
 library CauldronMath {
@@ -24,14 +18,8 @@ library CauldronMath {
 
 contract Cauldron is AccessControl(), Constants {
     using CauldronMath for uint128;
-    using WMul for uint256;
-    using WDiv for uint256;
-    using WDivUp for uint256;
-    using CastU128I128 for uint128;
-    using CastI128U128 for int128;
-    using CastU256U128 for uint256;
-    using CastU256U32 for uint256;
-    using CastU256I256 for uint256;
+    using Math for *;
+    using Cast for *;
 
     event AssetAdded(bytes6 indexed assetId, address indexed asset);
     event SeriesAdded(bytes6 indexed seriesId, bytes6 indexed baseId, address indexed fyToken);

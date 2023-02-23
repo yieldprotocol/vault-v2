@@ -3,26 +3,19 @@ pragma solidity >=0.8.13;
 
 import "erc3156/contracts/interfaces/IERC3156FlashBorrower.sol";
 import "erc3156/contracts/interfaces/IERC3156FlashLender.sol";
-import "@yield-protocol/utils-v2/contracts/token/ERC20Permit.sol";
-import "@yield-protocol/utils-v2/contracts/token/SafeERC20Namer.sol";
-import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
-import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";
-import "@yield-protocol/utils-v2/contracts/math/WDivUp.sol";
-import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
-import "@yield-protocol/utils-v2/contracts/cast/CastU256U32.sol";
+import "@yield-protocol/utils-v2/src/token/ERC20Permit.sol";
+import "@yield-protocol/utils-v2/src/token/SafeERC20Namer.sol";
+import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
+import "@yield-protocol/utils-v2/src/utils/Math.sol";
+import "@yield-protocol/utils-v2/src/utils/Cast.sol";
 import "./interfaces/IFYToken.sol";
 import "./interfaces/IJoin.sol";
 import "./interfaces/IOracle.sol";
 import "./constants/Constants.sol";
 
 contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, Constants {
-    using WMul for uint256;
-    using WDiv for uint256;
-    using WDivUp for uint256;
-
-    using CastU256U128 for uint256;
-    using CastU256U32 for uint256;
+    using Math for *;
+    using Cast for *;
 
     event Point(bytes32 indexed param, address value);
     event FlashFeeFactorSet(uint256 indexed fee);

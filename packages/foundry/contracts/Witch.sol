@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity >=0.8.13;
 
-import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
-import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";
-import "@yield-protocol/utils-v2/contracts/math/WDivUp.sol";
-import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
+import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
+import "@yield-protocol/utils-v2/src/utils/Math.sol";
+import "@yield-protocol/utils-v2/src/utils/Cast.sol";
 import "./interfaces/ILadle.sol";
 import "./interfaces/ICauldron.sol";
 import "./interfaces/IJoin.sol";
@@ -18,10 +16,8 @@ import "./interfaces/DataTypes.sol";
 /// all the debt. The auction is held open at the final price indefinitely.
 /// @dev After the debt is settled, the Witch returns the vault to its original owner.
 contract Witch is AccessControl {
-    using WMul for uint256;
-    using WDiv for uint256;
-    using WDivUp for uint256;
-    using CastU256U128 for uint256;
+    using Math for *;
+    using Cast for *;
 
     // ==================== Errors ====================
 

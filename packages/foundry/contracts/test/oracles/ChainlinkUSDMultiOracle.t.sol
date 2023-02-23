@@ -2,7 +2,7 @@
 pragma solidity >=0.8.13;
 
 import "forge-std/src/Test.sol";
-import { ERC20 } from "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
+import { ERC20 } from "@yield-protocol/utils-v2/src/token/ERC20.sol";
 import { ChainlinkUSDMultiOracle } from "../../oracles/chainlink/ChainlinkUSDMultiOracle.sol";
 import { ChainlinkL2USDMultiOracle } from "../../oracles/chainlink/ChainlinkL2USDMultiOracle.sol";
 import { AggregatorV3Interface } from "../../oracles/chainlink/AggregatorV3Interface.sol";

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity >=0.8.13;
 
-import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
-import "@yield-protocol/utils-v2/contracts/math/WPow.sol";
+import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
+import "@yield-protocol/utils-v2/src/utils/Cast.sol";
+import "@yield-protocol/utils-v2/src/utils/Math.sol";
 import "../../interfaces/IOracle.sol";
 
 import "../../constants/Constants.sol";
@@ -15,8 +15,8 @@ Each Accumulator is simple: it starts when `setSource` is called,
 and each `get` call returns perSecondRate ^ (time in seconds since oracle creation)
  */
 contract AccumulatorMultiOracle is IOracle, AccessControl, Constants {
-    using CastBytes32Bytes6 for bytes32;
-    using WPow for uint256;
+    using Cast for bytes32;
+    using Math for uint256;
 
     struct Accumulator {
         /// @dev secondly rate

@@ -5,16 +5,16 @@ import "erc3156/contracts/interfaces/IERC3156FlashBorrower.sol";
 import "erc3156/contracts/interfaces/IERC3156FlashLender.sol";
 import "./interfaces/IJoin.sol";
 import "./interfaces/IJoinFactory.sol";
-import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
-import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import "@yield-protocol/utils-v2/contracts/token/TransferHelper.sol";
-import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
-import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
+import "@yield-protocol/utils-v2/src/token/IERC20.sol";
+import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
+import "@yield-protocol/utils-v2/src/token/TransferHelper.sol";
+import "@yield-protocol/utils-v2/src/utils/Math.sol";
+import "@yield-protocol/utils-v2/src/utils/Cast.sol";
 
 contract Join is IJoin, AccessControl {
     using TransferHelper for IERC20;
-    using WMul for uint256;
-    using CastU256U128 for uint256;
+    using Math for *;
+    using Cast for *;
 
     address public immutable override asset;
     uint256 public override storedBalance;

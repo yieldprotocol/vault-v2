@@ -2,7 +2,7 @@
 pragma solidity >=0.8.13;
 
 import "forge-std/src/Test.sol";
-import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
+import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
 import "../../oracles/compound/CTokenMultiOracle.sol";
 import "../../mocks/DAIMock.sol";
 import "../../mocks/USDCMock.sol";

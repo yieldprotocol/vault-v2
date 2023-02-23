@@ -3,14 +3,15 @@ pragma solidity >=0.8.13;
 
 import "erc3156/contracts/interfaces/IERC3156FlashBorrower.sol";
 import "erc3156/contracts/interfaces/IERC3156FlashLender.sol";
-import "@yield-protocol/utils-v2/contracts/token/TransferHelper.sol";
-import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
-import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
+import "@yield-protocol/utils-v2/src/token/TransferHelper.sol";
+import "@yield-protocol/utils-v2/src/utils/Math.sol";
+import "@yield-protocol/utils-v2/src/utils/Cast.sol";
 import "./Join.sol";
 
 contract FlashJoin is Join, IERC3156FlashLender {
-    using WMul for uint256;
-    using CastU256U128 for uint256;
+    using Math for *;
+    using Cast for *;
+
     event FlashFeeFactorSet(uint256 indexed fee);
 
     bytes32 internal constant FLASH_LOAN_RETURN = keccak256("ERC3156FlashBorrower.onFlashLoan");

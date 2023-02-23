@@ -3,15 +3,15 @@ pragma solidity >=0.8.13;
 
 import "../interfaces/ICauldron.sol";
 import "../interfaces/ILadle.sol";
-import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
-import "@yield-protocol/utils-v2/contracts/cast/CastU256I128.sol";
+import "@yield-protocol/utils-v2/src/utils/Math.sol";
+import "@yield-protocol/utils-v2/src/utils/Cast.sol";
 import "../LadleStorage.sol";
 
 ///@title Healer module for the Ladle
 ///@notice Allows any vault to be poured to as long as it adds collateral or repays debt
 contract HealerModule is LadleStorage {
-    using WMul for uint256;
-    using CastU256I128 for uint256;
+    using Math for *;
+    using Cast for *;
 
     ///@notice Creates a Healer module for the Ladle
     ///@param cauldron_ address of the Cauldron

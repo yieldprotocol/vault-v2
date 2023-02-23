@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity >=0.8.13;
 
-import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
-import "@yield-protocol/utils-v2/contracts/token/IERC20Metadata.sol";
+import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
+import "@yield-protocol/utils-v2/src/utils/Cast.sol";
+import "@yield-protocol/utils-v2/src/token/IERC20Metadata.sol";
 import "../../interfaces/IOracle.sol";
 import "./IWstETH.sol";
 
@@ -12,7 +12,7 @@ import "./IWstETH.sol";
  * @notice Oracle to fetch WstETH-stETH exchange amounts
  */
 contract LidoOracle is IOracle, AccessControl {
-    using CastBytes32Bytes6 for bytes32;
+    using Cast for bytes32;
     IWstETH public wstETH;
     bytes32 public immutable wstEthId;
     bytes32 public immutable stEthId;

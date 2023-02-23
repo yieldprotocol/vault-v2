@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.6.0;
-import "@yield-protocol/utils-v2/contracts/token/IERC20Metadata.sol";
+import "@yield-protocol/utils-v2/src/token/IERC20Metadata.sol";
 
 // @notice Interface for Yearn Vault tokens for use with Yield price oracles
 // @dev see https://github.com/yearn/yearn-vaults/blob/main/contracts/Vault.vy

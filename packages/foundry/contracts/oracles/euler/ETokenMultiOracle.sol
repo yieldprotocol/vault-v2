@@ -2,9 +2,9 @@
 pragma solidity >=0.8.13;
 
 import {IOracle} from "../../interfaces/IOracle.sol";
-import {CastBytes32Bytes6} from "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
+import {Cast} from "@yield-protocol/utils-v2/src/utils/Cast.sol";
 import {IEToken} from "./IEToken.sol";
-import {AccessControl} from "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
+import {AccessControl} from "@yield-protocol/utils-v2/src/access/AccessControl.sol";
 
 
 /// @title ETokenMultiOracle (Euler EToken)
@@ -12,7 +12,7 @@ import {AccessControl} from "@yield-protocol/utils-v2/contracts/access/AccessCon
 /// @notice Converts from Euler EToken to underlying and vice-versa, e.g. eDAI <-> DAI
 /// @dev peek() and get() are effectively the same in this case, calling the EToken contract for current values
 contract ETokenMultiOracle is IOracle, AccessControl {
-    using CastBytes32Bytes6 for bytes32;
+    using Cast for bytes32;
 
     struct Source {
         /// @dev EToken contract address

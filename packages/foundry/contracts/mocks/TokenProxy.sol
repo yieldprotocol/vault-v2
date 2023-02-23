@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity >=0.8.13;
-import "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
+import "@yield-protocol/utils-v2/src/token/ERC20.sol";
 
 /// @notice A simple contract which could be used as a proxy for ERC20 contracts
 contract TokenProxy {

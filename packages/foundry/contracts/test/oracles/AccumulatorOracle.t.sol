@@ -2,7 +2,7 @@
 pragma solidity >=0.8.13;
 
 import "forge-std/src/Test.sol";
-import "@yield-protocol/utils-v2/contracts/token/IERC20Metadata.sol";
+import "@yield-protocol/utils-v2/src/token/IERC20Metadata.sol";
 import "../../oracles/accumulator/AccumulatorMultiOracle.sol";
 import "../utils/TestConstants.sol";
 

@@ -2,10 +2,10 @@
 
 pragma solidity >=0.8.13;
 
-import "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
+import "@yield-protocol/utils-v2/src/token/ERC20.sol";
 import "../interfaces/DataTypes.sol";
-import "@yield-protocol/utils-v2/contracts/token/TransferHelper.sol";
-import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
+import "@yield-protocol/utils-v2/src/token/TransferHelper.sol";
+import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
 
 struct Balances {
     uint128 art; // Debt amount

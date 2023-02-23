@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity >=0.8.13;
 
-import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
+import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
+import "@yield-protocol/utils-v2/src/utils/Cast.sol";
 import "../../interfaces/IOracle.sol";
 import "../../interfaces/IStrategy.sol";
 
@@ -10,7 +10,7 @@ import "../../interfaces/IStrategy.sol";
 /// @author iamsahu
 /// @dev value of 1 LP token = 1 base
 contract StrategyOracle is IOracle, AccessControl {
-    using CastBytes32Bytes6 for bytes32;
+    using Cast for bytes32;
     event SourceSet(
         bytes6 indexed baseId,
         bytes6 indexed quoteId,

@@ -2,13 +2,11 @@
 pragma solidity >=0.8.13;
 
 import "../LadleStorage.sol";
-import "@yield-protocol/utils-v2/contracts/cast/CastU256I128.sol";
-import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
-import "@yield-protocol/utils-v2/contracts/token/TransferHelper.sol";
+import "@yield-protocol/utils-v2/src/utils/Cast.sol";
+import "@yield-protocol/utils-v2/src/token/TransferHelper.sol";
 
 contract RepayFromLadleModule is LadleStorage {
-    using CastU256I128 for uint256;
-    using CastU256U128 for uint256;
+    using Cast for *;
     using TransferHelper for IERC20;
 
     ///@notice Creates a Healer module for the Ladle

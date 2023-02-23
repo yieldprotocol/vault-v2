@@ -8,9 +8,9 @@ import "../../../test/utils/TestConstants.sol";
 import "../../../test/utils/TestExtensions.sol";
 
 import { ERC1155 } from "../../../other/notional/ERC1155.sol";
-import { IWETH9 } from "@yield-protocol/utils-v2/contracts/interfaces/IWETH9.sol";
-import { IERC20 } from "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
-import { IERC20Metadata } from "@yield-protocol/utils-v2/contracts/token/IERC20Metadata.sol";
+import { IWETH9 } from "@yield-protocol/utils-v2/src/interfaces/IWETH9.sol";
+import { IERC20 } from "@yield-protocol/utils-v2/src/token/IERC20.sol";
+import { IERC20Metadata } from "@yield-protocol/utils-v2/src/token/IERC20Metadata.sol";
 import { IJoin } from "../../../interfaces/IJoin.sol";
 import { NotionalJoin } from "../../../other/notional/NotionalJoin.sol";
 import "./NotionalTypes.sol";

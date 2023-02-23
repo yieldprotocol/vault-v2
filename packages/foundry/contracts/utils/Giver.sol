@@ -3,7 +3,7 @@ pragma solidity >=0.8.13;
 
 import "../interfaces/ICauldron.sol";
 import "../interfaces/DataTypes.sol";
-import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
+import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
 
 /// @title A contract that allows owner of a vault to give the vault
 contract Giver is AccessControl {

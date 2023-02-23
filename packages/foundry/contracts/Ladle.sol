@@ -6,24 +6,20 @@ import "./interfaces/ICauldron.sol";
 import "./interfaces/IOracle.sol";
 import "./interfaces/DataTypes.sol";
 import "@yield-protocol/yieldspace-tv/src/interfaces/IPool.sol";
-import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
-import "@yield-protocol/utils-v2/contracts/token/IERC2612.sol";
-import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import "@yield-protocol/utils-v2/contracts/token/TransferHelper.sol";
-import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
-import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
-import "@yield-protocol/utils-v2/contracts/cast/CastU256I128.sol";
-import "@yield-protocol/utils-v2/contracts/cast/CastU128I128.sol";
+import "@yield-protocol/utils-v2/src/token/IERC20.sol";
+import "@yield-protocol/utils-v2/src/token/IERC2612.sol";
+import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
+import "@yield-protocol/utils-v2/src/token/TransferHelper.sol";
+import "@yield-protocol/utils-v2/src/utils/Math.sol";
+import "@yield-protocol/utils-v2/src/utils/Cast.sol";
 import "dss-interfaces/src/dss/DaiAbstract.sol";
 import "./LadleStorage.sol";
 
 
 /// @dev Ladle orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient user oriented features.
 contract Ladle is LadleStorage, AccessControl() {
-    using WMul for uint256;
-    using CastU256U128 for uint256;
-    using CastU256I128 for uint256;
-    using CastU128I128 for uint128;
+    using Math for *;
+    using Cast for *;
     using TransferHelper for IERC20;
     using TransferHelper for address payable;
 

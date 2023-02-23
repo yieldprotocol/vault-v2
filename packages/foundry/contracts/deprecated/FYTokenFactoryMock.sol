@@ -4,7 +4,7 @@ pragma solidity >=0.8.13;
 import "../interfaces/IOracle.sol";
 import "../interfaces/IJoin.sol";
 import "../interfaces/IFYTokenFactory.sol";
-import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
+import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
 import "../FYToken.sol";
 
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity >=0.8.13;
-import "@yield-protocol/utils-v2/contracts/token/ERC20Permit.sol";
-import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
+import "@yield-protocol/utils-v2/src/token/ERC20Permit.sol";
+import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
 
 contract RestrictedERC20Mock is AccessControl(), ERC20Permit  {
 

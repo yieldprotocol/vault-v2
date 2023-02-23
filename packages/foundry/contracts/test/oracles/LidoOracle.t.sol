@@ -2,7 +2,7 @@
 pragma solidity >=0.8.13;
 
 import "forge-std/src/Test.sol";
-import { AccessControl } from "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
+import { AccessControl } from "@yield-protocol/utils-v2/src/access/AccessControl.sol";
 import { IOracle } from "../../interfaces/IOracle.sol";
 import { IWstETH } from "../../oracles/lido/IWstETH.sol";
 import { ChainlinkMultiOracle } from "../../oracles/chainlink/ChainlinkMultiOracle.sol";

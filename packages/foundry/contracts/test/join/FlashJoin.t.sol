@@ -4,7 +4,7 @@ pragma solidity >=0.8.13;
 import "forge-std/src/Test.sol";
 import "forge-std/src/console2.sol";
 
-import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
+import "@yield-protocol/utils-v2/src/token/IERC20.sol";
 import { TestExtensions } from "../utils/TestExtensions.sol";
 import { TestConstants } from "../utils/TestConstants.sol";
 import { IERC3156FlashBorrower, IERC3156FlashLender, Join, FlashJoin } from "../../FlashJoin.sol";

@@ -2,20 +2,18 @@
 pragma solidity >=0.8.13;
 
 import "../../interfaces/IJoin.sol";
-import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
-import "@yield-protocol/utils-v2/contracts/interfaces/IWETH9.sol";
-import "@yield-protocol/utils-v2/contracts/token/MinimalTransferHelper.sol";
-import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
-import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";
-import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
+import "@yield-protocol/utils-v2/src/token/IERC20.sol";
+import "@yield-protocol/utils-v2/src/interfaces/IWETH9.sol";
+import "@yield-protocol/utils-v2/src/token/MinimalTransferHelper.sol";
+import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
+import "@yield-protocol/utils-v2/src/utils/Math.sol";
+import "@yield-protocol/utils-v2/src/utils/Cast.sol";
 import "./interfaces/IBatchAction.sol";
 import "./ERC1155.sol";
 
 contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl {
-    using WMul for uint256;
-    using WDiv for uint256;
-    using CastU256U128 for uint256;
+    using Math for *;
+    using Cast for *;
 
     event FlashFeeFactorSet(uint256 indexed fee);
     event Redeemed(uint256 fCash, uint256 underlying, uint256 accrual);

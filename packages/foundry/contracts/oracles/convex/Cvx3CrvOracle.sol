@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity >=0.8.13;
 
-import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
+import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
 import "../../interfaces/IOracle.sol";
-import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
+import "@yield-protocol/utils-v2/src/utils/Cast.sol";
 
 import "./ICurvePool.sol";
 import "../chainlink/AggregatorV3Interface.sol";
@@ -15,7 +15,7 @@ import "../chainlink/AggregatorV3Interface.sol";
  *@dev    Both peek() (view) and get() (transactional) are provided for convenience
  */
 contract Cvx3CrvOracle is IOracle, AccessControl {
-    using CastBytes32Bytes6 for bytes32;
+    using Cast for bytes32;
     ICurvePool public threecrv;
     AggregatorV3Interface public DAI;
     AggregatorV3Interface public USDC;

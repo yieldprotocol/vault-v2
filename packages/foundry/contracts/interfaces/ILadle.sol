@@ -5,7 +5,7 @@ import "./IJoin.sol";
 import "./ICauldron.sol";
 import "./IFYToken.sol";
 import "./IOracle.sol";
-import "@yield-protocol/utils-v2/contracts/interfaces/IWETH9.sol";
+import "@yield-protocol/utils-v2/src/interfaces/IWETH9.sol";
 import "@yield-protocol/yieldspace-tv/src/interfaces/IPool.sol";
 
 interface ILadle {

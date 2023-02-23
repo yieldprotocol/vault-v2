@@ -1,17 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity >=0.8.13;
 
-import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
-import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";
+import "@yield-protocol/utils-v2/src/utils/Math.sol";
 import "./UniswapV3FactoryMock.sol";
 import "./UniswapV3PoolMock.sol";
 
 /// @title Uniswap V3 Oracle Library Mock
 /// @notice Just for testing purposes
 library UniswapV3OracleLibraryMock {
-
-    using WMul for uint256;
-    using WDiv for uint256;
+    using Math for *;
 
     /// @notice Always provides the double of the base amount as the price of the base token expressed in the quote token
     function consult(

@@ -1,26 +1,18 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity >=0.8.13;
 
-import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
+import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
 import "../interfaces/ILadle.sol";
 import "../interfaces/ICauldron.sol";
 import "../interfaces/IJoin.sol";
 import "../interfaces/DataTypes.sol";
-import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
-import "@yield-protocol/utils-v2/contracts/math/WMulUp.sol";
-import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";
-import "@yield-protocol/utils-v2/contracts/math/WDivUp.sol";
-import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
-import "@yield-protocol/utils-v2/contracts/cast/CastU256U32.sol";
+import "@yield-protocol/utils-v2/src/utils/Math.sol";
+import "@yield-protocol/utils-v2/src/utils/Cast.sol";
 
 
 contract WitchOld is AccessControl() {
-    using WMul for uint256;
-    using WMulUp for uint256;
-    using WDiv for uint256;
-    using WDivUp for uint256;
-    using CastU256U128 for uint256;
-    using CastU256U32 for uint256;
+    using Math for *;
+    using Cast for *;
 
     event Point(bytes32 indexed param, address value);
     event IlkSet(bytes6 indexed ilkId, uint32 duration, uint64 initialOffer, uint96 line, uint24 dust, uint8 dec);

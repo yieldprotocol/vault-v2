@@ -4,8 +4,8 @@ pragma solidity >=0.8.13;
 import "forge-std/src/Test.sol";
 import "forge-std/src/console.sol";
 
-import {IERC20}                 from "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
-import {IWETH9}                 from "@yield-protocol/utils-v2/contracts/interfaces/IWETH9.sol";
+import {IERC20}                 from "@yield-protocol/utils-v2/src/token/IERC20.sol";
+import {IWETH9}                 from "@yield-protocol/utils-v2/src/interfaces/IWETH9.sol";
 
 import {DataTypes}              from "../../interfaces/DataTypes.sol";
 import {ICauldron}              from "../../interfaces/ICauldron.sol";

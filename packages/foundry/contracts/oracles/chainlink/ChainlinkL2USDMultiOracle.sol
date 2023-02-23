@@ -12,7 +12,7 @@ import './ChainlinkUSDMultiOracle.sol';
   https://docs.chain.link/docs/l2-sequencer-flag/
  */
 contract ChainlinkL2USDMultiOracle is ChainlinkUSDMultiOracle {
-    using CastBytes32Bytes6 for bytes32;
+    using Cast for bytes32;
 
     FlagsInterface public chainlinkFlags;
     // https://docs.chain.link/docs/l2-sequencer-flag/

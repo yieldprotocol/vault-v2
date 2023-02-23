@@ -3,8 +3,8 @@ pragma solidity >=0.8.13;
 
 import "forge-std/src/Test.sol";
 import "forge-std/src/console.sol";
-import "@yield-protocol/utils-v2/contracts/cast/CastU256I128.sol";
-import { IERC20 } from "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
+import "@yield-protocol/utils-v2/src/utils/Cast.sol";
+import { IERC20 } from "@yield-protocol/utils-v2/src/token/IERC20.sol";
 import { Cauldron } from "../../Cauldron.sol";
 import { FYToken } from "../../FYToken.sol";
 import { Join } from "../../Join.sol";
@@ -17,7 +17,7 @@ import { TestConstants } from "../utils/TestConstants.sol";
 import { TestExtensions } from "../utils/TestExtensions.sol";
 
 abstract contract ZeroState is Test, TestConstants, TestExtensions {
-    using CastU256I128 for uint256;
+    using Cast for *;
 
     event Point(bytes32 indexed param, address value);
     event SeriesMatured(uint256 chiAtMaturity);

@@ -9,7 +9,7 @@ import "../interfaces/IFYTokenFactory.sol";
 import "../interfaces/IFYToken.sol";
 import "../interfaces/DataTypes.sol";
 import "./IPoolFactory.sol";
-import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
+import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
 import "../constants/Constants.sol";
 
 interface IWitchGov {

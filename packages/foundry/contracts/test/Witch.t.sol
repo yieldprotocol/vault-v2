@@ -494,8 +494,7 @@ contract WitchWithMetadataTest is WitchWithMetadata {
 
 contract WitchWithAuction is WitchWithMetadata {
     using Mocks for *;
-    using WMul for uint256;
-    using WMul for uint128;
+    using Math for *;
 
     bytes12 internal constant VAULT_ID_2 = "vault2";
     DataTypes.Auction auction;

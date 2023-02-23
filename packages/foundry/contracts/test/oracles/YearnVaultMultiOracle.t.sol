@@ -2,8 +2,8 @@
 pragma solidity >=0.8.13;
 
 import "forge-std/src/Test.sol";
-import { AccessControl } from "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import { ERC20 } from "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
+import { AccessControl } from "@yield-protocol/utils-v2/src/access/AccessControl.sol";
+import { ERC20 } from "@yield-protocol/utils-v2/src/token/ERC20.sol";
 import { IYvToken } from "../../oracles/yearn/IYvToken.sol";
 import { YearnVaultMultiOracle } from "../../oracles/yearn/YearnVaultMultiOracle.sol";
 import { DAIMock } from "../../mocks/DAIMock.sol";

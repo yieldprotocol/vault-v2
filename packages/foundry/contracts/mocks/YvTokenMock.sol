@@ -2,7 +2,7 @@
 pragma solidity >=0.8.13;
 
 import "./oracles/ISourceMock.sol";
-import "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
+import "@yield-protocol/utils-v2/src/token/ERC20.sol";
 
 contract YvTokenMock is ISourceMock, ERC20 {
     ERC20 public token;
