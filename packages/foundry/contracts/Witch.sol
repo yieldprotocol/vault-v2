@@ -80,7 +80,8 @@ contract Witch is WitchBase {
     // =                          Bidding functions                         =
     // ======================================================================
 
-    function _artIn(DataTypes.Auction memory auction_, uint128 maxBaseIn)
+    /// @notice Returns debt that could be paid given the maxBaseIn
+    function _debtFromBase(DataTypes.Auction memory auction_, uint128 maxBaseIn)
         internal
         virtual
         override
@@ -89,7 +90,8 @@ contract Witch is WitchBase {
         artIn = cauldron.debtFromBase(auction_.seriesId, maxBaseIn);
     }
 
-    function _baseIn(DataTypes.Auction memory auction_, uint128 artIn)
+    /// @notice Returns base that could be paid given the artIn
+    function _debtToBase(DataTypes.Auction memory auction_, uint128 artIn)
         internal
         virtual
         override

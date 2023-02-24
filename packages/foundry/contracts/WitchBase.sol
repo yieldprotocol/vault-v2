@@ -381,13 +381,13 @@ contract WitchBase is AccessControl {
         DataTypes.Auction memory auction_ = _auction(vaultId);
 
         // Find out how much debt is being repaid
-        uint256 artIn = _artIn(auction_, maxBaseIn);
+        uint256 artIn = _debtFromBase(auction_, maxBaseIn);
 
         // If offering too much base, take only the necessary.
         if (artIn > auction_.art) {
             artIn = auction_.art;
         }
-        baseIn = _baseIn(auction_, artIn.u128());
+        baseIn = _debtToBase(auction_, artIn.u128());
 
         // Calculate the collateral to be sold
         (liquidatorCut, auctioneerCut) = _calcPayout(auction_, to, artIn);
@@ -424,13 +424,15 @@ contract WitchBase is AccessControl {
         _collateralBought(vaultId, to, liquidatorCut + auctioneerCut, artIn);
     }
 
-    function _artIn(DataTypes.Auction memory auction_, uint128 maxBaseIn)
+    /// @notice Returns debt that could be paid given the maxBaseIn
+    function _debtFromBase(DataTypes.Auction memory auction_, uint128 maxBaseIn)
         internal
         virtual
         returns (uint256 artIn)
     {}
 
-    function _baseIn(DataTypes.Auction memory auction_, uint128 artIn)
+    /// @notice Returns base that could be paid given the artIn
+    function _debtToBase(DataTypes.Auction memory auction_, uint128 artIn)
         internal
         virtual
         returns (uint256 baseIn)
