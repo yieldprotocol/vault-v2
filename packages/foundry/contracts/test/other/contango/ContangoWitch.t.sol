@@ -9,7 +9,10 @@ import "../../utils/Mocks.sol";
 import "../../../interfaces/IWitch.sol";
 import "../../../other/contango/ContangoWitch.sol";
 
-contract ContangoWitchStateZero is Test, TestConstants {
+using WMul for uint256;
+using WMul for uint128;
+
+abstract contract ContangoWitchStateZero is Test, TestConstants {
     using Mocks for *;
 
     event Auctioned(bytes12 indexed vaultId, DataTypes.Auction auction, uint256 duration, uint256 initialProportion);
@@ -231,6 +234,16 @@ abstract contract ContangoWitchWithMetadata is ContangoWitchStateZero {
         contango.auctionStarted.mock(vaultId);
         contango.auctionStarted.verify(vaultId);
     }
+
+    function _verifyCollateralBought(bytes12 vaultId, address buyer, uint256 ink, uint256 art) internal {
+        contango.collateralBought.mock(vaultId, buyer, ink, art);
+        contango.collateralBought.verify(vaultId, buyer, ink, art);
+    }
+
+    function _verifyAuctionEnded(bytes12 vaultId, address owner) internal {
+        contango.auctionEnded.mock(vaultId, owner);
+        contango.auctionEnded.verify(vaultId, owner);
+    }
 }
 
 contract ContangoWitchWithMetadataTest is ContangoWitchWithMetadata {
@@ -390,10 +403,8 @@ contract ContangoWitchWithMetadataTest is ContangoWitchWithMetadata {
     }
 }
 
-contract ContangoWitchWithAuction is ContangoWitchWithMetadata {
+abstract contract ContangoWitchWithAuction is ContangoWitchWithMetadata {
     using Mocks for *;
-    using WMul for uint256;
-    using WMul for uint128;
 
     bytes12 internal constant VAULT_ID_2 = "vault2";
     DataTypes.Auction auction;
@@ -403,7 +414,7 @@ contract ContangoWitchWithAuction is ContangoWitchWithMetadata {
 
         _verifyAuctionStarted(VAULT_ID);
 
-        // Test everyithing on the last moment the witch would be usable
+        // Test everything on the last moment the witch would be usable
         vm.warp(type(uint32).max);
 
         cauldron.level.mock(VAULT_ID, -1);
@@ -418,21 +429,18 @@ contract ContangoWitchWithAuction is ContangoWitchWithMetadata {
         cauldron.vaults.mock(VAULT_ID, vault);
     }
 
-    struct StubVault {
-        bytes12 vaultId;
-        uint128 ink;
-        uint128 art;
-        int256 level;
-    }
-
-    function _stubVault(StubVault memory params) internal {
+    function _stubVault(bytes12 vaultId, uint128 ink, uint128 art, int256 level) internal {
         DataTypes.Vault memory v = DataTypes.Vault({owner: bob, seriesId: SERIES_ID, ilkId: ILK_ID});
-        DataTypes.Balances memory b = DataTypes.Balances(params.art, params.ink);
-        cauldron.vaults.mock(params.vaultId, v);
-        cauldron.balances.mock(params.vaultId, b);
-        cauldron.level.mock(params.vaultId, params.level);
-        cauldron.give.mock(params.vaultId, address(witch), v);
+        DataTypes.Balances memory b = DataTypes.Balances(art, ink);
+        cauldron.vaults.mock(vaultId, v);
+        cauldron.balances.mock(vaultId, b);
+        cauldron.level.mock(vaultId, level);
+        cauldron.give.mock(vaultId, address(witch), v);
     }
+}
+
+contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
+    using Mocks for *;
 
     function testCalcPayoutAfterAuctionForAuctioneer() public {
         // 100 * 0.5 * 0.714 = 35.7
@@ -526,7 +534,9 @@ contract ContangoWitchWithAuction is ContangoWitchWithMetadata {
         (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
         assertEq(sum, 50 ether);
 
-        _stubVault(StubVault({vaultId: VAULT_ID_2, ink: 101 ether, art: 100_000e6, level: -1}));
+        _stubVault({vaultId: VAULT_ID_2, ink: 101 ether, art: 100_000e6, level: -1});
+
+        _verifyAuctionStarted(VAULT_ID_2);
 
         // When
         witch.auction(VAULT_ID_2, bot);
@@ -539,7 +549,7 @@ contract ContangoWitchWithAuction is ContangoWitchWithMetadata {
 
         // Given
         bytes12 otherVaultId = "other vault";
-        _stubVault(StubVault({vaultId: otherVaultId, ink: 10 ether, art: 20_000e6, level: -1}));
+        _stubVault({vaultId: otherVaultId, ink: 10 ether, art: 20_000e6, level: -1});
 
         // Expect
         vm.expectRevert(abi.encodeWithSelector(Witch.CollateralLimitExceeded.selector, sum, max));
@@ -554,7 +564,9 @@ contract ContangoWitchWithAuction is ContangoWitchWithMetadata {
         witch.setLineAndLimit(ILK_ID, BASE_ID, AUCTION_DURATION, proportion, initialOffer, max);
 
         // 20% of this vault would be less than the min of 5k
-        _stubVault(StubVault({vaultId: VAULT_ID_2, ink: 20 ether, art: 20_000e6, level: -1}));
+        _stubVault({vaultId: VAULT_ID_2, ink: 20 ether, art: 20_000e6, level: -1});
+
+        _verifyAuctionStarted(VAULT_ID_2);
 
         (DataTypes.Auction memory auction2,,) = witch.auction(VAULT_ID_2, bot);
 
@@ -572,7 +584,9 @@ contract ContangoWitchWithAuction is ContangoWitchWithMetadata {
         witch.setLineAndLimit(ILK_ID, BASE_ID, AUCTION_DURATION, proportion, initialOffer, max);
 
         // The remainder (40% of this vault) would be less than the min of 5k
-        _stubVault(StubVault({vaultId: VAULT_ID_2, ink: 10 ether, art: 10_000e6, level: -1}));
+        _stubVault({vaultId: VAULT_ID_2, ink: 10 ether, art: 10_000e6, level: -1});
+
+        _verifyAuctionStarted(VAULT_ID_2);
 
         (DataTypes.Auction memory auction2,,) = witch.auction(VAULT_ID_2, bot);
 
@@ -587,7 +601,9 @@ contract ContangoWitchWithAuction is ContangoWitchWithMetadata {
     function testDustLimitProportionUnderDustAndRemainderUnderDustAfterAdjusting() public {
         // 50% of this vault would be less than the min of 5k
         // Increasing the liquidated amount to the 5k min would leave a remainder under the limit (9000 - 5000 = 4000)
-        _stubVault(StubVault({vaultId: VAULT_ID_2, ink: 9 ether, art: 9_000e6, level: -1}));
+        _stubVault({vaultId: VAULT_ID_2, ink: 9 ether, art: 9_000e6, level: -1});
+
+        _verifyAuctionStarted(VAULT_ID_2);
 
         (DataTypes.Auction memory auction2,,) = witch.auction(VAULT_ID_2, bot);
 
@@ -600,8 +616,10 @@ contract ContangoWitchWithAuction is ContangoWitchWithMetadata {
     }
 
     function testVaultDebtBelowDustLimit() public {
+        _verifyAuctionStarted(VAULT_ID_2);
+
         // 4999 is below the min debt of 5k
-        _stubVault(StubVault({vaultId: VAULT_ID_2, ink: 9 ether, art: 4999e6, level: -1}));
+        _stubVault({vaultId: VAULT_ID_2, ink: 9 ether, art: 4999e6, level: -1});
 
         (DataTypes.Auction memory auction2,,) = witch.auction(VAULT_ID_2, bot);
 
@@ -644,6 +662,8 @@ contract ContangoWitchWithAuction is ContangoWitchWithMetadata {
         emit Ended(VAULT_ID);
         vm.expectEmit(true, true, true, true);
         emit Cancelled(VAULT_ID);
+
+        _verifyAuctionEnded(VAULT_ID, bob);
 
         witch.cancel(VAULT_ID);
 
@@ -709,6 +729,8 @@ contract ContangoWitchWithAuction is ContangoWitchWithMetadata {
         (uint256 minInkOut_,,) = witch.calcPayout(VAULT_ID, bot, maxBaseIn);
         uint128 minInkOut = uint128(minInkOut_);
 
+        _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxBaseIn);
+
         // Reduce balances on tha vault
         cauldron.slurp.mock(VAULT_ID, minInkOut, maxBaseIn, balances);
         cauldron.slurp.verify(VAULT_ID, minInkOut, maxBaseIn);
@@ -756,6 +778,8 @@ contract ContangoWitchWithAuction is ContangoWitchWithMetadata {
         (uint256 minInkOut_,,) = witch.calcPayout(VAULT_ID, bot, maxBaseIn);
         uint128 minInkOut = uint128(minInkOut_);
 
+        _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxBaseIn);
+
         // Reduce balances on tha vault
         cauldron.slurp.mock(VAULT_ID, minInkOut, maxBaseIn, balances);
         cauldron.slurp.verify(VAULT_ID, minInkOut, maxBaseIn);
@@ -796,6 +820,9 @@ contract ContangoWitchWithAuction is ContangoWitchWithMetadata {
         vm.prank(bot);
         (uint256 minInkOut_,,) = witch.calcPayout(VAULT_ID, bot, maxBaseIn);
         uint128 minInkOut = uint128(minInkOut_);
+
+        _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxBaseIn);
+        _verifyAuctionEnded(VAULT_ID, bob);
 
         // Reduce balances on tha vault
         cauldron.slurp.mock(VAULT_ID, minInkOut, maxBaseIn, balances);
@@ -848,6 +875,9 @@ contract ContangoWitchWithAuction is ContangoWitchWithMetadata {
         (uint256 minInkOut_,,) = witch.calcPayout(VAULT_ID, bot, maxBaseIn);
         uint128 minInkOut = uint128(minInkOut_);
 
+        _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxBaseIn);
+        _verifyAuctionEnded(VAULT_ID, bob);
+
         // Reduce balances on tha vault
         cauldron.slurp.mock(VAULT_ID, minInkOut, maxBaseIn, balances);
         cauldron.slurp.verify(VAULT_ID, minInkOut, maxBaseIn);
@@ -897,6 +927,9 @@ contract ContangoWitchWithAuction is ContangoWitchWithMetadata {
         uint128 liquidatorCut = uint128(liquidatorCut_);
         uint128 auctioneerCut = uint128(auctioneerCut_);
 
+        _verifyCollateralBought(VAULT_ID, bot2, liquidatorCut + auctioneerCut, maxBaseIn);
+        _verifyAuctionEnded(VAULT_ID, bob);
+
         // Reduce balances on tha vault
         cauldron.slurp.mock(VAULT_ID, liquidatorCut + auctioneerCut, maxBaseIn, balances);
         cauldron.slurp.verify(VAULT_ID, liquidatorCut + auctioneerCut, maxBaseIn);
@@ -945,7 +978,9 @@ contract ContangoWitchWithAuction is ContangoWitchWithMetadata {
     function testPayBaseOnAnAuctionStartedByMaliciousActor() public {
         address bot2 = address(0xb072);
         address evilAddress = address(0x666);
-        _stubVault(StubVault({vaultId: VAULT_ID_2, ink: 140 ether, art: 100_000e6, level: -1}));
+        _stubVault({vaultId: VAULT_ID_2, ink: 140 ether, art: 100_000e6, level: -1});
+
+        _verifyAuctionStarted(VAULT_ID_2);
 
         vm.prank(bot2);
         (auction,,) = witch.auction(VAULT_ID_2, evilAddress);
@@ -957,6 +992,9 @@ contract ContangoWitchWithAuction is ContangoWitchWithMetadata {
         uint128 auctioneerCut = uint128(auctioneerCut_);
 
         uint128 totalCut = liquidatorCut + auctioneerCut;
+
+        _verifyCollateralBought(VAULT_ID_2, bot, totalCut, maxBaseIn);
+        _verifyAuctionEnded(VAULT_ID_2, bob);
 
         // Reduce balances on tha vault
         cauldron.slurp.mock(VAULT_ID_2, totalCut, maxBaseIn, balances);
@@ -1029,6 +1067,8 @@ contract ContangoWitchWithAuction is ContangoWitchWithMetadata {
         (uint256 minInkOut_,,) = witch.calcPayout(VAULT_ID, bot, maxArtIn);
         uint128 minInkOut = uint128(minInkOut_);
 
+        _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxArtIn);
+
         // Reduce balances on tha vault
         cauldron.slurp.mock(VAULT_ID, minInkOut, maxArtIn, balances);
         cauldron.slurp.verify(VAULT_ID, minInkOut, maxArtIn);
@@ -1070,6 +1110,8 @@ contract ContangoWitchWithAuction is ContangoWitchWithMetadata {
         (uint256 minInkOut_,,) = witch.calcPayout(VAULT_ID, bot, maxArtIn);
         uint128 minInkOut = uint128(minInkOut_);
 
+        _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxArtIn);
+
         // Reduce balances on tha vault
         cauldron.slurp.mock(VAULT_ID, minInkOut, maxArtIn, balances);
         cauldron.slurp.verify(VAULT_ID, minInkOut, maxArtIn);
@@ -1108,7 +1150,10 @@ contract ContangoWitchWithAuction is ContangoWitchWithMetadata {
         uint128 liquidatorCut = uint128(liquidatorCut_);
         uint128 auctioneerCut = uint128(auctioneerCut_);
 
-        // Reduce balances on tha vault
+        _verifyCollateralBought(VAULT_ID, bot2, liquidatorCut + auctioneerCut, maxArtIn);
+        _verifyAuctionEnded(VAULT_ID, bob);
+
+        // Reduce balances on the vault
         cauldron.slurp.mock(VAULT_ID, liquidatorCut + auctioneerCut, maxArtIn, balances);
         cauldron.slurp.verify(VAULT_ID, liquidatorCut + auctioneerCut, maxArtIn);
         // Vault returns to it's owner after all the liquidation is done
@@ -1150,7 +1195,9 @@ contract ContangoWitchWithAuction is ContangoWitchWithMetadata {
     function testPayFYTokenAllOnAuctionStartedByMaliciousActor() public {
         address bot2 = address(0xb072);
         address evilAddress = address(0x666);
-        _stubVault(StubVault({vaultId: VAULT_ID_2, ink: 140 ether, art: 100_000e6, level: -1}));
+        _stubVault({vaultId: VAULT_ID_2, ink: 140 ether, art: 100_000e6, level: -1});
+
+        _verifyAuctionStarted(VAULT_ID_2);
 
         vm.prank(bot2);
         (auction,,) = witch.auction(VAULT_ID_2, evilAddress);
@@ -1162,6 +1209,9 @@ contract ContangoWitchWithAuction is ContangoWitchWithMetadata {
         uint128 auctioneerCut = uint128(auctioneerCut_);
 
         uint128 totalCut = liquidatorCut + auctioneerCut;
+
+        _verifyCollateralBought(VAULT_ID_2, bot, totalCut, maxArtIn);
+        _verifyAuctionEnded(VAULT_ID_2, bob);
 
         // Reduce balances on tha vault
         cauldron.slurp.mock(VAULT_ID_2, totalCut, maxArtIn, balances);
@@ -1208,6 +1258,9 @@ contract ContangoWitchWithAuction is ContangoWitchWithMetadata {
         (uint256 minInkOut_,,) = witch.calcPayout(VAULT_ID, bot, maxArtIn);
         uint128 minInkOut = uint128(minInkOut_);
 
+        _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxArtIn);
+        _verifyAuctionEnded(VAULT_ID, bob);
+
         // Reduce balances on tha vault
         cauldron.slurp.mock(VAULT_ID, minInkOut, maxArtIn, balances);
         cauldron.slurp.verify(VAULT_ID, minInkOut, maxArtIn);
@@ -1251,6 +1304,9 @@ contract ContangoWitchWithAuction is ContangoWitchWithMetadata {
         vm.prank(bot);
         (uint256 minInkOut_,,) = witch.calcPayout(VAULT_ID, bot, maxArtIn);
         uint128 minInkOut = uint128(minInkOut_);
+
+        _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxArtIn);
+        _verifyAuctionEnded(VAULT_ID, bob);
 
         // Reduce balances on tha vault
         cauldron.slurp.mock(VAULT_ID, minInkOut, maxArtIn, balances);
