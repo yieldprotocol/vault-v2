@@ -8,6 +8,8 @@ import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";
 import "@yield-protocol/utils-v2/contracts/math/WDivUp.sol";
 import "./interfaces/DataTypes.sol";
 import "./interfaces/ILadle.sol";
+import "./interfaces/ICauldron.sol";
+import "./interfaces/IJoin.sol";
 
 contract WitchBase is AccessControl {
     using WMul for uint256;

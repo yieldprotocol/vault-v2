@@ -1,12 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity >=0.8.13;
 
-import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
-import "../interfaces/ILadle.sol";
 import "./interfaces/IVRCauldron.sol";
-import "../interfaces/IJoin.sol";
-import "../interfaces/DataTypes.sol";
 import "../WitchBase.sol";
 
 /// @title  The Witch is a DataTypes.Auction/Liquidation Engine for the Yield protocol
