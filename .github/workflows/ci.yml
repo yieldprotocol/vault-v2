@@ -20,10 +20,10 @@ jobs:
           version: nightly
 
       - name: Build contracts
-        run: forge build
+        run: yarn workspace @yield-protocol/vault-v2 forge:build
 
       - name: Run tests
-        run: forge test
+        run: yarn workspace @yield-protocol/vault-v2 forge:test
         env:
           ARBITRUM_RPC: $${{ secrets.ARBITRUM_RPC}}
           MAINNET_RPC: ${{ secrets.MAINNET_RPC }}
