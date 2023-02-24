@@ -12,14 +12,8 @@ import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U32.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256I256.sol";
 import "../constants/Constants.sol";
+import { CauldronMath } from "../Cauldron.sol";
 
-library CauldronMath {
-    /// @dev Add a number (which might be negative) to a positive, and revert if the result is negative.
-    function add(uint128 x, int128 y) internal pure returns (uint128 z) {
-        require(y > 0 || x >= uint128(-y), "Result below zero");
-        z = y > 0 ? x + uint128(y) : x - uint128(-y);
-    }
-}
 
 contract VRCauldron is AccessControl, Constants {
     using CauldronMath for uint128;

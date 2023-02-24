@@ -177,6 +177,62 @@ contract WitchBase is AccessControl {
     // =                    Auction management functions                    =
     // ======================================================================
 
+    /// @dev Checks whether vault is eligible for auction and calculates auction parameters.
+    /// @param vaultId Id of vault to be auctioned
+    /// @param baseId Id of asset used for underlying
+    /// @param ilkId Id of asset used for collateral
+    /// @param seriesId Id of series used for debt
+    /// @param vaultOwner Owner of the vault to be auctioned
+    /// @param to Address that will receive the bought collateral
+    function _calcAuctionParameters(
+        bytes12 vaultId,
+        bytes6 baseId,
+        bytes6 ilkId,
+        bytes6 seriesId,
+        address vaultOwner,
+        address to
+    )
+        internal
+        returns (DataTypes.Auction memory auction_, DataTypes.Line memory line)
+    {
+        if (auctions[vaultId].start != 0 || protected[vaultOwner]) {
+            revert VaultAlreadyUnderAuction(vaultId, vaultOwner);
+        }
+
+        DataTypes.Limits memory limits_ = limits[ilkId][baseId];
+        if (limits_.max == 0) {
+            revert VaultNotLiquidatable(ilkId, baseId);
+        }
+        // There is a limit on how much collateral can be concurrently put at auction, but it is a soft limit.
+        // This means that the first auction to reach the limit is allowed to pass it,
+        // so that there is never the situation where a vault would be too big to ever be auctioned.
+        if (limits_.sum > limits_.max) {
+            revert CollateralLimitExceeded(limits_.sum, limits_.max);
+        }
+
+        if (cauldron.level(vaultId) >= 0) {
+            revert NotUnderCollateralised(vaultId);
+        }
+
+        DataTypes.Balances memory balances = cauldron.balances(vaultId);
+        DataTypes.Debt memory debt = cauldron.debt(baseId, ilkId);
+
+        (auction_, line) = _calcAuction(
+            ilkId,
+            baseId,
+            seriesId,
+            vaultOwner,
+            to,
+            balances,
+            debt
+        );
+
+        limits_.sum += auction_.ink;
+        limits[ilkId][baseId] = limits_;
+
+        auctions[vaultId] = auction_;
+    }
+
     /// @dev Cancel an auction for a vault that isn't under-collateralised any more
     /// @param vaultId Id of the vault to remove from auction
     function cancel(bytes12 vaultId) external {
@@ -316,12 +372,68 @@ contract WitchBase is AccessControl {
         uint128 maxBaseIn
     )
         external
-        virtual
         returns (
             uint256 liquidatorCut,
             uint256 auctioneerCut,
             uint256 baseIn
         )
+    {
+        DataTypes.Auction memory auction_ = _auction(vaultId);
+
+        // Find out how much debt is being repaid
+        uint256 artIn = _artIn(auction_, maxBaseIn);
+
+        // If offering too much base, take only the necessary.
+        if (artIn > auction_.art) {
+            artIn = auction_.art;
+        }
+        baseIn = _baseIn(auction_, artIn.u128());
+
+        // Calculate the collateral to be sold
+        (liquidatorCut, auctioneerCut) = _calcPayout(auction_, to, artIn);
+        if (liquidatorCut < minInkOut) {
+            revert NotEnoughBought(minInkOut, liquidatorCut);
+        }
+
+        // Update Cauldron and local auction data
+        _updateAccounting(
+            vaultId,
+            auction_,
+            (liquidatorCut + auctioneerCut).u128(),
+            artIn.u128()
+        );
+
+        // Move the assets
+        (liquidatorCut, auctioneerCut) = _payInk(
+            auction_.ilkId,
+            auction_.auctioneer,
+            to,
+            liquidatorCut,
+            auctioneerCut
+        );
+
+        if (baseIn != 0) {
+            // Take underlying from liquidator
+            IJoin baseJoin = ladle.joins(auction_.baseId);
+            if (baseJoin == IJoin(address(0))) {
+                revert JoinNotFound(auction_.baseId);
+            }
+            baseJoin.join(msg.sender, baseIn.u128());
+        }
+
+        _collateralBought(vaultId, to, liquidatorCut + auctioneerCut, artIn);
+    }
+
+    function _artIn(DataTypes.Auction memory auction_, uint128 maxBaseIn)
+        internal
+        virtual
+        returns (uint256 artIn)
+    {}
+
+    function _baseIn(DataTypes.Auction memory auction_, uint128 artIn)
+        internal
+        virtual
+        returns (uint256 baseIn)
     {}
 
     /// @dev transfers funds from the ilkJoin to the liquidator (and potentially the auctioneer if they're different people)

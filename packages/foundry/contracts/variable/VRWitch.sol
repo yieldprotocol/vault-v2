@@ -42,43 +42,16 @@ contract VRWitch is WitchBase {
             revert WitchIsDead();
         }
         vault = IVRCauldron(address(cauldron)).vaults(vaultId);
-        if (auctions[vaultId].start != 0 || protected[vault.owner]) {
-            revert VaultAlreadyUnderAuction(vaultId, vault.owner);
-        }
 
-        DataTypes.Limits memory limits_ = limits[vault.ilkId][vault.baseId];
-        if (limits_.max == 0) {
-            revert VaultNotLiquidatable(vault.ilkId, vault.baseId);
-        }
-        // There is a limit on how much collateral can be concurrently put at auction, but it is a soft limit.
-        // This means that the first auction to reach the limit is allowed to pass it,
-        // so that there is never the situation where a vault would be too big to ever be auctioned.
-        if (limits_.sum > limits_.max) {
-            revert CollateralLimitExceeded(limits_.sum, limits_.max);
-        }
-
-        if (cauldron.level(vaultId) >= 0) {
-            revert NotUnderCollateralised(vaultId);
-        }
-
-        DataTypes.Balances memory balances = cauldron.balances(vaultId);
-        DataTypes.Debt memory debt = cauldron.debt(vault.baseId, vault.ilkId);
         DataTypes.Line memory line;
-
-        (auction_, line) = _calcAuction(
-            vault.ilkId,
+        (auction_, line) = _calcAuctionParameters(
+            vaultId,
             vault.baseId,
+            vault.ilkId,
             bytes6(0),
             vault.owner,
-            to,
-            balances,
-            debt
+            to
         );
-
-        limits_.sum += auction_.ink;
-        limits[vault.ilkId][vault.baseId] = limits_;
-
-        auctions[vaultId] = auction_;
 
         vault = _auctionStarted(vaultId, auction_, line);
     }
@@ -105,73 +78,20 @@ contract VRWitch is WitchBase {
     // =                          Bidding functions                         =
     // ======================================================================
 
-    /// @notice If too much base is offered, only the necessary amount are taken.
-    /// @dev Pay at most `maxBaseIn` of the debt in a vault in liquidation, getting at least `minInkOut` collateral.
-    /// @param vaultId Id of the vault to buy
-    /// @param to Receiver of the collateral bought
-    /// @param minInkOut Minimum amount of collateral that must be received
-    /// @param maxBaseIn Maximum amount of base that the liquidator will pay
-    /// @return liquidatorCut Amount paid to `to`.
-    /// @return auctioneerCut Amount paid to an address specified by whomever started the auction. 0 if it's the same as the `to` address
-    /// @return baseIn Amount of underlying taken
-    function payBase(
-        bytes12 vaultId,
-        address to,
-        uint128 minInkOut,
-        uint128 maxBaseIn
-    )
-        external
+    function _artIn(DataTypes.Auction memory auction_, uint128 maxBaseIn)
+        internal
         override
-        returns (
-            uint256 liquidatorCut,
-            uint256 auctioneerCut,
-            uint256 baseIn
-        )
+        returns (uint256 artIn)
     {
-        DataTypes.Auction memory auction_ = _auction(vaultId);
+        artIn = cauldron.debtFromBase(auction_.baseId, maxBaseIn);
+    }
 
-        // Find out how much debt is being repaid
-        uint256 artIn = cauldron.debtFromBase(auction_.baseId, maxBaseIn);
-
-        // If offering too much base, take only the necessary.
-        if (artIn > auction_.art) {
-            artIn = auction_.art;
-        }
-        baseIn = cauldron.debtToBase(auction_.baseId, artIn.u128());
-
-        // Calculate the collateral to be sold
-        (liquidatorCut, auctioneerCut) = _calcPayout(auction_, to, artIn);
-        if (liquidatorCut < minInkOut) {
-            revert NotEnoughBought(minInkOut, liquidatorCut);
-        }
-
-        // Update Cauldron and local auction data
-        _updateAccounting(
-            vaultId,
-            auction_,
-            (liquidatorCut + auctioneerCut).u128(),
-            artIn.u128()
-        );
-
-        // Move the assets
-        (liquidatorCut, auctioneerCut) = _payInk(
-            auction_.ilkId,
-            auction_.auctioneer,
-            to,
-            liquidatorCut,
-            auctioneerCut
-        );
-
-        if (baseIn != 0) {
-            // Take underlying from liquidator
-            IJoin baseJoin = ladle.joins(auction_.baseId);
-            if (baseJoin == IJoin(address(0))) {
-                revert JoinNotFound(auction_.baseId);
-            }
-            baseJoin.join(msg.sender, baseIn.u128());
-        }
-
-        _collateralBought(vaultId, to, liquidatorCut + auctioneerCut, artIn);
+    function _baseIn(DataTypes.Auction memory auction_, uint128 artIn)
+        internal
+        override
+        returns (uint256 baseIn)
+    {
+        baseIn = cauldron.debtToBase(auction_.baseId, artIn);
     }
 
     // ======================================================================
