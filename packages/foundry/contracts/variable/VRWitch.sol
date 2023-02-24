@@ -91,6 +91,24 @@ contract VRWitch is WitchBase {
         vault = _auctionStarted(vaultId, auction_, line);
     }
 
+    /// @dev Moves the vault ownership to the witch.
+    /// Useful as a method so it can be overridden by specialised witches that may need to do extra accounting or notify 3rd parties
+    /// @param vaultId Id of the vault to liquidate
+    function _auctionStarted(
+        bytes12 vaultId,
+        DataTypes.Auction memory auction_,
+        DataTypes.Line memory line
+    ) internal virtual returns (VRDataTypes.Vault memory vault) {
+        // The Witch is now in control of the vault under auction
+        vault = vrCauldron.give(vaultId, address(this));
+        emit Auctioned(
+            vaultId,
+            auction_,
+            line.duration,
+            line.collateralProportion
+        );
+    }
+
     // ======================================================================
     // =                          Bidding functions                         =
     // ======================================================================
@@ -162,24 +180,6 @@ contract VRWitch is WitchBase {
         }
 
         _collateralBought(vaultId, to, liquidatorCut + auctioneerCut, artIn);
-    }
-
-    /// @dev Moves the vault ownership to the witch.
-    /// Useful as a method so it can be overridden by specialised witches that may need to do extra accounting or notify 3rd parties
-    /// @param vaultId Id of the vault to liquidate
-    function _auctionStarted(
-        bytes12 vaultId,
-        DataTypes.Auction memory auction_,
-        DataTypes.Line memory line
-    ) internal virtual returns (VRDataTypes.Vault memory vault) {
-        // The Witch is now in control of the vault under auction
-        vault = vrCauldron.give(vaultId, address(this));
-        emit Auctioned(
-            vaultId,
-            auction_,
-            line.duration,
-            line.collateralProportion
-        );
     }
 
     // ======================================================================
