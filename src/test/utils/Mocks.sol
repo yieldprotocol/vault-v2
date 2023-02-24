@@ -172,6 +172,20 @@ library Mocks {
         vm.mockCall(f.address, abi.encodeWithSelector(f.selector, param1, param2), abi.encode(0));
     }
 
+    function mock(
+        function (bytes12, address, uint256, uint256) external f,
+        bytes12 p1,
+        address p2,
+        uint256 p3,
+        uint256 p4
+    ) internal {
+        vm.mockCall(f.address, abi.encodeWithSelector(f.selector, p1, p2, p3, p4), "");
+    }
+
+    function mock(function (bytes12, address) external f, bytes12 p1, address p2) internal {
+        vm.mockCall(f.address, abi.encodeWithSelector(f.selector, p1, p2), "");
+    }
+
     // ===================================== verify =====================================
 
     function verify(function (address) external f, address param1) internal {
@@ -223,6 +237,20 @@ library Mocks {
         bytes6 p4
     ) internal {
         vm.expectCall(f.address, abi.encodeWithSelector(f.selector, p1, p2, p3, p4));
+    }
+
+    function verify(
+        function (bytes12, address, uint256, uint256) external f,
+        bytes12 p1,
+        address p2,
+        uint256 p3,
+        uint256 p4
+    ) internal {
+        vm.expectCall(f.address, abi.encodeWithSelector(f.selector, p1, p2, p3, p4));
+    }
+
+    function verify(function (bytes12, address) external f, bytes12 p1, address p2) internal {
+        vm.expectCall(f.address, abi.encodeWithSelector(f.selector, p1, p2));
     }
 }
 
