@@ -30,6 +30,7 @@ abstract contract ContangoWitchStateZero is Test, TestConstants {
     bytes6 internal constant BASE_ID = USDC;
     bytes6 internal constant SERIES_ID = FYETH2206;
     uint32 internal constant AUCTION_DURATION = 1 hours;
+    uint32 internal constant INSURANCE_AUCTION_DURATION = 2 hours;
 
     // address internal admin;
     address internal deployer = 0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84;
@@ -194,7 +195,7 @@ abstract contract ContangoWitchWithMetadata is ContangoWitchStateZero {
     DataTypes.Balances balances;
     DataTypes.Debt debt;
 
-    uint96 max = 100e18;
+    uint96 max = 100 ether;
     uint24 dust = 5000;
     uint8 dec = 6;
 
@@ -443,39 +444,50 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
     using Mocks for *;
 
     function testCalcPayoutAfterAuctionForAuctioneer() public {
-        // 100 * 0.5 * 0.714 = 35.7
-        // (ink * proportion * initialOffer)
-        (uint256 liquidatorCut, uint256 auctioneerCut,) = witch.calcPayout(VAULT_ID, bot, 50_000e6);
-        assertEq(liquidatorCut, 35.7 ether);
-        assertEq(auctioneerCut, 0);
+        uint256 vaultDebt = balances.art;
+        uint256 auctionStart = auction.start;
 
-        skip(5 minutes);
+        // 100000 * 0.5 = 50000
+        // maxArtIn = (vaultDebt * proportion)
+
+        // 100 * 0.5 * 0.714 = 357
+        // (ink * proportion * initialOffer)
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 artIn) = witch.calcPayout(VAULT_ID, bot, vaultDebt);
+        assertEqDecimal(liquidatorCut, 35.7 ether, 18, "liquidatorCut");
+        assertEqDecimal(auctioneerCut, 0, 18, "auctioneerCut");
+        assertEqDecimal(artIn, 50000e6, 6, "artIn");
+
+        vm.warp(auctionStart + 5 minutes);
         // 100 * 0.5 * (0.714 + (1 - 0.714) * 300/3600) = 36.8916666667
         // (ink * proportion * (initialOffer + (1 - initialOffer) * timeElapsed)
-        (liquidatorCut, auctioneerCut,) = witch.calcPayout(VAULT_ID, bot, 50_000e6);
-        assertEq(liquidatorCut, 36.89166666666666665 ether);
-        assertEq(auctioneerCut, 0);
+        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(VAULT_ID, bot, vaultDebt);
+        assertEqDecimal(liquidatorCut, 36.89166666666666665 ether, 18, "liquidatorCut");
+        assertEqDecimal(auctioneerCut, 0, 18, "auctioneerCut");
+        assertEqDecimal(artIn, 50000e6, 6, "artIn");
 
-        skip(25 minutes);
+        vm.warp(auctionStart + 30 minutes);
         // 100 * 0.5 * (0.714 + (1 - 0.714) * 1800/3600) = 42.85
         // (ink * proportion * (initialOffer + (1 - initialOffer) * timeElapsed)
-        (liquidatorCut, auctioneerCut,) = witch.calcPayout(VAULT_ID, bot, 50_000e6);
-        assertEq(liquidatorCut, 42.85 ether);
-        assertEq(auctioneerCut, 0);
+        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(VAULT_ID, bot, vaultDebt);
+        assertEqDecimal(liquidatorCut, 42.85 ether, 18, "liquidatorCut");
+        assertEqDecimal(auctioneerCut, 0, 18, "auctioneerCut");
+        assertEqDecimal(artIn, 50000e6, 6, "artIn");
 
         // Right at auction end
-        skip(30 minutes);
-        // 100 * 0.5 = 50
-        // (ink * proportion)
-        (liquidatorCut, auctioneerCut,) = witch.calcPayout(VAULT_ID, bot, 50_000e6);
-        assertEq(liquidatorCut, 50 ether);
-        assertEq(auctioneerCut, 0);
+        vm.warp(auctionStart + 1 hours);
+        // 100 * 0.5 = 50 (ink * proportion)
+        // from now on, the liquidatorCut will not change anymore
+        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(VAULT_ID, bot, vaultDebt);
+        assertEqDecimal(liquidatorCut, 50 ether, 18, "liquidatorCut");
+        assertEqDecimal(auctioneerCut, 0, 18, "auctioneerCut");
+        assertEqDecimal(artIn, 50000e6, 6, "artIn");
 
         // After the auction ends the value is fixed
-        skip(1 hours);
-        (liquidatorCut, auctioneerCut,) = witch.calcPayout(VAULT_ID, bot, 50_000e6);
-        assertEq(liquidatorCut, 50 ether);
-        assertEq(auctioneerCut, 0);
+        vm.warp(auctionStart + 4 hours);
+        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(VAULT_ID, bot, vaultDebt);
+        assertEqDecimal(liquidatorCut, 50 ether, 18, "liquidatorCut");
+        assertEqDecimal(auctioneerCut, 0, 18, "auctioneerCut");
+        assertEqDecimal(artIn, 50000e6, 6, "artIn");
     }
 
     function testCalcPayoutAfterAuctionForNonAuctioneer() public {
@@ -1358,5 +1370,96 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         assertEq(auction_.baseId, auction.baseId, "baseId");
         assertEq(auction_.art, auction.art - art, "art");
         assertEq(auction_.ink, auction.ink - ink, "ink");
+    }
+}
+
+contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
+    using Mocks for *;
+
+    uint64 maxInsuredProportion = 0.2e18;
+
+    function setUp() public virtual override {
+        super.setUp();
+        witch.setInsuranceLine(ILK_ID, BASE_ID, INSURANCE_AUCTION_DURATION, maxInsuredProportion);
+    }
+
+    function testCalcPayoutAfterAuctionForAuctioneerWithInsurance() public {
+        uint256 vaultDebt = balances.art;
+        uint256 auctionStart = auction.start;
+
+        // 100000 * 0.5 = 50000
+        // maxArtIn = (vaultDebt * proportion)
+
+        // 100 * 0.5 * 0.714 = 357
+        // (ink * proportion * initialOffer)
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 artIn) = witch.calcPayout(VAULT_ID, bot, vaultDebt);
+        assertEqDecimal(liquidatorCut, 35.7 ether, 18, "liquidatorCut");
+        assertEqDecimal(auctioneerCut, 0, 18, "auctioneerCut");
+        assertEqDecimal(artIn, 50000e6, 6, "artIn");
+
+        vm.warp(auctionStart + 5 minutes);
+        // 100 * 0.5 * (0.714 + (1 - 0.714) * 300/3600) = 36.8916666667
+        // (ink * proportion * (initialOffer + (1 - initialOffer) * timeElapsed)
+        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(VAULT_ID, bot, vaultDebt);
+        assertEqDecimal(liquidatorCut, 36.89166666666666665 ether, 18, "liquidatorCut");
+        assertEqDecimal(auctioneerCut, 0, 18, "auctioneerCut");
+        assertEqDecimal(artIn, 50000e6, 6, "artIn");
+
+        vm.warp(auctionStart + 30 minutes);
+        // 100 * 0.5 * (0.714 + (1 - 0.714) * 1800/3600) = 42.85
+        // (ink * proportion * (initialOffer + (1 - initialOffer) * timeElapsed)
+        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(VAULT_ID, bot, vaultDebt);
+        assertEqDecimal(liquidatorCut, 42.85 ether, 18, "liquidatorCut");
+        assertEqDecimal(auctioneerCut, 0, 18, "auctioneerCut");
+        assertEqDecimal(artIn, 50000e6, 6, "artIn");
+
+        // Right at auction end and start of the insurance auction
+        vm.warp(auctionStart + 1 hours);
+        // 100 * 0.5 = 50 (ink * proportion)
+        // from now on, the liquidatorCut will not change anymore
+        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(VAULT_ID, bot, vaultDebt);
+        assertEqDecimal(liquidatorCut, 50 ether, 18, "liquidatorCut");
+        assertEqDecimal(auctioneerCut, 0, 18, "auctioneerCut");
+        assertEqDecimal(artIn, 50000e6, 6, "artIn");
+
+        vm.warp(auctionStart + 1.5 hours);
+        // 50000 * (1 - ((1800/7200) * 0.2)) = 47500
+        // maxArtIn * (1 - (timeElapsed * maxInsuredProportion))
+        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(VAULT_ID, bot, vaultDebt);
+        assertEqDecimal(liquidatorCut, 50 ether, 18, "liquidatorCut");
+        assertEqDecimal(auctioneerCut, 0, 18, "auctioneerCut");
+        assertEqDecimal(artIn, 47500e6, 6, "artIn");
+
+        vm.warp(auctionStart + 2 hours);
+        // 50000 * (1 - ((3600/7200) * 0.2)) = 45000
+        // maxArtIn * (1 - (timeElapsed * maxInsuredProportion))
+        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(VAULT_ID, bot, vaultDebt);
+        assertEqDecimal(liquidatorCut, 50 ether, 18, "liquidatorCut");
+        assertEqDecimal(auctioneerCut, 0, 18, "auctioneerCut");
+        assertEqDecimal(artIn, 45000e6, 6, "artIn");
+
+        vm.warp(auctionStart + 2.5 hours);
+        // 50000 * (1 - ((5400/7200) * 0.2)) = 42500
+        // maxArtIn * (1 - (timeElapsed * maxInsuredProportion))
+        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(VAULT_ID, bot, vaultDebt);
+        assertEqDecimal(liquidatorCut, 50 ether, 18, "liquidatorCut");
+        assertEqDecimal(auctioneerCut, 0, 18, "auctioneerCut");
+        assertEqDecimal(artIn, 42500e6, 6, "artIn");
+
+        // Right at insurance auction end
+        vm.warp(auctionStart + 3 hours);
+        // 50000 * (1 - 0.2) = 40000
+        // maxArtIn * (1 - maxInsuredProportion)
+        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(VAULT_ID, bot, vaultDebt);
+        assertEqDecimal(liquidatorCut, 50 ether, 18, "liquidatorCut");
+        assertEqDecimal(auctioneerCut, 0, 18, "auctioneerCut");
+        assertEqDecimal(artIn, 40000e6, 6, "artIn");
+
+        // After the auction ends the value is fixed
+        vm.warp(auctionStart + 4 hours);
+        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(VAULT_ID, bot, vaultDebt);
+        assertEqDecimal(liquidatorCut, 50 ether, 18, "liquidatorCut");
+        assertEqDecimal(auctioneerCut, 0, 18, "auctioneerCut");
+        assertEqDecimal(artIn, 40000e6, 6, "artIn");
     }
 }

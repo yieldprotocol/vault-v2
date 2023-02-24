@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
+
 import "./IFYToken.sol";
 import "./IOracle.sol";
 
@@ -9,7 +10,7 @@ library DataTypes {
         IFYToken fyToken; // Redeemable token for the series.
         bytes6 baseId; // Asset received on redemption.
         uint32 maturity; // Unix time at which redemption becomes possible.
-        // bytes2 free
+            // bytes2 free
     }
 
     struct Debt {
@@ -22,7 +23,7 @@ library DataTypes {
     struct SpotOracle {
         IOracle oracle; // Address for the spot price oracle
         uint32 ratio; // Collateralization ratio to multiply the price for
-        // bytes8 free
+            // bytes8 free
     }
 
     struct Vault {
