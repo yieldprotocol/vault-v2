@@ -12,7 +12,7 @@ import "../../../other/contango/ContangoWitch.sol";
 using WMul for uint256;
 using WMul for uint128;
 
-abstract contract ContangoWitchStateZero is Test, TestConstants {
+abstract contract ContangoWitchStateZero is Test, TestConstants, IContangoWitchEvents {
     using Mocks for *;
 
     event Auctioned(bytes12 indexed vaultId, DataTypes.Auction auction, uint256 duration, uint256 initialProportion);
@@ -39,6 +39,7 @@ abstract contract ContangoWitchStateZero is Test, TestConstants {
     address internal bot = address(0xb07);
     address internal bad = address(0xbad);
     address internal cool = address(0xc001);
+    address internal insuranceFund = address(0x5afe);
 
     IContangoWitchListener public contango;
     ICauldron internal cauldron;
@@ -53,7 +54,7 @@ abstract contract ContangoWitchStateZero is Test, TestConstants {
         contango = IContangoWitchListener(Mocks.mock("ContangoWitchListener"));
 
         vm.startPrank(ada);
-        witch = new ContangoWitch(contango, cauldron, ladle);
+        witch = new ContangoWitch(contango, cauldron, ladle, insuranceFund);
         witch.grantRole(Witch.point.selector, ada);
         witch.grantRole(Witch.setLineAndLimit.selector, ada);
         witch.grantRole(Witch.setProtected.selector, ada);
@@ -336,7 +337,7 @@ contract ContangoWitchWithMetadataTest is ContangoWitchWithMetadata {
 
     function testAuctionAVaultWithoutLimitsSet() public {
         // Given
-        witch = new ContangoWitch(contango, cauldron, ladle);
+        witch = new ContangoWitch(contango, cauldron, ladle, insuranceFund);
 
         // When
         vm.expectRevert(abi.encodeWithSelector(Witch.VaultNotLiquidatable.selector, ILK_ID, BASE_ID));
@@ -437,6 +438,24 @@ abstract contract ContangoWitchWithAuction is ContangoWitchWithMetadata {
         cauldron.balances.mock(vaultId, b);
         cauldron.level.mock(vaultId, level);
         cauldron.give.mock(vaultId, address(witch), v);
+    }
+
+    function _auctionWasDeleted(bytes12 vaultId) internal {
+        DataTypes.Auction memory auction_ = iWitch.auctions(vaultId);
+        assertEq(auction_.owner, address(0));
+        assertEq(auction_.start, 0);
+        assertEq(auction_.baseId, "");
+        assertEq(auction_.art, 0);
+        assertEq(auction_.ink, 0);
+    }
+
+    function _auctionWasUpdated(bytes12 vaultId, uint128 art, uint128 ink) internal {
+        DataTypes.Auction memory auction_ = iWitch.auctions(vaultId);
+        assertEq(auction_.owner, auction.owner, "owner");
+        assertEq(auction_.start, auction.start, "start");
+        assertEq(auction_.baseId, auction.baseId, "baseId");
+        assertEq(auction_.art, auction.art - art, "art");
+        assertEq(auction_.ink, auction.ink - ink, "ink");
     }
 }
 
@@ -866,6 +885,58 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) =
             witch.payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
         assertEq(liquidatorCut, minInkOut);
+        assertEq(auctioneerCut, 0);
+        assertEq(baseIn, maxBaseIn);
+
+        // sum is reduced by auction.ink
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, 0, "sum");
+
+        _auctionWasDeleted(VAULT_ID);
+    }
+
+    function testPayBaseAllAndTakesAll() public {
+        uint128 maxBaseIn = uint128(auction.art);
+        vm.warp(uint256(auction.start) + AUCTION_DURATION);
+
+        vm.prank(bot);
+        (uint256 minInkOut_,,) = witch.calcPayout(VAULT_ID, bot, maxBaseIn);
+        uint128 minInkOut = uint128(minInkOut_);
+
+        _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxBaseIn);
+        _verifyAuctionEnded(VAULT_ID, bob);
+
+        // Reduce balances on tha vault
+        cauldron.slurp.mock(VAULT_ID, minInkOut, maxBaseIn, balances);
+        cauldron.slurp.verify(VAULT_ID, minInkOut, maxBaseIn);
+        // Vault returns to it's owner after all the liquidation is done
+        cauldron.give.mock(VAULT_ID, bob, vault);
+        cauldron.give.verify(VAULT_ID, bob);
+
+        // make fyToken 1:1 with base to make things simpler
+        cauldron.debtFromBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+        cauldron.debtToBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+
+        IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
+        ladle.joins.mock(vault.ilkId, ilkJoin);
+        ilkJoin.exit.mock(bot, minInkOut, minInkOut);
+        ilkJoin.exit.verify(bot, minInkOut);
+
+        IJoin baseJoin = IJoin(Mocks.mock("BaseJoin"));
+        ladle.joins.mock(series.baseId, baseJoin);
+        baseJoin.join.mock(bot, maxBaseIn, maxBaseIn);
+        baseJoin.join.verify(bot, maxBaseIn);
+
+        vm.expectEmit(true, true, true, true);
+        emit Ended(VAULT_ID);
+        vm.expectEmit(true, true, true, true);
+        emit Bought(VAULT_ID, bot, minInkOut, maxBaseIn);
+
+        vm.prank(bot);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) =
+            witch.payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
+        assertEq(liquidatorCut, minInkOut);
+        assertEq(liquidatorCut, balances.ink.wmul(proportion));
         assertEq(auctioneerCut, 0);
         assertEq(baseIn, maxBaseIn);
 
@@ -1353,24 +1424,6 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
 
         _auctionWasDeleted(VAULT_ID);
     }
-
-    function _auctionWasDeleted(bytes12 vaultId) internal {
-        DataTypes.Auction memory auction_ = iWitch.auctions(vaultId);
-        assertEq(auction_.owner, address(0));
-        assertEq(auction_.start, 0);
-        assertEq(auction_.baseId, "");
-        assertEq(auction_.art, 0);
-        assertEq(auction_.ink, 0);
-    }
-
-    function _auctionWasUpdated(bytes12 vaultId, uint128 art, uint128 ink) internal {
-        DataTypes.Auction memory auction_ = iWitch.auctions(vaultId);
-        assertEq(auction_.owner, auction.owner, "owner");
-        assertEq(auction_.start, auction.start, "start");
-        assertEq(auction_.baseId, auction.baseId, "baseId");
-        assertEq(auction_.art, auction.art - art, "art");
-        assertEq(auction_.ink, auction.ink - ink, "ink");
-    }
 }
 
 contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
@@ -1461,5 +1514,68 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         assertEqDecimal(liquidatorCut, 50 ether, 18, "liquidatorCut");
         assertEqDecimal(auctioneerCut, 0, 18, "auctioneerCut");
         assertEqDecimal(artIn, 40000e6, 6, "artIn");
+    }
+
+    function testPayBaseAllAndTakesAllWithInsurance() public {
+        vm.warp(uint256(auction.start) + AUCTION_DURATION + INSURANCE_AUCTION_DURATION);
+
+        vm.prank(bot);
+        (uint256 minInkOut_,, uint256 maxBaseIn_) = witch.calcPayout(VAULT_ID, bot, auction.art);
+        assertEq(maxBaseIn_, auction.art.wmul(1e18 - maxInsuredProportion));
+        uint128 minInkOut = uint128(minInkOut_);
+        uint128 maxBaseIn = uint128(maxBaseIn_);
+
+        _verifyCollateralBought(VAULT_ID, bot, minInkOut, auction.art);
+        _verifyAuctionEnded(VAULT_ID, bob);
+
+        // Reduce balances on tha vault
+        cauldron.slurp.mock(VAULT_ID, minInkOut, auction.art, balances);
+        cauldron.slurp.verify(VAULT_ID, minInkOut, auction.art);
+        // Vault returns to it's owner after all the liquidation is done
+        cauldron.give.mock(VAULT_ID, bob, vault);
+        cauldron.give.verify(VAULT_ID, bob);
+
+        // make fyToken 1:1 with base to make things simpler
+        cauldron.debtFromBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+        cauldron.debtToBase.mock(vault.seriesId, auction.art, auction.art);
+        uint128 expectedArtTopUp = auction.art - maxBaseIn;
+        cauldron.debtToBase.mock(vault.seriesId, expectedArtTopUp, expectedArtTopUp);
+
+        IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
+        ladle.joins.mock(vault.ilkId, ilkJoin);
+        ilkJoin.exit.mock(bot, minInkOut, minInkOut);
+        ilkJoin.exit.verify(bot, minInkOut);
+
+        IJoin baseJoin = IJoin(Mocks.mock("BaseJoin"));
+        ladle.joins.mock(series.baseId, baseJoin);
+        baseJoin.join.mock(bot, auction.art, auction.art);
+        baseJoin.join.verify(bot, auction.art);
+        IERC20 base = IERC20(Mocks.mock("Base"));
+        baseJoin.asset.mock(address(base));
+        baseJoin.asset.verify();
+
+        base.transferFrom.mock(insuranceFund, address(baseJoin), expectedArtTopUp, true);
+        base.transferFrom.verify(insuranceFund, address(baseJoin), expectedArtTopUp);
+
+        vm.expectEmit(true, true, true, true);
+        emit LiquidationInsured(VAULT_ID, expectedArtTopUp, expectedArtTopUp);
+        vm.expectEmit(true, true, true, true);
+        emit Ended(VAULT_ID);
+        vm.expectEmit(true, true, true, true);
+        emit Bought(VAULT_ID, bot, minInkOut, auction.art);
+
+        vm.prank(bot);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) =
+            witch.payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
+        assertEq(liquidatorCut, minInkOut, "liquidatorCut");
+        assertEq(liquidatorCut, balances.ink.wmul(proportion), "liquidatorCut");
+        assertEq(auctioneerCut, 0, "auctioneerCut");
+        assertEq(baseIn, maxBaseIn_, "baseIn");
+
+        // sum is reduced by auction.ink
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, 0, "sum");
+
+        _auctionWasDeleted(VAULT_ID);
     }
 }

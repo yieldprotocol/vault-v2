@@ -40,6 +40,10 @@ library Mocks {
         vm.mockCall(f.address, abi.encodeWithSelector(f.selector, param1), abi.encode(0));
     }
 
+    function mock(function () view external returns(address) f, address returned1) internal {
+        vm.mockCall(f.address, abi.encodeWithSelector(f.selector), abi.encode(returned1));
+    }
+
     function mock(function () external returns(uint256) f, uint256 returned1) internal {
         vm.mockCall(f.address, abi.encodeWithSelector(f.selector), abi.encode(returned1));
     }
@@ -106,6 +110,16 @@ library Mocks {
         DataTypes.Balances memory returned1
     ) internal {
         vm.mockCall(f.address, abi.encodeWithSelector(f.selector, param1), abi.encode(returned1));
+    }
+
+    function mock(
+        function (address, address, uint256) external returns(bool) f,
+        address param1,
+        address param2,
+        uint256 param3,
+        bool returned1
+    ) internal {
+        vm.mockCall(f.address, abi.encodeWithSelector(f.selector, param1, param2, param3), abi.encode(returned1));
     }
 
     function mock(
@@ -188,6 +202,10 @@ library Mocks {
 
     // ===================================== verify =====================================
 
+    function verify(function () external view returns(address) f) internal {
+        vm.expectCall(f.address, abi.encodeWithSelector(f.selector));
+    }
+
     function verify(function (address) external f, address param1) internal {
         vm.expectCall(f.address, abi.encodeWithSelector(f.selector, param1));
     }
@@ -221,6 +239,15 @@ library Mocks {
         bytes12 param1,
         uint128 param2,
         uint128 param3
+    ) internal {
+        vm.expectCall(f.address, abi.encodeWithSelector(f.selector, param1, param2, param3));
+    }
+
+    function verify(
+        function (address, address, uint) external returns(bool) f,
+        address param1,
+        address param2,
+        uint256 param3
     ) internal {
         vm.expectCall(f.address, abi.encodeWithSelector(f.selector, param1, param2, param3));
     }
