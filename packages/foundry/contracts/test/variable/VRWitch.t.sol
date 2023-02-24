@@ -67,10 +67,10 @@ abstract contract WitchStateZero is Test, TestConstants {
 
         vm.startPrank(ada);
         witch = new VRWitch(cauldron, ladle);
-        witch.grantRole(VRWitch.point.selector, ada);
-        witch.grantRole(VRWitch.setLineAndLimit.selector, ada);
-        witch.grantRole(VRWitch.setProtected.selector, ada);
-        witch.grantRole(VRWitch.setAuctioneerReward.selector, ada);
+        witch.grantRole(WitchBase.point.selector, ada);
+        witch.grantRole(WitchBase.setLineAndLimit.selector, ada);
+        witch.grantRole(WitchBase.setProtected.selector, ada);
+        witch.grantRole(WitchBase.setAuctioneerReward.selector, ada);
         vm.stopPrank();
 
         vm.label(ada, "ada");
@@ -91,7 +91,7 @@ contract WitchStateZeroTest is WitchStateZero {
         vm.prank(ada);
         vm.expectRevert(
             abi.encodeWithSelector(
-                VRWitch.UnrecognisedParam.selector,
+                WitchBase.UnrecognisedParam.selector,
                 bytes32("cauldron")
             )
         );
@@ -206,7 +206,7 @@ contract WitchStateZeroTest is WitchStateZero {
         vm.prank(ada);
         vm.expectRevert(
             abi.encodeWithSelector(
-                VRWitch.AuctioneerRewardTooHigh.selector,
+                WitchBase.AuctioneerRewardTooHigh.selector,
                 1e18,
                 1.00001e18
             )
@@ -355,7 +355,7 @@ contract WitchWithMetadataTest is WitchWithMetadata {
 
     function testWitchIsTooOld() public {
         vm.warp(uint256(type(uint32).max) + 1);
-        vm.expectRevert(VRWitch.WitchIsDead.selector);
+        vm.expectRevert(WitchBase.WitchIsDead.selector);
         witch.auction(VAULT_ID, bot);
     }
 
@@ -363,7 +363,7 @@ contract WitchWithMetadataTest is WitchWithMetadata {
         cauldron.level.mock(VAULT_ID, 0);
         vm.expectRevert(
             abi.encodeWithSelector(
-                VRWitch.NotUnderCollateralised.selector,
+                WitchBase.NotUnderCollateralised.selector,
                 VAULT_ID
             )
         );
@@ -383,7 +383,7 @@ contract WitchWithMetadataTest is WitchWithMetadata {
         // When
         vm.expectRevert(
             abi.encodeWithSelector(
-                VRWitch.VaultAlreadyUnderAuction.selector,
+                WitchBase.VaultAlreadyUnderAuction.selector,
                 VAULT_ID,
                 owner
             )
@@ -398,7 +398,7 @@ contract WitchWithMetadataTest is WitchWithMetadata {
         // When
         vm.expectRevert(
             abi.encodeWithSelector(
-                VRWitch.VaultNotLiquidatable.selector,
+                WitchBase.VaultNotLiquidatable.selector,
                 ILK_ID,
                 BASE_ID
             )
@@ -451,7 +451,7 @@ contract WitchWithMetadataTest is WitchWithMetadata {
     function testCancelNonExistentAuction() public {
         vm.expectRevert(
             abi.encodeWithSelector(
-                VRWitch.VaultNotUnderAuction.selector,
+                WitchBase.VaultNotUnderAuction.selector,
                 VAULT_ID
             )
         );
@@ -461,7 +461,7 @@ contract WitchWithMetadataTest is WitchWithMetadata {
     function testPayBaseNonExistingAuction() public {
         vm.expectRevert(
             abi.encodeWithSelector(
-                VRWitch.VaultNotUnderAuction.selector,
+                WitchBase.VaultNotUnderAuction.selector,
                 VAULT_ID
             )
         );
@@ -643,7 +643,7 @@ contract WitchWithAuction is WitchWithMetadata {
     function testAuctionAlreadyExists() public {
         vm.expectRevert(
             abi.encodeWithSelector(
-                VRWitch.VaultAlreadyUnderAuction.selector,
+                WitchBase.VaultAlreadyUnderAuction.selector,
                 VAULT_ID,
                 address(witch)
             )
@@ -688,7 +688,7 @@ contract WitchWithAuction is WitchWithMetadata {
         // Expect
         vm.expectRevert(
             abi.encodeWithSelector(
-                VRWitch.CollateralLimitExceeded.selector,
+                WitchBase.CollateralLimitExceeded.selector,
                 sum,
                 max
             )
@@ -831,7 +831,7 @@ contract WitchWithAuction is WitchWithMetadata {
     function testCancelUndercollateralisedAuction() public {
         vm.expectRevert(
             abi.encodeWithSelector(
-                VRWitch.UnderCollateralised.selector,
+                WitchBase.UnderCollateralised.selector,
                 VAULT_ID
             )
         );
@@ -862,7 +862,10 @@ contract WitchWithAuction is WitchWithMetadata {
 
     function testClearOwnedAuction() public {
         vm.expectRevert(
-            abi.encodeWithSelector(VRWitch.AuctionIsCorrect.selector, VAULT_ID)
+            abi.encodeWithSelector(
+                WitchBase.AuctionIsCorrect.selector,
+                VAULT_ID
+            )
         );
         witch.clear(VAULT_ID);
     }
@@ -896,7 +899,7 @@ contract WitchWithAuction is WitchWithMetadata {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                VRWitch.NotEnoughBought.selector,
+                WitchBase.NotEnoughBought.selector,
                 minInkOut,
                 35.7 ether
             )
@@ -913,7 +916,11 @@ contract WitchWithAuction is WitchWithMetadata {
         cauldron.debtToBase.mock(vault.baseId, maxBaseIn, maxBaseIn);
 
         vm.expectRevert(
-            abi.encodeWithSelector(VRWitch.LeavesDust.selector, 4999e6, 5000e6)
+            abi.encodeWithSelector(
+                WitchBase.LeavesDust.selector,
+                4999e6,
+                5000e6
+            )
         );
         witch.payBase(VAULT_ID, bot, 0, maxBaseIn);
     }

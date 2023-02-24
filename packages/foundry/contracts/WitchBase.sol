@@ -2,10 +2,18 @@
 pragma solidity >=0.8.13;
 
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
+import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
+import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";
+import "@yield-protocol/utils-v2/contracts/math/WDivUp.sol";
 import "./interfaces/DataTypes.sol";
 import "./interfaces/ILadle.sol";
 
 contract WitchBase is AccessControl {
+    using WMul for uint256;
+    using WDiv for uint256;
+    using WDivUp for uint256;
+    using CastU256U128 for uint256;
     // ==================== Errors ====================
 
     error VaultAlreadyUnderAuction(bytes12 vaultId, address witch);
@@ -64,15 +72,17 @@ contract WitchBase is AccessControl {
     // Reward given to whomever calls `auction`. It represents a % of the bought collateral
     uint256 public auctioneerReward;
     ILadle public ladle;
+    ICauldron public immutable cauldron;
 
     mapping(bytes12 => DataTypes.Auction) public auctions;
     mapping(bytes6 => mapping(bytes6 => DataTypes.Line)) public lines;
     mapping(bytes6 => mapping(bytes6 => DataTypes.Limits)) public limits;
     mapping(address => bool) public protected;
 
-    constructor(ILadle ladle_) public {
+    constructor(ICauldron cauldron_, ILadle ladle_) public {
+        cauldron = cauldron_;
         ladle = ladle_;
-        auctioneerReward = ONE_HUNDRED_PERCENT;
+        auctioneerReward = ONE_PERCENT;
     }
 
     // ======================================================================
@@ -161,6 +171,256 @@ contract WitchBase is AccessControl {
         emit AuctioneerRewardSet(auctioneerReward_);
     }
 
+    // ======================================================================
+    // =                    Auction management functions                    =
+    // ======================================================================
+
+    /// @dev Cancel an auction for a vault that isn't under-collateralised any more
+    /// @param vaultId Id of the vault to remove from auction
+    function cancel(bytes12 vaultId) external {
+        DataTypes.Auction memory auction_ = _auction(vaultId);
+        if (cauldron.level(vaultId) < 0) {
+            revert UnderCollateralised(vaultId);
+        }
+
+        // Update concurrent collateral under auction
+        limits[auction_.ilkId][auction_.baseId].sum -= auction_.ink;
+
+        _auctionEnded(vaultId, auction_.owner);
+
+        emit Cancelled(vaultId);
+    }
+
+    /// @dev Moves the vault ownership back to the original owner & clean internal state.
+    /// Useful as a method so it can be overridden by specialised witches that may need to do extra accounting or notify 3rd parties
+    /// @param vaultId Id of the liquidated vault
+    function _auctionEnded(bytes12 vaultId, address owner) internal virtual {
+        cauldron.give(vaultId, owner);
+        delete auctions[vaultId];
+        emit Ended(vaultId);
+    }
+
+    /// @dev Remove an auction for a vault that isn't owned by this Witch
+    /// @notice Other witches or similar contracts can take vaults
+    /// @param vaultId Id of the vault whose auction we will clear
+    function clear(bytes12 vaultId) external {
+        DataTypes.Auction memory auction_ = _auction(vaultId);
+        if (cauldron.vaults(vaultId).owner == address(this)) {
+            revert AuctionIsCorrect(vaultId);
+        }
+
+        // Update concurrent collateral under auction
+        limits[auction_.ilkId][auction_.baseId].sum -= auction_.ink;
+        delete auctions[vaultId];
+        emit Cleared(vaultId);
+    }
+
+    /// @dev Calculates the auction initial values, the 2 non-trivial values are how much art must be repaid
+    /// and what's the max ink that will be offered in exchange. For the realtime amount of ink that's on offer
+    /// use `_calcPayout`
+    /// @param ilkId The ilkId of the collateral
+    /// @param baseId The baseId of the collateral
+    /// @param seriesId The seriesId of the collateral
+    /// @param vaultOwner Who owns the vault
+    /// @param to Who's gonna get the auctioneerCut
+    /// @param balances Balances data
+    /// @param debt Debt data
+    /// @return auction_ Auction data
+    /// @return line Line data
+    function _calcAuction(
+        bytes6 ilkId,
+        bytes6 baseId,
+        bytes6 seriesId,
+        address vaultOwner,
+        address to,
+        DataTypes.Balances memory balances,
+        DataTypes.Debt memory debt
+    )
+        internal
+        view
+        returns (DataTypes.Auction memory auction_, DataTypes.Line memory line)
+    {
+        // We try to partially liquidate the vault if possible.
+        line = lines[ilkId][baseId];
+        uint256 vaultProportion = line.vaultProportion;
+
+        // There's a min amount of debt that a vault can hold,
+        // this limit is set so liquidations are big enough to be attractive,
+        // so 2 things have to be true:
+        //      a) what we are putting up for liquidation has to be over the min
+        //      b) what we leave in the vault has to be over the min (or zero) in case another liquidation has to be performed
+        uint256 min = debt.min * (10**debt.dec);
+
+        uint256 art;
+        uint256 ink;
+
+        if (balances.art > min) {
+            // We optimistically assume the vaultProportion to be liquidated is correct.
+            art = uint256(balances.art).wmul(vaultProportion);
+
+            // If the vaultProportion we'd be liquidating is too small
+            if (art < min) {
+                // We up the amount to the min
+                art = min;
+                // We calculate the new vaultProportion of the vault that we're liquidating
+                vaultProportion = art.wdivup(balances.art);
+            }
+
+            // If the debt we'd be leaving in the vault is too small
+            if (balances.art - art < min) {
+                // We liquidate everything
+                art = balances.art;
+                // Proportion is set to 100%
+                vaultProportion = ONE_HUNDRED_PERCENT;
+            }
+
+            // We calculate how much ink has to be put for sale based on how much art are we asking to be repaid
+            ink = uint256(balances.ink).wmul(vaultProportion);
+        } else {
+            // If min debt was raised, any vault that's left below the new min should be liquidated 100%
+            art = balances.art;
+            ink = balances.ink;
+        }
+
+        auction_ = DataTypes.Auction({
+            owner: vaultOwner,
+            start: uint32(block.timestamp), // Overflow can't happen as max value is checked before
+            seriesId: seriesId,
+            baseId: baseId,
+            ilkId: ilkId,
+            art: art.u128(),
+            ink: ink.u128(),
+            auctioneer: to
+        });
+    }
+
+    // ======================================================================
+    // =                          Bidding functions                         =
+    // ======================================================================
+
+    /// @notice If too much base is offered, only the necessary amount are taken.
+    /// @dev Pay at most `maxBaseIn` of the debt in a vault in liquidation, getting at least `minInkOut` collateral.
+    /// @param vaultId Id of the vault to buy
+    /// @param to Receiver of the collateral bought
+    /// @param minInkOut Minimum amount of collateral that must be received
+    /// @param maxBaseIn Maximum amount of base that the liquidator will pay
+    /// @return liquidatorCut Amount paid to `to`.
+    /// @return auctioneerCut Amount paid to an address specified by whomever started the auction. 0 if it's the same as the `to` address
+    /// @return baseIn Amount of underlying taken
+    function payBase(
+        bytes12 vaultId,
+        address to,
+        uint128 minInkOut,
+        uint128 maxBaseIn
+    )
+        external
+        virtual
+        returns (
+            uint256 liquidatorCut,
+            uint256 auctioneerCut,
+            uint256 baseIn
+        )
+    {}
+
+    /// @dev transfers funds from the ilkJoin to the liquidator (and potentially the auctioneer if they're different people)
+    /// @param ilkId The ilkId of the collateral
+    /// @param to Who's gonna get the `liquidatorCut`
+    /// @param auctioneer Who's gonna get the `auctioneerCut`
+    /// @param liquidatorCut How much collateral the liquidator is expected to get
+    /// @param auctioneerCut How much collateral the auctioneer is expected to get. 0 if liquidator == auctioneer
+    /// @return updated liquidatorCut & auctioneerCut
+    function _payInk(
+        bytes6 ilkId,
+        address auctioneer,
+        address to,
+        uint256 liquidatorCut,
+        uint256 auctioneerCut
+    ) internal returns (uint256, uint256) {
+        IJoin ilkJoin = ladle.joins(ilkId);
+        if (ilkJoin == IJoin(address(0))) {
+            revert JoinNotFound(ilkId);
+        }
+
+        // Pay auctioneer's cut if necessary
+        if (auctioneerCut > 0) {
+            // A transfer revert would block the auction, in that case the liquidator gets the auctioneer's cut as well
+            try ilkJoin.exit(auctioneer, auctioneerCut.u128()) returns (
+                uint128
+            ) {} catch {
+                liquidatorCut += auctioneerCut;
+                auctioneerCut = 0;
+            }
+        }
+
+        // Give collateral to the liquidator
+        if (liquidatorCut > 0) {
+            ilkJoin.exit(to, liquidatorCut.u128());
+        }
+
+        return (liquidatorCut, auctioneerCut);
+    }
+
+    /// @notice Update accounting on the Witch and on the Cauldron. Delete the auction and give back the vault if finished.
+    /// @param vaultId Id of the liquidated vault
+    /// @param auction_ Auction data
+    /// @param inkOut How much collateral was sold
+    /// @param artIn How much debt was repaid
+    /// This function doesn't verify the vaultId matches the vault and auction passed. Check before calling.
+    function _updateAccounting(
+        bytes12 vaultId,
+        DataTypes.Auction memory auction_,
+        uint128 inkOut,
+        uint128 artIn
+    ) internal {
+        // Duplicate check, but guarantees data integrity
+        if (auction_.start == 0) {
+            revert VaultNotUnderAuction(vaultId);
+        }
+
+        DataTypes.Limits memory limits_ = limits[auction_.ilkId][
+            auction_.baseId
+        ];
+
+        // Update local auction
+        {
+            if (auction_.art == artIn) {
+                // If there is no debt left, return the vault with the collateral to the owner
+                _auctionEnded(vaultId, auction_.owner);
+
+                // Update limits - reduce it by the whole auction
+                limits_.sum -= auction_.ink;
+            } else {
+                // Ensure enough dust is left
+                DataTypes.Debt memory debt = cauldron.debt(
+                    auction_.baseId,
+                    auction_.ilkId
+                );
+
+                uint256 remainder = auction_.art - artIn;
+                uint256 min = debt.min * (10**debt.dec);
+                if (remainder < min) {
+                    revert LeavesDust(remainder, min);
+                }
+
+                // Update the auction
+                auction_.ink -= inkOut;
+                auction_.art -= artIn;
+
+                // Store auction changes
+                auctions[vaultId] = auction_;
+
+                // Update limits - reduce it by whatever was bought
+                limits_.sum -= inkOut;
+            }
+        }
+
+        // Store limit changes
+        limits[auction_.ilkId][auction_.baseId] = limits_;
+
+        // Update accounting at Cauldron
+        cauldron.slurp(vaultId, inkOut, artIn);
+    }
+
     /// @dev Logs that a certain amount of a vault was liquidated
     /// Useful as a method so it can be overridden by specialised witches that may need to do extra accounting or notify 3rd parties
     /// @param vaultId Id of the liquidated vault
@@ -174,6 +434,117 @@ contract WitchBase is AccessControl {
         uint256 art
     ) internal virtual {
         emit Bought(vaultId, buyer, ink, art);
+    }
+
+    // ======================================================================
+    // =                         Quoting functions                          =
+    // ======================================================================
+
+    /*
+
+       x x x
+     x      x    Hi Fren!
+    x  .  .  x   I want to buy this vault under auction!  I'll pay
+    x        x   you in the same `base` currency of the debt, or in fyToken, but
+    x        x   I want no less than `uint min` of the collateral, ok?
+    x   ===  x
+    x       x
+      xxxxx
+        x                             __  Ok Fren!
+        x     ┌────────────┐  _(\    |@@|
+        xxxxxx│ BASE BUCKS │ (__/\__ \--/ __
+        x     │     OR     │    \___|----|  |   __
+        x     │   FYTOKEN  │        \ }{ /\ )_ / _\
+       x x    └────────────┘        /\__/\ \__O (__
+                                   (--/\--)    \__/
+                            │      _)(  )(_
+                            │     `---''---`
+                            ▼
+      _______
+     /  12   \  First lets check how much time `t` is left on the auction
+    |    |    | because that helps us determine the price we will accept
+    |9   |   3| for the debt! Yay!
+    |     \   |                       p + (1 - p) * t
+    |         |
+     \___6___/          (p is the auction starting price!)
+
+                            │
+                            │
+                            ▼                  (\
+                                                \ \
+    Then the Cauldron updates our internal    __    \/ ___,.-------..__        __
+    accounting by slurping up the debt      //\\ _,-'\\               `'--._ //\\
+    and the collateral from the vault!      \\ ;'      \\                   `: //
+                                             `(          \\                   )'
+    The Join then dishes out the collateral    :.          \\,----,         ,;
+    to you, dear user. And the debt is          `.`--.___   (    /  ___.--','
+    settled with the base join or debt fyToken.   `.     ``-----'-''     ,'
+                                                    -.               ,-
+                                                       `-._______.-'
+
+
+    */
+
+    /// @dev quotes how much ink a liquidator is expected to get if it repays an `artIn` amount. Works for both Auctioned and ToBeAuctioned vaults
+    /// @param vaultId The vault to get a quote for
+    /// @param to Address that would get the collateral bought
+    /// @param maxArtIn How much of the vault debt will be paid. GT than available art means all
+    /// @return liquidatorCut How much collateral the liquidator is expected to get
+    /// @return auctioneerCut How much collateral the auctioneer is expected to get. 0 if liquidator == auctioneer
+    /// @return artIn How much debt the liquidator is expected to pay
+    function calcPayout(
+        bytes12 vaultId,
+        address to,
+        uint256 maxArtIn
+    )
+        external
+        view
+        virtual
+        returns (
+            uint256 liquidatorCut,
+            uint256 auctioneerCut,
+            uint256 artIn
+        )
+    {}
+
+    /// @notice Return how much collateral should be given out.
+    /// @dev Calculate how much collateral to give for paying a certain amount of debt, at a certain time, for a certain vault.
+    /// @param auction_ Auction data
+    /// @param to Who's gonna get the collateral
+    /// @param artIn How much debt is being repaid
+    /// @return liquidatorCut how much collateral will be paid to `to`
+    /// @return auctioneerCut how much collateral will be paid to whomever started the auction
+    /// Formula: (artIn / totalArt) * totalInk * (initialProportion + (1 - initialProportion) * t)
+    function _calcPayout(
+        DataTypes.Auction memory auction_,
+        address to,
+        uint256 artIn
+    ) internal view returns (uint256 liquidatorCut, uint256 auctioneerCut) {
+        DataTypes.Line memory line_ = lines[auction_.ilkId][auction_.baseId];
+        uint256 duration = line_.duration;
+        uint256 initialCollateralProportion = line_.collateralProportion;
+
+        uint256 collateralProportionNow;
+        uint256 elapsed = block.timestamp - auction_.start;
+        if (duration == type(uint32).max) {
+            // Interpreted as infinite duration
+            collateralProportionNow = initialCollateralProportion;
+        } else if (elapsed >= duration) {
+            collateralProportionNow = ONE_HUNDRED_PERCENT;
+        } else {
+            collateralProportionNow =
+                initialCollateralProportion +
+                ((ONE_HUNDRED_PERCENT - initialCollateralProportion) *
+                    elapsed) /
+                duration;
+        }
+
+        uint256 inkAtEnd = artIn.wdiv(auction_.art).wmul(auction_.ink);
+        liquidatorCut = inkAtEnd.wmul(collateralProportionNow);
+        if (auction_.auctioneer != to) {
+            auctioneerCut = liquidatorCut.wmul(auctioneerReward);
+            liquidatorCut -= auctioneerCut;
+        }
     }
 
     /// @dev Loads the auction data for a given `vaultId` (if valid)
