@@ -1,0 +1,66 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+pragma solidity >=0.5.12;
+
+// https://github.com/makerdao/sai/blob/master/src/tub.sol
+interface SaiTubAbstract {
+    function sai() external view returns (address);
+    function sin() external view returns (address);
+    function skr() external view returns (address);
+    function gem() external view returns (address);
+    function gov() external view returns (address);
+    function vox() external view returns (address);
+    function pip() external view returns (address);
+    function pep() external view returns (address);
+    function tap() external view returns (address);
+    function pit() external view returns (address);
+    function axe() external view returns (uint256);
+    function cap() external view returns (uint256);
+    function mat() external view returns (uint256);
+    function tax() external view returns (uint256);
+    function fee() external view returns (uint256);
+    function gap() external view returns (uint256);
+    function off() external view returns (bool);
+    function out() external view returns (bool);
+    function fit() external view returns (uint256);
+    function rho() external view returns (uint256);
+    function rum() external view returns (uint256);
+    function cupi() external view returns (uint256);
+    function cups(bytes32) external view returns (address, uint256, uint256, uint256);
+    function lad(bytes32) external view returns (address);
+    function ink(bytes32) external view returns (address);
+    function tab(bytes32) external view returns (uint256);
+    function rap(bytes32) external returns (uint256);
+    function din() external returns (uint256);
+    function air() external view returns (uint256);
+    function pie() external view returns (uint256);
+    function era() external view returns (uint256);
+    function mold(bytes32, uint256) external;
+    function setPip(address) external;
+    function setPep(address) external;
+    function setVox(address) external;
+    function turn(address) external;
+    function per() external view returns (uint256);
+    function ask(uint256) external view returns (uint256);
+    function bid(uint256) external view returns (uint256);
+    function join(uint256) external;
+    function exit(uint256) external;
+    function chi() external returns (uint256);
+    function rhi() external returns (uint256);
+    function drip() external;
+    function tag() external view returns (uint256);
+    function safe(bytes32) external returns (bool);
+    function open() external returns (bytes32);
+    function give(bytes32, address) external;
+    function lock(bytes32, uint256) external;
+    function free(bytes32, uint256) external;
+    function draw(bytes32, uint256) external;
+    function wipe(bytes32, uint256) external;
+    function shut(bytes32) external;
+    function bite(bytes32) external;
+    function cage(uint256, uint256) external;
+    function flow() external;
+    function authority() external view returns (address);
+    function owner() external view returns (address);
+    function setOwner(address) external;
+    function setAuthority(address) external;
+}

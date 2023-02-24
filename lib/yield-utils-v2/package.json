@@ -1,0 +1,20 @@
+{
+  "name": "@yield-protocol/utils-v2",
+  "version": "2.6.10",
+  "description": "Yield v2 utility contracts",
+  "author": "Yield Inc.",
+  "files": [
+    "contracts",
+    "!contracts/mocks"
+  ],
+  "scripts": {
+    "prepublishOnly": "npx tsdx build --tsconfig ./tsconfig-publish.json"
+  },
+  "devDependencies": {
+    "ts-node": "^8.10.2",
+    "tsdx": "^0.14.1",
+    "typechain": "^8.0.0",
+    "typescript": "^4.6.3"
+  },
+  "license": "GPL-3.0-or-later"
+}

@@ -1,0 +1,17 @@
+{
+  "name": "dss-interfaces",
+  "version": "0.1.1",
+  "description": "MakerDAO solidity interfaces",
+  "author": "Maker",
+  "files": [
+    "src"
+  ],
+  "repository": {
+    "url": "https://github.com/makerdao/dss-interfaces",
+    "type": "git"
+  },
+  "bugs": {
+    "url": "https://github.com/makerdao/dss-interfaces/issues"
+  },
+  "license": "GPL-3.0-or-later"
+}
