@@ -353,7 +353,9 @@ contract Witch is AccessControl {
         if (artIn > auction_.art) {
             artIn = auction_.art;
         }
-        baseIn = cauldron.debtToBase(auction_.seriesId, artIn.u128());
+
+        uint256 baseToppedUp;
+        (artIn, baseToppedUp) = _topUpDebt(vaultId, auction_, artIn);
 
         // Calculate the collateral to be sold
         (liquidatorCut, auctioneerCut,) = _calcPayout(auction_, to, artIn);
@@ -367,6 +369,7 @@ contract Witch is AccessControl {
         // Move the assets
         (liquidatorCut, auctioneerCut) = _payInk(auction_, to, liquidatorCut, auctioneerCut);
 
+        baseIn = cauldron.debtToBase(auction_.seriesId, artIn.u128());
         if (baseIn != 0) {
             // Take underlying from liquidator
             IJoin baseJoin = ladle.joins(auction_.baseId);
@@ -376,7 +379,19 @@ contract Witch is AccessControl {
             baseJoin.join(msg.sender, baseIn.u128());
         }
 
+        if (baseToppedUp != 0) {
+            baseIn -= baseToppedUp;
+        }
+
         _collateralBought(vaultId, to, liquidatorCut + auctioneerCut, artIn);
+    }
+
+    function _topUpDebt(bytes12 vaultId, DataTypes.Auction memory auction_, uint256 artIn)
+        internal
+        virtual
+        returns (uint256 requiredArtIn, uint256 baseToppedUp)
+    {
+        return (artIn, 0);
     }
 
     /// @notice If too much fyToken are offered, only the necessary amount are taken.
