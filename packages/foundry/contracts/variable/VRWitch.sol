@@ -18,13 +18,9 @@ import "../WitchBase.sol";
 contract VRWitch is WitchBase {
     using CastU256U128 for uint256;
 
-    IVRCauldron public immutable vrCauldron;
-
-    constructor(IVRCauldron cauldron_, ILadle ladle_)
-        WitchBase(ICauldron(address(cauldron_)), ladle_)
-    {
-        vrCauldron = cauldron_;
-    }
+    constructor(ICauldron cauldron_, ILadle ladle_)
+        WitchBase(cauldron_, ladle_)
+    {}
 
     // ======================================================================
     // =                    Auction management functions                    =
@@ -49,7 +45,7 @@ contract VRWitch is WitchBase {
         if (block.timestamp > type(uint32).max) {
             revert WitchIsDead();
         }
-        vault = vrCauldron.vaults(vaultId);
+        vault = IVRCauldron(address(cauldron)).vaults(vaultId);
         if (auctions[vaultId].start != 0 || protected[vault.owner]) {
             revert VaultAlreadyUnderAuction(vaultId, vault.owner);
         }
@@ -100,7 +96,7 @@ contract VRWitch is WitchBase {
         DataTypes.Line memory line
     ) internal virtual returns (VRDataTypes.Vault memory vault) {
         // The Witch is now in control of the vault under auction
-        vault = vrCauldron.give(vaultId, address(this));
+        vault = IVRCauldron(address(cauldron)).give(vaultId, address(this));
         emit Auctioned(
             vaultId,
             auction_,
@@ -208,7 +204,9 @@ contract VRWitch is WitchBase {
         )
     {
         DataTypes.Auction memory auction_ = auctions[vaultId];
-        VRDataTypes.Vault memory vault = vrCauldron.vaults(vaultId);
+        VRDataTypes.Vault memory vault = IVRCauldron(address(cauldron)).vaults(
+            vaultId
+        );
 
         // If the vault hasn't been auctioned yet, we calculate what values it'd have if it was started right now
         if (auction_.start == 0) {

@@ -66,7 +66,7 @@ abstract contract WitchStateZero is Test, TestConstants {
         ladle = ILadle(Mocks.mock("Ladle"));
 
         vm.startPrank(ada);
-        witch = new VRWitch(cauldron, ladle);
+        witch = new VRWitch(ICauldron(address(cauldron)), ladle);
         witch.grantRole(WitchBase.point.selector, ada);
         witch.grantRole(WitchBase.setLineAndLimit.selector, ada);
         witch.grantRole(WitchBase.setProtected.selector, ada);
@@ -393,7 +393,7 @@ contract WitchWithMetadataTest is WitchWithMetadata {
 
     function testAuctionAVaultWithoutLimitsSet() public {
         // Given
-        witch = new VRWitch(cauldron, ladle);
+        witch = new VRWitch(ICauldron(address(cauldron)), ladle);
 
         // When
         vm.expectRevert(
