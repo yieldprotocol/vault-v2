@@ -354,8 +354,8 @@ contract Witch is AccessControl {
             artIn = auction_.art;
         }
 
-        uint256 baseToppedUp;
-        (artIn, baseToppedUp) = _topUpDebt(vaultId, auction_, artIn);
+        uint256 debtToppedUp;
+        (artIn, debtToppedUp) = _topUpDebt(vaultId, auction_, artIn, true);
 
         // Calculate the collateral to be sold
         (liquidatorCut, auctioneerCut,) = _calcPayout(auction_, to, artIn);
@@ -379,17 +379,17 @@ contract Witch is AccessControl {
             baseJoin.join(msg.sender, baseIn.u128());
         }
 
-        if (baseToppedUp != 0) {
-            baseIn -= baseToppedUp;
+        if (debtToppedUp != 0) {
+            baseIn -= debtToppedUp;
         }
 
         _collateralBought(vaultId, to, liquidatorCut + auctioneerCut, artIn);
     }
 
-    function _topUpDebt(bytes12 vaultId, DataTypes.Auction memory auction_, uint256 artIn)
+    function _topUpDebt(bytes12 vaultId, DataTypes.Auction memory auction_, uint256 artIn, bool baseTopUp)
         internal
         virtual
-        returns (uint256 requiredArtIn, uint256 baseToppedUp)
+        returns (uint256 requiredArtIn, uint256 debtToppedUp)
     {
         return (artIn, 0);
     }
@@ -412,14 +412,16 @@ contract Witch is AccessControl {
         // If offering too much fyToken, take only the necessary.
         artIn = maxArtIn > auction_.art ? auction_.art : maxArtIn;
 
+        (uint256 totalArtIn,) = _topUpDebt(vaultId, auction_, artIn, false);
+
         // Calculate the collateral to be sold
-        (liquidatorCut, auctioneerCut,) = _calcPayout(auction_, to, artIn);
+        (liquidatorCut, auctioneerCut,) = _calcPayout(auction_, to, totalArtIn);
         if (liquidatorCut < minInkOut) {
             revert NotEnoughBought(minInkOut, liquidatorCut);
         }
 
         // Update Cauldron and local auction data
-        _updateAccounting(vaultId, auction_, (liquidatorCut + auctioneerCut).u128(), artIn);
+        _updateAccounting(vaultId, auction_, (liquidatorCut + auctioneerCut).u128(), totalArtIn.u128());
 
         // Move the assets
         (liquidatorCut, auctioneerCut) = _payInk(auction_, to, liquidatorCut, auctioneerCut);
@@ -429,7 +431,7 @@ contract Witch is AccessControl {
             cauldron.series(auction_.seriesId).fyToken.burn(msg.sender, artIn);
         }
 
-        _collateralBought(vaultId, to, liquidatorCut + auctioneerCut, artIn);
+        _collateralBought(vaultId, to, liquidatorCut + auctioneerCut, totalArtIn);
     }
 
     /// @dev transfers funds from the ilkJoin to the liquidator (and potentially the auctioneer if they're different people)
