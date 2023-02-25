@@ -49,7 +49,10 @@ contract ContangoWitch is Witch, IContangoWitch {
     }
 
     // TODO auth this
-    function setInsuranceLine(bytes6 ilkId, bytes6 baseId, uint32 duration, uint64 maxInsuredProportion) external override {
+    function setInsuranceLine(bytes6 ilkId, bytes6 baseId, uint32 duration, uint64 maxInsuredProportion)
+        external
+        override
+    {
         insuranceLines[ilkId][baseId] = InsuranceLine(duration, maxInsuredProportion);
         emit InsuranceLineSet(duration, maxInsuredProportion);
     }
@@ -76,10 +79,10 @@ contract ContangoWitch is Witch, IContangoWitch {
         debtProportionNow = ONE_HUNDRED_PERCENT - discount;
     }
 
-    function _topUpDebt(bytes12 vaultId, DataTypes.Auction memory auction, uint256 artIn)
+    function _topUpDebt(bytes12 vaultId, DataTypes.Auction memory auction, uint256 artIn, bool baseTopUp)
         internal
         override
-        returns (uint256 requiredArtIn, uint256 baseToppedUp)
+        returns (uint256 requiredArtIn, uint256 debtToppedUp)
     {
         InsuranceLine memory insuranceLine = insuranceLines[auction.ilkId][auction.baseId];
         uint256 duration = lines[auction.ilkId][auction.baseId].duration;
@@ -98,11 +101,15 @@ contract ContangoWitch is Witch, IContangoWitch {
                     revert JoinNotFound(auction.baseId);
                 }
 
-                baseToppedUp = cauldron.debtToBase(auction.seriesId, topUpAmount.u128());
+                debtToppedUp = baseTopUp ? cauldron.debtToBase(auction.seriesId, topUpAmount.u128()) : topUpAmount;
 
-                IERC20(baseJoin.asset()).safeTransferFrom(insuranceFund, address(baseJoin), baseToppedUp);
+                IERC20(baseJoin.asset()).safeTransferFrom(insuranceFund, address(baseJoin), debtToppedUp);
 
-                emit LiquidationInsured(vaultId, topUpAmount, baseToppedUp);
+                if (!baseTopUp) {
+                    baseJoin.join(address(this), debtToppedUp.u128());
+                }
+
+                emit LiquidationInsured(vaultId, topUpAmount, debtToppedUp);
             }
         }
     }
