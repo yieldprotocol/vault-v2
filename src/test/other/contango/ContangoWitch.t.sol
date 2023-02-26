@@ -1573,34 +1573,41 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         _verifyCollateralBought(VAULT_ID, bot, minInkOut, auction.art);
         _verifyAuctionEnded(VAULT_ID, bob);
 
-        // Reduce balances on tha vault
-        cauldron.slurp.mock(VAULT_ID, minInkOut, auction.art, balances);
-        cauldron.slurp.verify(VAULT_ID, minInkOut, auction.art);
-        // Vault returns to it's owner after all the liquidation is done
-        cauldron.give.mock(VAULT_ID, bob, vault);
-        cauldron.give.verify(VAULT_ID, bob);
-
-        // make fyToken 1:1 with base to make things simpler
-        cauldron.debtFromBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
-        cauldron.debtToBase.mock(vault.seriesId, auction.art, auction.art);
         uint128 expectedArtTopUp = auction.art - maxBaseIn;
-        cauldron.debtToBase.mock(vault.seriesId, expectedArtTopUp, expectedArtTopUp);
+        uint128 expectedArtRepaid = auction.art - expectedArtTopUp;
 
-        IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
-        ladle.joins.mock(vault.ilkId, ilkJoin);
-        ilkJoin.exit.mock(bot, minInkOut, minInkOut);
-        ilkJoin.exit.verify(bot, minInkOut);
+        {
+            // Reduce balances on tha vault
+            cauldron.slurp.mock(VAULT_ID, minInkOut, auction.art, balances);
+            cauldron.slurp.verify(VAULT_ID, minInkOut, auction.art);
+            // Vault returns to it's owner after all the liquidation is done
+            cauldron.give.mock(VAULT_ID, bob, vault);
+            cauldron.give.verify(VAULT_ID, bob);
 
-        IJoin baseJoin = IJoin(Mocks.mock("BaseJoin"));
-        ladle.joins.mock(series.baseId, baseJoin);
-        baseJoin.join.mock(bot, auction.art, auction.art);
-        baseJoin.join.verify(bot, auction.art);
-        IERC20 base = IERC20(Mocks.mock("Base"));
-        baseJoin.asset.mock(address(base));
-        baseJoin.asset.verify();
+            // make fyToken 1:1 with base to make things simpler
+            cauldron.debtFromBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+            cauldron.debtToBase.mock(vault.seriesId, expectedArtRepaid, expectedArtRepaid);
+            cauldron.debtToBase.mock(vault.seriesId, expectedArtTopUp, expectedArtTopUp);
 
-        base.transferFrom.mock(insuranceFund, address(baseJoin), expectedArtTopUp, true);
-        base.transferFrom.verify(insuranceFund, address(baseJoin), expectedArtTopUp);
+            IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
+            ladle.joins.mock(vault.ilkId, ilkJoin);
+            ilkJoin.exit.mock(bot, minInkOut, minInkOut);
+            ilkJoin.exit.verify(bot, minInkOut);
+
+            IJoin baseJoin = IJoin(Mocks.mock("BaseJoin"));
+            ladle.joins.mock(series.baseId, baseJoin);
+            baseJoin.join.mock(bot, expectedArtRepaid, expectedArtRepaid);
+            baseJoin.join.verify(bot, expectedArtRepaid);
+            IERC20 base = IERC20(Mocks.mock("Base"));
+            baseJoin.asset.mock(address(base));
+            baseJoin.asset.verify();
+
+            base.transferFrom.mock(insuranceFund, address(baseJoin), expectedArtTopUp, true);
+            base.transferFrom.verify(insuranceFund, address(baseJoin), expectedArtTopUp);
+
+            baseJoin.join.mock(address(witch), expectedArtTopUp, expectedArtTopUp);
+            baseJoin.join.verify(address(witch), expectedArtTopUp);
+        }
 
         vm.expectEmit(true, true, true, true);
         emit LiquidationInsured(VAULT_ID, expectedArtTopUp, expectedArtTopUp);

@@ -354,17 +354,16 @@ contract Witch is AccessControl {
             artIn = auction_.art;
         }
 
-        uint256 debtToppedUp;
-        (artIn, debtToppedUp) = _topUpDebt(vaultId, auction_, artIn, true);
+        uint256 totalArtIn = _topUpDebt(vaultId, auction_, artIn, true);
 
         // Calculate the collateral to be sold
-        (liquidatorCut, auctioneerCut,) = _calcPayout(auction_, to, artIn);
+        (liquidatorCut, auctioneerCut,) = _calcPayout(auction_, to, totalArtIn);
         if (liquidatorCut < minInkOut) {
             revert NotEnoughBought(minInkOut, liquidatorCut);
         }
 
         // Update Cauldron and local auction data
-        _updateAccounting(vaultId, auction_, (liquidatorCut + auctioneerCut).u128(), artIn.u128());
+        _updateAccounting(vaultId, auction_, (liquidatorCut + auctioneerCut).u128(), totalArtIn.u128());
 
         // Move the assets
         (liquidatorCut, auctioneerCut) = _payInk(auction_, to, liquidatorCut, auctioneerCut);
@@ -379,19 +378,15 @@ contract Witch is AccessControl {
             baseJoin.join(msg.sender, baseIn.u128());
         }
 
-        if (debtToppedUp != 0) {
-            baseIn -= debtToppedUp;
-        }
-
-        _collateralBought(vaultId, to, liquidatorCut + auctioneerCut, artIn);
+        _collateralBought(vaultId, to, liquidatorCut + auctioneerCut, totalArtIn);
     }
 
     function _topUpDebt(bytes12 vaultId, DataTypes.Auction memory auction_, uint256 artIn, bool baseTopUp)
         internal
         virtual
-        returns (uint256 requiredArtIn, uint256 debtToppedUp)
+        returns (uint256 requiredArtIn)
     {
-        return (artIn, 0);
+        return artIn;
     }
 
     /// @notice If too much fyToken are offered, only the necessary amount are taken.
@@ -412,7 +407,7 @@ contract Witch is AccessControl {
         // If offering too much fyToken, take only the necessary.
         artIn = maxArtIn > auction_.art ? auction_.art : maxArtIn;
 
-        (uint256 totalArtIn,) = _topUpDebt(vaultId, auction_, artIn, false);
+        uint256 totalArtIn = _topUpDebt(vaultId, auction_, artIn, false);
 
         // Calculate the collateral to be sold
         (liquidatorCut, auctioneerCut,) = _calcPayout(auction_, to, totalArtIn);
