@@ -210,6 +210,10 @@ library Mocks {
         vm.expectCall(f.address, abi.encodeWithSelector(f.selector, param1));
     }
 
+    function verify(function (address) external returns (uint256) f, address param1) internal {
+        vm.expectCall(f.address, abi.encodeWithSelector(f.selector, param1));
+    }
+
     function verify(function (IPool) external f, IPool param1) internal {
         vm.expectCall(f.address, abi.encodeWithSelector(f.selector, param1));
     }

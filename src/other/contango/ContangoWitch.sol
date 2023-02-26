@@ -9,7 +9,7 @@ import "./interfaces/IContangoWitch.sol";
 contract ContangoWitch is Witch, IContangoWitch {
     using WMul for uint256;
     using WDiv for uint256;
-    using TransferHelper for IERC20;
+    using TransferHelper for *;
     using CastU256U128 for uint256;
 
     struct InsuranceLine {
@@ -95,17 +95,30 @@ contract ContangoWitch is Witch, IContangoWitch {
             uint256 topUpAmount = requiredArtIn - artIn;
 
             if (topUpAmount != 0) {
-                // Take underlying from insurance fund
-                IJoin baseJoin = ladle.joins(auction.baseId);
-                if (baseJoin == IJoin(address(0))) {
-                    revert JoinNotFound(auction.baseId);
-                }
-
                 uint256 debtToppedUp =
                     baseTopUp ? cauldron.debtToBase(auction.seriesId, topUpAmount.u128()) : topUpAmount;
 
-                IERC20(baseJoin.asset()).safeTransferFrom(insuranceFund, address(baseJoin), debtToppedUp);
-                baseJoin.join(address(this), debtToppedUp.u128());
+                IFYToken fyToken = cauldron.series(auction.seriesId).fyToken;
+                uint256 fyTokenBalance = fyToken.balanceOf(insuranceFund);
+
+                uint256 payWithFYToken = fyTokenBalance > debtToppedUp ? debtToppedUp : fyTokenBalance;
+                if (payWithFYToken != 0) {
+                    // Take fyTokens from insurance fund
+                    fyToken.safeTransferFrom(insuranceFund, address(fyToken), payWithFYToken);
+                    fyToken.burn(address(this), payWithFYToken);
+                }
+
+                uint256 payWithBase = debtToppedUp - payWithFYToken;
+                if (payWithBase != 0) {
+                    IJoin baseJoin = ladle.joins(auction.baseId);
+                    if (baseJoin == IJoin(address(0))) {
+                        revert JoinNotFound(auction.baseId);
+                    }
+
+                    // Take underlying from insurance fund
+                    IERC20(baseJoin.asset()).safeTransferFrom(insuranceFund, address(baseJoin), payWithBase);
+                    baseJoin.join(address(this), payWithBase.u128());
+                }
 
                 emit LiquidationInsured(vaultId, topUpAmount, debtToppedUp);
             }
