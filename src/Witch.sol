@@ -369,11 +369,7 @@ contract Witch is AccessControl {
         baseIn = cauldron.debtToBase(auction_.seriesId, artIn.u128());
         if (baseIn != 0) {
             // Take underlying from liquidator
-            IJoin baseJoin = ladle.joins(auction_.baseId);
-            if (baseJoin == IJoin(address(0))) {
-                revert JoinNotFound(auction_.baseId);
-            }
-            baseJoin.join(msg.sender, baseIn.u128());
+            _join(auction_.baseId).join(msg.sender, baseIn.u128());
         }
 
         _collateralBought(vaultId, to, liquidatorCut + auctioneerCut, totalArtIn);
@@ -435,12 +431,10 @@ contract Witch is AccessControl {
     /// @return updated liquidatorCut & auctioneerCut
     function _payInk(DataTypes.Auction memory auction_, address to, uint256 liquidatorCut, uint256 auctioneerCut)
         internal
+        virtual
         returns (uint256, uint256)
     {
-        IJoin ilkJoin = ladle.joins(auction_.ilkId);
-        if (ilkJoin == IJoin(address(0))) {
-            revert JoinNotFound(auction_.ilkId);
-        }
+        IJoin ilkJoin = _join(auction_.ilkId);
 
         // Pay auctioneer's cut if necessary
         if (auctioneerCut > 0) {
@@ -612,6 +606,7 @@ contract Witch is AccessControl {
     function _calcPayout(DataTypes.Auction memory auction_, address to, uint256 artIn)
         internal
         view
+        virtual
         returns (uint256 liquidatorCut, uint256 auctioneerCut, uint256 requiredArtIn)
     {
         DataTypes.Line memory line_ = lines[auction_.ilkId][auction_.baseId];
@@ -658,5 +653,12 @@ contract Witch is AccessControl {
         returns (uint256 requiredArtIn)
     {
         requiredArtIn = artIn;
+    }
+
+    function _join(bytes6 assetId) internal view returns (IJoin join) {
+        join = ladle.joins(assetId);
+        if (join == IJoin(address(0))) {
+            revert JoinNotFound(assetId);
+        }
     }
 }
