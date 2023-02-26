@@ -152,7 +152,7 @@ contract ContangoWitch is Witch, IContangoWitch {
 
         if (_shouldItPayInsurancePremium(insurancePremium, auction)) {
             uint256 premium = liquidatorCut.wdiv(ONE_HUNDRED_PERCENT - insurancePremium) - liquidatorCut;
-            _join(auction.ilkId).exit(to, premium.u128());
+            _join(auction.ilkId).exit(insuranceFund, premium.u128());
         }
 
         return super._payInk(auction, to, liquidatorCut, auctioneerCut);
