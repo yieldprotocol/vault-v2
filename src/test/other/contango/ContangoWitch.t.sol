@@ -1589,8 +1589,8 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         ilkJoin.exit.verify(bot, minInkOut);
 
         uint128 premium = uint128(minInkOut.wdiv(1e18 - insurancePremium) - minInkOut);
-        ilkJoin.exit.mock(bot, premium, premium);
-        ilkJoin.exit.verify(bot, premium);
+        ilkJoin.exit.mock(insuranceFund, premium, premium);
+        ilkJoin.exit.verify(insuranceFund, premium);
 
         IJoin baseJoin = IJoin(Mocks.mock("BaseJoin"));
         ladle.joins.mock(series.baseId, baseJoin);
@@ -1711,8 +1711,8 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         ilkJoin.exit.verify(bot, minInkOut);
 
         uint128 premium = uint128(minInkOut.wdiv(1e18 - insurancePremium) - minInkOut);
-        ilkJoin.exit.mock(bot, premium, premium);
-        ilkJoin.exit.verify(bot, premium);
+        ilkJoin.exit.mock(insuranceFund, premium, premium);
+        ilkJoin.exit.verify(insuranceFund, premium);
 
         series.fyToken.burn.mock(bot, maxArtIn);
         series.fyToken.burn.verify(bot, maxArtIn);
