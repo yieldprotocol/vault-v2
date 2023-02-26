@@ -15,6 +15,7 @@ contract ContangoWitch is Witch, IContangoWitch {
     struct InsuranceLine {
         uint32 duration; // Time that the insurance auction take to cover the maximum debt insured
         uint64 maxInsuredProportion; // Maximum proportion of debt that is covered by the insurance fund at the insurance auction end (1e18 = 100%)
+        uint64 insurancePremium; // Proportion of the collateral that is sent to the insurance fund for healthy liquidations (1e18 = 100%)
     }
 
     IContangoWitchListener public immutable contango;
@@ -49,12 +50,15 @@ contract ContangoWitch is Witch, IContangoWitch {
     }
 
     // TODO auth this
-    function setInsuranceLine(bytes6 ilkId, bytes6 baseId, uint32 duration, uint64 maxInsuredProportion)
-        external
-        override
-    {
-        insuranceLines[ilkId][baseId] = InsuranceLine(duration, maxInsuredProportion);
-        emit InsuranceLineSet(duration, maxInsuredProportion);
+    function setInsuranceLine(
+        bytes6 ilkId,
+        bytes6 baseId,
+        uint32 duration,
+        uint64 maxInsuredProportion,
+        uint64 insurancePremium
+    ) external override {
+        insuranceLines[ilkId][baseId] = InsuranceLine(duration, maxInsuredProportion, insurancePremium);
+        emit InsuranceLineSet(duration, maxInsuredProportion, insurancePremium);
     }
 
     function _discountDebt(bytes6 ilkId, bytes6 baseId, uint256 auctionStart, uint256 auctionDuration, uint256 artIn)
@@ -87,7 +91,7 @@ contract ContangoWitch is Witch, IContangoWitch {
         InsuranceLine memory insuranceLine = insuranceLines[auction.ilkId][auction.baseId];
         uint256 duration = lines[auction.ilkId][auction.baseId].duration;
 
-        if (insuranceLine.duration == 0 || block.timestamp <= auction.start + duration) {
+        if (insuranceLine.duration == 0 || auction.start + duration > block.timestamp) {
             requiredArtIn = artIn;
         } else {
             requiredArtIn = artIn.wdiv(_debtProportionNow(insuranceLine, auction.start, duration));
@@ -123,5 +127,44 @@ contract ContangoWitch is Witch, IContangoWitch {
                 emit LiquidationInsured(vaultId, topUpAmount, debtToppedUp);
             }
         }
+    }
+
+    function _calcPayout(DataTypes.Auction memory auction, address to, uint256 artIn)
+        internal
+        view
+        override
+        returns (uint256 liquidatorCut, uint256 auctioneerCut, uint256 requiredArtIn)
+    {
+        (liquidatorCut, auctioneerCut, requiredArtIn) = super._calcPayout(auction, to, artIn);
+        uint256 insurancePremium = insuranceLines[auction.ilkId][auction.baseId].insurancePremium;
+
+        if (_shouldItPayInsurancePremium(insurancePremium, auction)) {
+            liquidatorCut -= liquidatorCut.wmul(insurancePremium);
+        }
+    }
+
+    function _payInk(DataTypes.Auction memory auction, address to, uint256 liquidatorCut, uint256 auctioneerCut)
+        internal
+        override
+        returns (uint256, uint256)
+    {
+        uint256 insurancePremium = insuranceLines[auction.ilkId][auction.baseId].insurancePremium;
+
+        if (_shouldItPayInsurancePremium(insurancePremium, auction)) {
+            uint256 premium = liquidatorCut.wdiv(ONE_HUNDRED_PERCENT - insurancePremium) - liquidatorCut;
+            _join(auction.ilkId).exit(to, premium.u128());
+        }
+
+        return super._payInk(auction, to, liquidatorCut, auctioneerCut);
+    }
+
+    function _shouldItPayInsurancePremium(uint256 insurancePremium, DataTypes.Auction memory auction)
+        internal
+        view
+        returns (bool)
+    {
+        uint256 duration = lines[auction.ilkId][auction.baseId].duration;
+        // Only charge premium for non-insured liquidations
+        return insurancePremium > 0 && auction.start + duration > block.timestamp;
     }
 }

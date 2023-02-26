@@ -11,6 +11,7 @@ import "../../../other/contango/ContangoWitch.sol";
 
 using WMul for uint256;
 using WMul for uint128;
+using WDiv for uint128;
 
 abstract contract ContangoWitchStateZero is Test, TestConstants, IContangoWitchEvents {
     using Mocks for *;
@@ -1475,10 +1476,11 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
     using Mocks for *;
 
     uint64 maxInsuredProportion = 0.2e18;
+    uint64 insurancePremium = 0.02e18;
 
     function setUp() public virtual override {
         super.setUp();
-        witch.setInsuranceLine(ILK_ID, BASE_ID, INSURANCE_AUCTION_DURATION, maxInsuredProportion);
+        witch.setInsuranceLine(ILK_ID, BASE_ID, INSURANCE_AUCTION_DURATION, maxInsuredProportion, insurancePremium);
     }
 
     function testCalcPayoutAfterAuctionForAuctioneerWithInsurance() public {
@@ -1488,26 +1490,26 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         // 100000 * 0.5 = 50000
         // maxArtIn = (vaultDebt * proportion)
 
-        // 100 * 0.5 * 0.714 = 357
-        // (ink * proportion * initialOffer)
+        // 100 * 0.5 * 0.714 * 0.98 = 34.986
+        // (ink * proportion * initialOffer * (1 - premium))
         (uint256 liquidatorCut, uint256 auctioneerCut, uint256 artIn) = witch.calcPayout(VAULT_ID, bot, vaultDebt);
-        assertEqDecimal(liquidatorCut, 35.7 ether, 18, "liquidatorCut");
+        assertEqDecimal(liquidatorCut, 34.986 ether, 18, "liquidatorCut");
         assertEqDecimal(auctioneerCut, 0, 18, "auctioneerCut");
         assertEqDecimal(artIn, 50000e6, 6, "artIn");
 
         vm.warp(auctionStart + 5 minutes);
-        // 100 * 0.5 * (0.714 + (1 - 0.714) * 300/3600) = 36.8916666667
-        // (ink * proportion * (initialOffer + (1 - initialOffer) * timeElapsed)
+        // 100 * 0.5 * (0.714 + (1 - 0.714) * 300/3600) * 0.98 = 36.1538333333
+        // (ink * proportion * (initialOffer + (1 - initialOffer) * timeElapsed * (1 - premium))
         (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(VAULT_ID, bot, vaultDebt);
-        assertEqDecimal(liquidatorCut, 36.89166666666666665 ether, 18, "liquidatorCut");
+        assertEqDecimal(liquidatorCut, 36.153833333333333317 ether, 18, "liquidatorCut");
         assertEqDecimal(auctioneerCut, 0, 18, "auctioneerCut");
         assertEqDecimal(artIn, 50000e6, 6, "artIn");
 
         vm.warp(auctionStart + 30 minutes);
-        // 100 * 0.5 * (0.714 + (1 - 0.714) * 1800/3600) = 42.85
-        // (ink * proportion * (initialOffer + (1 - initialOffer) * timeElapsed)
+        // 100 * 0.5 * (0.714 + (1 - 0.714) * 1800/3600) * 0.98 = 41.993
+        // (ink * proportion * (initialOffer + (1 - initialOffer) * timeElapsed * (1 - premium))
         (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(VAULT_ID, bot, vaultDebt);
-        assertEqDecimal(liquidatorCut, 42.85 ether, 18, "liquidatorCut");
+        assertEqDecimal(liquidatorCut, 41.993 ether, 18, "liquidatorCut");
         assertEqDecimal(auctioneerCut, 0, 18, "auctioneerCut");
         assertEqDecimal(artIn, 50000e6, 6, "artIn");
 
@@ -1559,6 +1561,59 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         assertEqDecimal(liquidatorCut, 50 ether, 18, "liquidatorCut");
         assertEqDecimal(auctioneerCut, 0, 18, "auctioneerCut");
         assertEqDecimal(artIn, 40000e6, 6, "artIn");
+    }
+
+    function testPayBaseAll() public {
+        uint128 maxBaseIn = uint128(auction.art);
+        vm.prank(bot);
+        (uint256 minInkOut_,,) = witch.calcPayout(VAULT_ID, bot, maxBaseIn);
+        uint128 minInkOut = uint128(minInkOut_);
+
+        _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxBaseIn);
+        _verifyAuctionEnded(VAULT_ID, bob);
+
+        // Reduce balances on tha vault
+        cauldron.slurp.mock(VAULT_ID, minInkOut, maxBaseIn, balances);
+        cauldron.slurp.verify(VAULT_ID, minInkOut, maxBaseIn);
+        // Vault returns to it's owner after all the liquidation is done
+        cauldron.give.mock(VAULT_ID, bob, vault);
+        cauldron.give.verify(VAULT_ID, bob);
+
+        // make fyToken 1:1 with base to make things simpler
+        cauldron.debtFromBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+        cauldron.debtToBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+
+        IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
+        ladle.joins.mock(vault.ilkId, ilkJoin);
+        ilkJoin.exit.mock(bot, minInkOut, minInkOut);
+        ilkJoin.exit.verify(bot, minInkOut);
+
+        uint128 premium = uint128(minInkOut.wdiv(1e18 - insurancePremium) - minInkOut);
+        ilkJoin.exit.mock(bot, premium, premium);
+        ilkJoin.exit.verify(bot, premium);
+
+        IJoin baseJoin = IJoin(Mocks.mock("BaseJoin"));
+        ladle.joins.mock(series.baseId, baseJoin);
+        baseJoin.join.mock(bot, maxBaseIn, maxBaseIn);
+        baseJoin.join.verify(bot, maxBaseIn);
+
+        vm.expectEmit(true, true, true, true);
+        emit Ended(VAULT_ID);
+        vm.expectEmit(true, true, true, true);
+        emit Bought(VAULT_ID, bot, minInkOut, maxBaseIn);
+
+        vm.prank(bot);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) =
+            witch.payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
+        assertEq(liquidatorCut, minInkOut);
+        assertEq(auctioneerCut, 0);
+        assertEq(baseIn, maxBaseIn);
+
+        // sum is reduced by auction.ink
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, 0, "sum");
+
+        _auctionWasDeleted(VAULT_ID);
     }
 
     function testPayBaseAllAndTakesAllWithInsurance() public {
@@ -1626,6 +1681,53 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         assertEq(liquidatorCut, balances.ink.wmul(proportion), "liquidatorCut");
         assertEq(auctioneerCut, 0, "auctioneerCut");
         assertEq(baseIn, maxArtIn, "baseIn");
+
+        // sum is reduced by auction.ink
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, 0, "sum");
+
+        _auctionWasDeleted(VAULT_ID);
+    }
+
+    function testPayFYTokenAll() public {
+        uint128 maxArtIn = uint128(auction.art);
+        vm.prank(bot);
+        (uint256 minInkOut_,,) = witch.calcPayout(VAULT_ID, bot, maxArtIn);
+        uint128 minInkOut = uint128(minInkOut_);
+
+        _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxArtIn);
+        _verifyAuctionEnded(VAULT_ID, bob);
+
+        // Reduce balances on tha vault
+        cauldron.slurp.mock(VAULT_ID, minInkOut, maxArtIn, balances);
+        cauldron.slurp.verify(VAULT_ID, minInkOut, maxArtIn);
+        // Vault returns to it's owner after all the liquidation is done
+        cauldron.give.mock(VAULT_ID, bob, vault);
+        cauldron.give.verify(VAULT_ID, bob);
+
+        IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
+        ladle.joins.mock(vault.ilkId, ilkJoin);
+        ilkJoin.exit.mock(bot, minInkOut, minInkOut);
+        ilkJoin.exit.verify(bot, minInkOut);
+
+        uint128 premium = uint128(minInkOut.wdiv(1e18 - insurancePremium) - minInkOut);
+        ilkJoin.exit.mock(bot, premium, premium);
+        ilkJoin.exit.verify(bot, premium);
+
+        series.fyToken.burn.mock(bot, maxArtIn);
+        series.fyToken.burn.verify(bot, maxArtIn);
+
+        vm.expectEmit(true, true, true, true);
+        emit Ended(VAULT_ID);
+        vm.expectEmit(true, true, true, true);
+        emit Bought(VAULT_ID, bot, minInkOut, maxArtIn);
+
+        vm.prank(bot);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) =
+            witch.payFYToken(VAULT_ID, bot, minInkOut, maxArtIn);
+        assertEq(liquidatorCut, minInkOut);
+        assertEq(auctioneerCut, 0);
+        assertEq(baseIn, maxArtIn);
 
         // sum is reduced by auction.ink
         (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
