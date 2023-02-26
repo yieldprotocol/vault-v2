@@ -82,7 +82,7 @@ contract ContangoWitch is Witch, IContangoWitch {
     function _topUpDebt(bytes12 vaultId, DataTypes.Auction memory auction, uint256 artIn, bool baseTopUp)
         internal
         override
-        returns (uint256 requiredArtIn, uint256 debtToppedUp)
+        returns (uint256 requiredArtIn)
     {
         InsuranceLine memory insuranceLine = insuranceLines[auction.ilkId][auction.baseId];
         uint256 duration = lines[auction.ilkId][auction.baseId].duration;
@@ -101,13 +101,11 @@ contract ContangoWitch is Witch, IContangoWitch {
                     revert JoinNotFound(auction.baseId);
                 }
 
-                debtToppedUp = baseTopUp ? cauldron.debtToBase(auction.seriesId, topUpAmount.u128()) : topUpAmount;
+                uint256 debtToppedUp =
+                    baseTopUp ? cauldron.debtToBase(auction.seriesId, topUpAmount.u128()) : topUpAmount;
 
                 IERC20(baseJoin.asset()).safeTransferFrom(insuranceFund, address(baseJoin), debtToppedUp);
-
-                if (!baseTopUp) {
-                    baseJoin.join(address(this), debtToppedUp.u128());
-                }
+                baseJoin.join(address(this), debtToppedUp.u128());
 
                 emit LiquidationInsured(vaultId, topUpAmount, debtToppedUp);
             }
