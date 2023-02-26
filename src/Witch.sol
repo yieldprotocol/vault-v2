@@ -350,9 +350,7 @@ contract Witch is AccessControl {
         uint256 artIn = cauldron.debtFromBase(auction_.seriesId, maxBaseIn);
 
         // If offering too much base, take only the necessary.
-        if (artIn > auction_.art) {
-            artIn = auction_.art;
-        }
+        artIn = artIn > auction_.art ? artIn = auction_.art : artIn;
 
         uint256 totalArtIn = _topUpDebt(vaultId, auction_, artIn, true);
 
