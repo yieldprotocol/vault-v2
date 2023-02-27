@@ -9,9 +9,8 @@ import "../../utils/Mocks.sol";
 import "../../../interfaces/IWitch.sol";
 import "../../../other/contango/ContangoWitch.sol";
 
-using WMul for uint256;
-using WMul for uint128;
-using WDiv for uint128;
+using Math for uint256;
+using Math for uint128;
 
 abstract contract ContangoWitchStateZero is Test, TestConstants, IContangoWitchEvents {
     using Mocks for *;
