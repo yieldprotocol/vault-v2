@@ -32,6 +32,15 @@ contract WitchBase is AccessControl, IWitchEvents, IWitchErrors {
         _;
     }
 
+    struct VaultBalanceDebtData {
+        bytes6 ilkId;
+        bytes6 baseId;
+        bytes6 seriesId;
+        address owner;
+        DataTypes.Balances balances;
+        DataTypes.Debt debt;
+    }
+
     uint128 public constant ONE_HUNDRED_PERCENT = 1e18;
     uint128 public constant ONE_PERCENT = 0.01e18;
 
@@ -600,15 +609,6 @@ contract WitchBase is AccessControl, IWitchEvents, IWitchErrors {
         artIn = maxArtIn > auction_.art ? auction_.art : maxArtIn;
 
         (liquidatorCut, auctioneerCut) = _calcPayout(auction_, to, artIn);
-    }
-
-    struct VaultBalanceDebtData {
-        bytes6 ilkId;
-        bytes6 baseId;
-        bytes6 seriesId;
-        address owner;
-        DataTypes.Balances balances;
-        DataTypes.Debt debt;
     }
 
     function _getVaultDetailsAndDebt(bytes12 vaultId)
