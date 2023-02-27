@@ -1,5 +1,5 @@
 [profile.default]
-src = './contracts'
+src = './src'
 root = '.'
 test = 'test'
 out = 'out'
