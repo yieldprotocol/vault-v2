@@ -1,16 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity >=0.8.13;
 
-import "@yield-protocol/utils-v2/contracts/token/TransferHelper.sol";
+import "@yield-protocol/utils-v2/src/token/TransferHelper.sol";
 import "../../Witch.sol";
 import "./interfaces/IContangoWitchListener.sol";
 import "./interfaces/IContangoWitch.sol";
 
 contract ContangoWitch is Witch, IContangoWitch {
-    using WMul for uint256;
-    using WDiv for uint256;
+    using Math for uint256;
     using TransferHelper for *;
-    using CastU256U128 for uint256;
+    using Cast for uint256;
 
     struct InsuranceLine {
         uint32 duration; // Time that the insurance auction take to cover the maximum debt insured
