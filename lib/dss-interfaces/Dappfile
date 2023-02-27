@@ -1,0 +1,6 @@
+name            dss-interfaces
+description     Abstract contracts for the Dai Stablecoin System
+version         0.0.1
+
+author          brianmcmichael
+license         AGPL-3.0

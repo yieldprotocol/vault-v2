@@ -1,0 +1,22 @@
+[fuzz]
+runs = 1000
+
+[profile.default]
+contracts = 'src/contracts'
+gas_reports = ["*"]
+libs = ['lib']
+out = 'out'
+src = 'src'
+verbosity = 3                 # The verbosity of tests
+optimizer_runs = 1000         # The number of optimizer runs
+
+[profile.dev]
+ignored_error_codes = [
+    5667, # unused args warning
+    5574  # code size warning
+] 
+optimizer = false
+
+[rpc_endpoints]
+mainnet = "${MAINNET_RPC}"
+arbitrum = "${ARBITRUM_RPC}"

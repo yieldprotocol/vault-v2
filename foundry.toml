@@ -1,0 +1,19 @@
+[profile.default]
+src = './src'
+root = '.'
+test = 'test'
+out = 'out'
+libs = ['lib']
+block_timestamp = 1651743369 # Arbitrary Thursday, 5 May 2022 09:36:09
+verbosity = 3
+solc_version = '0.8.15'
+rpc_endpoints = { MAINNET = "${MAINNET_RPC}", ARBITRUM = "${ARBITRUM_RPC}", HARNESS = "" }
+
+[profile.dev]
+ignored_error_codes = [
+    5667, # unused args warning
+    5574  # code size warning
+] 
+optimizer = false
+
+# See more config options https://github.com/gakonst/foundry/tree/master/config
