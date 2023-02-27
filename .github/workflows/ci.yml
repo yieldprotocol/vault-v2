@@ -7,81 +7,6 @@ on:
   pull_request:
 
 jobs:
-  lint:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
-        with:
-          node-version: 14.14.x
-          registry-url: 'https://registry.npmjs.org'
-      
-      - id: yarn-cache
-        run: echo "::set-output name=dir::$(yarn cache dir)"
-
-      - uses: actions/cache@v1
-        with:
-          path: ${{ steps.yarn-cache.outputs.dir }}
-          key: yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            yarn-
-      - run: yarn
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - run: yarn workspace @yield-protocol/vault-v2-hardhat lint:ts
-      - run: yarn workspace @yield-protocol/vault-v2-hardhat lint:sol
-
-  test05:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
-        with:
-          node-version: 14.14.x
-          registry-url: 'https://registry.npmjs.org'
-
-      - id: yarn-cache
-        run: echo "::set-output name=dir::$(yarn cache dir)"
-
-      - uses: actions/cache@v1
-        with:
-          path: ${{ steps.yarn-cache.outputs.dir }}
-          key: yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            yarn-
-      - run: yarn
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - run: yarn workspace @yield-protocol/vault-v2-hardhat hardhat:build
-      - run: yarn workspace @yield-protocol/vault-v2-hardhat hardhat:test:05
-
-  test09:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
-        with:
-          node-version: 14.14.x
-          registry-url: 'https://registry.npmjs.org'
-
-      - id: yarn-cache
-        run: echo "::set-output name=dir::$(yarn cache dir)"
-
-      - uses: actions/cache@v1
-        with:
-          path: ${{ steps.yarn-cache.outputs.dir }}
-          key: yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            yarn-
-      - run: yarn
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - run: yarn workspace @yield-protocol/vault-v2-hardhat hardhat:build
-      - run: yarn workspace @yield-protocol/vault-v2-hardhat hardhat:test:09
-
   foundry-tests:
     runs-on: ubuntu-latest
     steps:
@@ -95,10 +20,10 @@ jobs:
           version: nightly
 
       - name: Build contracts
-        run: yarn workspace @yield-protocol/vault-v2 forge:build
+        run: forge build
 
       - name: Run tests
-        run: yarn workspace @yield-protocol/vault-v2 forge:test
+        run: forge test
         env:
           ARBITRUM_RPC: $${{ secrets.ARBITRUM_RPC}}
           MAINNET_RPC: ${{ secrets.MAINNET_RPC }}

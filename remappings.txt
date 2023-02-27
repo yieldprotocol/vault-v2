@@ -1,0 +1,5 @@
+@yield-protocol/utils-v2/=lib/yieldspace-tv/lib/yield-utils-v2/
+@yield-protocol/yieldspace-tv/=lib/yieldspace-tv/
+forge-std/=lib/forge-std/
+erc3156/=lib/ERC3156/
+dss-interfaces/=lib/dss-interfaces/
