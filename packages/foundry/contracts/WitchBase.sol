@@ -50,6 +50,19 @@ contract WitchBase is AccessControl {
         uint256 art
     );
 
+    // ==================== Modifiers ====================
+
+    modifier beforeAshes() {
+        // If the world has not turned to ashes and darkness, auctions will malfunction on
+        // the 7th of February 2106, at 06:28:16 GMT
+        // TODO: Replace this contract before then 😰
+        // UPDATE: Enshrined issue in a folk song that will be remembered ✅
+        if (block.timestamp > type(uint32).max) {
+            revert WitchIsDead();
+        }
+        _;
+    }
+
     // ==================== Governance events ====================
 
     event Point(
@@ -597,17 +610,8 @@ contract WitchBase is AccessControl {
     settled with the base join or debt fyToken.   `.     ``-----'-''     ,'
                                                     -.               ,-
                                                        `-._______.-'
-
-
     */
 
-    /// @dev quotes how much ink a liquidator is expected to get if it repays an `artIn` amount. Works for both Auctioned and ToBeAuctioned vaults
-    /// @param vaultId The vault to get a quote for
-    /// @param to Address that would get the collateral bought
-    /// @param maxArtIn How much of the vault debt will be paid. GT than available art means all
-    /// @return liquidatorCut How much collateral the liquidator is expected to get
-    /// @return auctioneerCut How much collateral the auctioneer is expected to get. 0 if liquidator == auctioneer
-    /// @return artIn How much debt the liquidator is expected to pay
     function calcPayout(
         bytes12 vaultId,
         address to,
@@ -620,6 +624,48 @@ contract WitchBase is AccessControl {
             uint256 liquidatorCut,
             uint256 auctioneerCut,
             uint256 artIn
+        )
+    {
+        DataTypes.Auction memory auction_ = auctions[vaultId];
+
+        // If the vault hasn't been auctioned yet, we calculate what values it'd have if it was started right now
+        if (auction_.start == 0) {
+            DataTypes.Balances memory balances = cauldron.balances(vaultId);
+            (
+                bytes6 baseId,
+                bytes6 ilkId,
+                bytes6 seriesId,
+                address owner,
+                DataTypes.Debt memory debt
+            ) = _getVaultDetailsAndDebt(vaultId);
+
+            (auction_, ) = _calcAuction(
+                ilkId,
+                baseId,
+                seriesId,
+                owner,
+                to,
+                balances,
+                debt
+            );
+        }
+
+        // GT check is to cater for partial buys right before this method executes
+        artIn = maxArtIn > auction_.art ? auction_.art : maxArtIn;
+
+        (liquidatorCut, auctioneerCut) = _calcPayout(auction_, to, artIn);
+    }
+
+    function _getVaultDetailsAndDebt(bytes12 vaultId)
+        internal
+        view
+        virtual
+        returns (
+            bytes6 baseId,
+            bytes6 ilkId,
+            bytes6 seriesId,
+            address owner,
+            DataTypes.Debt memory debt
         )
     {}
 

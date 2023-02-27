@@ -29,19 +29,13 @@ contract Witch is WitchBase {
     /// @return series Series for the vault that's being auctioned
     function auction(bytes12 vaultId, address to)
         external
+        beforeAshes
         returns (
             DataTypes.Auction memory auction_,
             DataTypes.Vault memory vault,
             DataTypes.Series memory series
         )
     {
-        // If the world has not turned to ashes and darkness, auctions will malfunction on
-        // the 7th of February 2106, at 06:28:16 GMT
-        // TODO: Replace this contract before then 😰
-        // UPDATE: Enshrined issue in a folk song that will be remembered ✅
-        if (block.timestamp > type(uint32).max) {
-            revert WitchIsDead();
-        }
         vault = cauldron.vaults(vaultId);
         series = cauldron.series(vault.seriesId);
 
@@ -162,53 +156,21 @@ contract Witch is WitchBase {
     // =                         Quoting functions                          =
     // ======================================================================
 
-    /// @dev quotes how much ink a liquidator is expected to get if it repays an `artIn` amount. Works for both Auctioned and ToBeAuctioned vaults
-    /// @param vaultId The vault to get a quote for
-    /// @param to Address that would get the collateral bought
-    /// @param maxArtIn How much of the vault debt will be paid. GT than available art means all
-    /// @return liquidatorCut How much collateral the liquidator is expected to get
-    /// @return auctioneerCut How much collateral the auctioneer is expected to get. 0 if liquidator == auctioneer
-    /// @return artIn How much debt the liquidator is expected to pay
-    function calcPayout(
-        bytes12 vaultId,
-        address to,
-        uint256 maxArtIn
-    )
-        external
+    function _getVaultDetailsAndDebt(bytes12 vaultId)
+        internal
         view
-        virtual
         override
         returns (
-            uint256 liquidatorCut,
-            uint256 auctioneerCut,
-            uint256 artIn
+            bytes6 baseId,
+            bytes6 ilkId,
+            bytes6 seriesId,
+            address owner,
+            DataTypes.Debt memory debt
         )
     {
-        DataTypes.Auction memory auction_ = auctions[vaultId];
         DataTypes.Vault memory vault = cauldron.vaults(vaultId);
-
-        // If the vault hasn't been auctioned yet, we calculate what values it'd have if it was started right now
-        if (auction_.start == 0) {
-            DataTypes.Series memory series = cauldron.series(vault.seriesId);
-            DataTypes.Balances memory balances = cauldron.balances(vaultId);
-            DataTypes.Debt memory debt = cauldron.debt(
-                series.baseId,
-                vault.ilkId
-            );
-            (auction_, ) = _calcAuction(
-                vault.ilkId,
-                series.baseId,
-                vault.seriesId,
-                vault.owner,
-                to,
-                balances,
-                debt
-            );
-        }
-
-        // GT check is to cater for partial buys right before this method executes
-        artIn = maxArtIn > auction_.art ? auction_.art : maxArtIn;
-
-        (liquidatorCut, auctioneerCut) = _calcPayout(auction_, to, artIn);
+        DataTypes.Series memory series = cauldron.series(vault.seriesId);
+        debt = cauldron.debt(series.baseId, vault.ilkId);
+        return (series.baseId, vault.ilkId, vault.seriesId, vault.owner, debt);
     }
 }

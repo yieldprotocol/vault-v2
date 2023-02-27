@@ -29,18 +29,12 @@ contract VRWitch is WitchBase {
     /// @return vault Vault that's being auctioned
     function auction(bytes12 vaultId, address to)
         external
+        beforeAshes
         returns (
             DataTypes.Auction memory auction_,
             VRDataTypes.Vault memory vault
         )
     {
-        // If the world has not turned to ashes and darkness, auctions will malfunction on
-        // the 7th of February 2106, at 06:28:16 GMT
-        // TODO: Replace this contract before then 😰
-        // UPDATE: Enshrined issue in a folk song that will be remembered ✅
-        if (block.timestamp > type(uint32).max) {
-            revert WitchIsDead();
-        }
         vault = IVRCauldron(address(cauldron)).vaults(vaultId);
 
         DataTypes.Line memory line;
@@ -100,53 +94,22 @@ contract VRWitch is WitchBase {
     // =                         Quoting functions                          =
     // ======================================================================
 
-    /// @dev quotes how much ink a liquidator is expected to get if it repays an `artIn` amount. Works for both Auctioned and ToBeAuctioned vaults
-    /// @param vaultId The vault to get a quote for
-    /// @param to Address that would get the collateral bought
-    /// @param maxArtIn How much of the vault debt will be paid. GT than available art means all
-    /// @return liquidatorCut How much collateral the liquidator is expected to get
-    /// @return auctioneerCut How much collateral the auctioneer is expected to get. 0 if liquidator == auctioneer
-    /// @return artIn How much debt the liquidator is expected to pay
-    function calcPayout(
-        bytes12 vaultId,
-        address to,
-        uint256 maxArtIn
-    )
-        external
+    function _getVaultDetailsAndDebt(bytes12 vaultId)
+        internal
         view
         override
         returns (
-            uint256 liquidatorCut,
-            uint256 auctioneerCut,
-            uint256 artIn
+            bytes6 baseId,
+            bytes6 ilkId,
+            bytes6 seriesId,
+            address owner,
+            DataTypes.Debt memory debt
         )
     {
-        DataTypes.Auction memory auction_ = auctions[vaultId];
         VRDataTypes.Vault memory vault = IVRCauldron(address(cauldron)).vaults(
             vaultId
         );
-
-        // If the vault hasn't been auctioned yet, we calculate what values it'd have if it was started right now
-        if (auction_.start == 0) {
-            DataTypes.Balances memory balances = cauldron.balances(vaultId);
-            DataTypes.Debt memory debt = cauldron.debt(
-                vault.baseId,
-                vault.ilkId
-            );
-            (auction_, ) = _calcAuction(
-                vault.ilkId,
-                vault.baseId,
-                bytes6(0),
-                vault.owner,
-                to,
-                balances,
-                debt
-            );
-        }
-
-        // GT check is to cater for partial buys right before this method executes
-        artIn = maxArtIn > auction_.art ? auction_.art : maxArtIn;
-
-        (liquidatorCut, auctioneerCut) = _calcPayout(auction_, to, artIn);
+        debt = cauldron.debt(vault.baseId, vault.ilkId);
+        return (vault.baseId, vault.ilkId, bytes6(0), vault.owner, debt);
     }
 }
