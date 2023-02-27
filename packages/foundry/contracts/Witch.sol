@@ -28,7 +28,8 @@ contract Witch is WitchBase {
     /// @return vault Vault that's being auctioned
     /// @return series Series for the vault that's being auctioned
     function auction(bytes12 vaultId, address to)
-        external
+        public
+        virtual
         beforeAshes
         returns (
             DataTypes.Auction memory auction_,
@@ -49,18 +50,6 @@ contract Witch is WitchBase {
             to
         );
 
-        vault = _auctionStarted(vaultId, auction_, line);
-    }
-
-    /// @dev Moves the vault ownership to the witch.
-    /// Useful as a method so it can be overridden by specialised witches that may need to do extra accounting or notify 3rd parties
-    /// @param vaultId Id of the vault to liquidate
-    function _auctionStarted(
-        bytes12 vaultId,
-        DataTypes.Auction memory auction_,
-        DataTypes.Line memory line
-    ) internal virtual returns (DataTypes.Vault memory vault) {
-        // The Witch is now in control of the vault under auction
         vault = cauldron.give(vaultId, address(this));
         emit Auctioned(
             vaultId,
@@ -160,17 +149,16 @@ contract Witch is WitchBase {
         internal
         view
         override
-        returns (
-            bytes6 baseId,
-            bytes6 ilkId,
-            bytes6 seriesId,
-            address owner,
-            DataTypes.Debt memory debt
-        )
+        returns (VaultBalanceDebtData memory details)
     {
         DataTypes.Vault memory vault = cauldron.vaults(vaultId);
         DataTypes.Series memory series = cauldron.series(vault.seriesId);
-        debt = cauldron.debt(series.baseId, vault.ilkId);
-        return (series.baseId, vault.ilkId, vault.seriesId, vault.owner, debt);
+
+        details.ilkId = vault.ilkId;
+        details.baseId = series.baseId;
+        details.seriesId = vault.seriesId;
+        details.owner = vault.owner;
+        details.balances = cauldron.balances(vaultId);
+        details.debt = cauldron.debt(series.baseId, vault.ilkId);
     }
 }

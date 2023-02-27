@@ -10,45 +10,14 @@ import "./interfaces/DataTypes.sol";
 import "./interfaces/ILadle.sol";
 import "./interfaces/ICauldron.sol";
 import "./interfaces/IJoin.sol";
+import "./interfaces/IWitchEvents.sol";
+import "./interfaces/IWitchErrors.sol";
 
-contract WitchBase is AccessControl {
+contract WitchBase is AccessControl, IWitchEvents, IWitchErrors {
     using WMul for uint256;
     using WDiv for uint256;
     using WDivUp for uint256;
     using CastU256U128 for uint256;
-    // ==================== Errors ====================
-
-    error VaultAlreadyUnderAuction(bytes12 vaultId, address witch);
-    error VaultNotLiquidatable(bytes6 ilkId, bytes6 baseId);
-    error AuctionIsCorrect(bytes12 vaultId);
-    error AuctioneerRewardTooHigh(uint256 max, uint256 actual);
-    error WitchIsDead();
-    error CollateralLimitExceeded(uint256 current, uint256 max);
-    error NotUnderCollateralised(bytes12 vaultId);
-    error UnderCollateralised(bytes12 vaultId);
-    error VaultNotUnderAuction(bytes12 vaultId);
-    error NotEnoughBought(uint256 expected, uint256 got);
-    error JoinNotFound(bytes6 id);
-    error UnrecognisedParam(bytes32 param);
-    error LeavesDust(uint256 remainder, uint256 min);
-
-    // ==================== User events ====================
-
-    event Auctioned(
-        bytes12 indexed vaultId,
-        DataTypes.Auction auction,
-        uint256 duration,
-        uint256 initialCollateralProportion
-    );
-    event Cancelled(bytes12 indexed vaultId);
-    event Cleared(bytes12 indexed vaultId);
-    event Ended(bytes12 indexed vaultId);
-    event Bought(
-        bytes12 indexed vaultId,
-        address indexed buyer,
-        uint256 ink,
-        uint256 art
-    );
 
     // ==================== Modifiers ====================
 
@@ -62,24 +31,6 @@ contract WitchBase is AccessControl {
         }
         _;
     }
-
-    // ==================== Governance events ====================
-
-    event Point(
-        bytes32 indexed param,
-        address indexed oldValue,
-        address indexed newValue
-    );
-    event LineSet(
-        bytes6 indexed ilkId,
-        bytes6 indexed baseId,
-        uint32 duration,
-        uint64 vaultProportion,
-        uint64 collateralProportion
-    );
-    event LimitSet(bytes6 indexed ilkId, bytes6 indexed baseId, uint128 max);
-    event ProtectedSet(address indexed value, bool protected);
-    event AuctioneerRewardSet(uint256 auctioneerReward);
 
     uint128 public constant ONE_HUNDRED_PERCENT = 1e18;
     uint128 public constant ONE_PERCENT = 0.01e18;
@@ -630,23 +581,18 @@ contract WitchBase is AccessControl {
 
         // If the vault hasn't been auctioned yet, we calculate what values it'd have if it was started right now
         if (auction_.start == 0) {
-            DataTypes.Balances memory balances = cauldron.balances(vaultId);
-            (
-                bytes6 baseId,
-                bytes6 ilkId,
-                bytes6 seriesId,
-                address owner,
-                DataTypes.Debt memory debt
-            ) = _getVaultDetailsAndDebt(vaultId);
+            VaultBalanceDebtData memory details = _getVaultDetailsAndDebt(
+                vaultId
+            );
 
             (auction_, ) = _calcAuction(
-                ilkId,
-                baseId,
-                seriesId,
-                owner,
+                details.ilkId,
+                details.baseId,
+                details.seriesId,
+                details.owner,
                 to,
-                balances,
-                debt
+                details.balances,
+                details.debt
             );
         }
 
@@ -656,17 +602,20 @@ contract WitchBase is AccessControl {
         (liquidatorCut, auctioneerCut) = _calcPayout(auction_, to, artIn);
     }
 
+    struct VaultBalanceDebtData {
+        bytes6 ilkId;
+        bytes6 baseId;
+        bytes6 seriesId;
+        address owner;
+        DataTypes.Balances balances;
+        DataTypes.Debt debt;
+    }
+
     function _getVaultDetailsAndDebt(bytes12 vaultId)
         internal
         view
         virtual
-        returns (
-            bytes6 baseId,
-            bytes6 ilkId,
-            bytes6 seriesId,
-            address owner,
-            DataTypes.Debt memory debt
-        )
+        returns (VaultBalanceDebtData memory)
     {}
 
     /// @notice Return how much collateral should be given out.

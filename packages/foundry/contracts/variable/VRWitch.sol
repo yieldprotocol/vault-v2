@@ -47,18 +47,6 @@ contract VRWitch is WitchBase {
             to
         );
 
-        vault = _auctionStarted(vaultId, auction_, line);
-    }
-
-    /// @dev Moves the vault ownership to the witch.
-    /// Useful as a method so it can be overridden by specialised witches that may need to do extra accounting or notify 3rd parties
-    /// @param vaultId Id of the vault to liquidate
-    function _auctionStarted(
-        bytes12 vaultId,
-        DataTypes.Auction memory auction_,
-        DataTypes.Line memory line
-    ) internal virtual returns (VRDataTypes.Vault memory vault) {
-        // The Witch is now in control of the vault under auction
         vault = IVRCauldron(address(cauldron)).give(vaultId, address(this));
         emit Auctioned(
             vaultId,
@@ -98,18 +86,17 @@ contract VRWitch is WitchBase {
         internal
         view
         override
-        returns (
-            bytes6 baseId,
-            bytes6 ilkId,
-            bytes6 seriesId,
-            address owner,
-            DataTypes.Debt memory debt
-        )
+        returns (VaultBalanceDebtData memory details)
     {
         VRDataTypes.Vault memory vault = IVRCauldron(address(cauldron)).vaults(
             vaultId
         );
-        debt = cauldron.debt(vault.baseId, vault.ilkId);
-        return (vault.baseId, vault.ilkId, bytes6(0), vault.owner, debt);
+
+        details.ilkId = vault.ilkId;
+        details.baseId = vault.baseId;
+        details.seriesId = bytes6(0);
+        details.owner = vault.owner;
+        details.balances = cauldron.balances(vaultId);
+        details.debt = cauldron.debt(vault.baseId, vault.ilkId);
     }
 }
