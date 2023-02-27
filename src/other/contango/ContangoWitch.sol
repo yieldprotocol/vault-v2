@@ -60,6 +60,12 @@ contract ContangoWitch is Witch, IContangoWitch {
         emit InsuranceLineSet(duration, maxInsuredProportion, insurancePremium);
     }
 
+    // TODO auth this
+    function setInsuranceFund(address insuranceFund_) external override {
+        insuranceFund = insuranceFund_;
+        emit InsuranceFundSet(insuranceFund);
+    }
+
     function _discountDebt(bytes6 ilkId, bytes6 baseId, uint256 auctionStart, uint256 auctionDuration, uint256 artIn)
         internal
         view
@@ -93,7 +99,7 @@ contract ContangoWitch is Witch, IContangoWitch {
         if (insuranceLine.duration == 0 || auction.start + duration > block.timestamp) {
             requiredArtIn = artIn;
         } else {
-            requiredArtIn = artIn.wdiv(_debtProportionNow(insuranceLine, auction.start, duration));
+            requiredArtIn = artIn.wdivup(_debtProportionNow(insuranceLine, auction.start, duration));
 
             uint256 topUpAmount = requiredArtIn - artIn;
 
@@ -128,19 +134,34 @@ contract ContangoWitch is Witch, IContangoWitch {
         }
     }
 
-    function _calcPayout(DataTypes.Auction memory auction, address to, uint256 artIn)
+    function _discountInsurancePremium(DataTypes.Auction memory auction_, uint256 liquidatorCut)
         internal
         view
         override
-        returns (uint256 liquidatorCut, uint256 auctioneerCut, uint256 requiredArtIn)
+        returns (uint256 discountedLiquidatorCut)
     {
-        (liquidatorCut, auctioneerCut, requiredArtIn) = super._calcPayout(auction, to, artIn);
-        uint256 insurancePremium = insuranceLines[auction.ilkId][auction.baseId].insurancePremium;
+        uint256 insurancePremium = insuranceLines[auction_.ilkId][auction_.baseId].insurancePremium;
 
-        if (_shouldItPayInsurancePremium(insurancePremium, auction)) {
-            liquidatorCut -= liquidatorCut.wmul(insurancePremium);
+        if (_shouldItPayInsurancePremium(insurancePremium, auction_)) {
+            discountedLiquidatorCut = liquidatorCut.wmul(ONE_HUNDRED_PERCENT - insurancePremium);
+        } else {
+            discountedLiquidatorCut = liquidatorCut;
         }
     }
+
+    // function _calcPayout(DataTypes.Auction memory auction, address to, uint256 artIn)
+    //     internal
+    //     view
+    //     override
+    //     returns (uint256 liquidatorCut, uint256 auctioneerCut, uint256 requiredArtIn)
+    // {
+    //     (liquidatorCut, auctioneerCut, requiredArtIn) = super._calcPayout(auction, to, artIn);
+    //     uint256 insurancePremium = insuranceLines[auction.ilkId][auction.baseId].insurancePremium;
+
+    //     if (_shouldItPayInsurancePremium(insurancePremium, auction)) {
+    //         liquidatorCut -= liquidatorCut.wmul(insurancePremium);
+    //     }
+    // }
 
     function _payInk(DataTypes.Auction memory auction, address to, uint256 liquidatorCut, uint256 auctioneerCut)
         internal
@@ -150,8 +171,9 @@ contract ContangoWitch is Witch, IContangoWitch {
         uint256 insurancePremium = insuranceLines[auction.ilkId][auction.baseId].insurancePremium;
 
         if (_shouldItPayInsurancePremium(insurancePremium, auction)) {
-            uint256 premium = liquidatorCut.wdiv(ONE_HUNDRED_PERCENT - insurancePremium) - liquidatorCut;
+            uint256 premium = liquidatorCut.wmul(insurancePremium);
             _join(auction.ilkId).exit(insuranceFund, premium.u128());
+            liquidatorCut -= premium;
         }
 
         return super._payInk(auction, to, liquidatorCut, auctioneerCut);
@@ -164,6 +186,6 @@ contract ContangoWitch is Witch, IContangoWitch {
     {
         uint256 duration = lines[auction.ilkId][auction.baseId].duration;
         // Only charge premium for non-insured liquidations
-        return insurancePremium > 0 && auction.start + duration > block.timestamp;
+        return insurancePremium > 0 && block.timestamp <= auction.start + duration;
     }
 }
