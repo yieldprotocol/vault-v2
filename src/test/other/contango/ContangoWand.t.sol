@@ -58,6 +58,8 @@ contract ContangoWandTest is Test, TestConstants {
         wand.grantRole(wand.setDebtLimits.selector, address(this));
         wand.grantRole(wand.setDefaultDebtLimits.selector, address(this));
         wand.grantRole(wand.boundDebtLimits.selector, address(this));
+        AccessControl(address(yieldSpaceOracle)).grantRole(YieldSpaceMultiOracle.setSource.selector, address(wand));
+        wand.grantRole(wand.setYieldSpaceOracleSource.selector, address(this));
         vm.stopPrank();
     }
 
@@ -272,5 +274,28 @@ contract ContangoWandTest is Test, TestConstants {
         assertEq(contangoDebtLimits.max, 1_000_000, "max");
         assertEq(contangoDebtLimits.min, 20, "min");
         assertEq(contangoDebtLimits.dec, 6, "dec");
+    }
+
+    function testSetYieldSpaceOracleSource_Auth() public {
+        vm.prank(bob);
+        vm.expectRevert("Access denied");
+        wand.setYieldSpaceOracleSource(FYUSDT2306);
+    }
+
+    function testSetYieldSpaceOracleSource() public {
+        wand.setYieldSpaceOracleSource(FYUSDT2306);
+
+        (IPool pool, bool lending) = yieldSpaceOracle.sources(USDT, FYUSDT2306);
+        assertEq(address(pool), 0xc6078e090641cC32b05a7F3F102F272A4Ee19867, "pool");
+        assertFalse(lending, "lending");
+
+        (pool, lending) = yieldSpaceOracle.sources(FYUSDT2306, USDT);
+        assertEq(address(pool), 0xc6078e090641cC32b05a7F3F102F272A4Ee19867, "pool");
+        assertTrue(lending, "lending");
+    }
+
+    function testSetYieldSpaceOracleSource_InvalidSeries() public {
+        vm.expectRevert("Pool not known to the Yield Ladle");
+        wand.setYieldSpaceOracleSource("series");
     }
 }
