@@ -55,6 +55,9 @@ contract ContangoWandTest is Test, TestConstants {
         wand.grantRole(wand.setRatio.selector, address(this));
         wand.grantRole(wand.boundRatio.selector, address(this));
         wand.grantRole(wand.setDefaultRatio.selector, address(this));
+        wand.grantRole(wand.setDebtLimits.selector, address(this));
+        wand.grantRole(wand.setDefaultDebtLimits.selector, address(this));
+        wand.grantRole(wand.boundDebtLimits.selector, address(this));
         vm.stopPrank();
     }
 
@@ -220,4 +223,54 @@ contract ContangoWandTest is Test, TestConstants {
         assertTrue(contangoCauldron.ilks(FYUSDT2306, FYETH2306), "ilk");
     }
 
+    function testSetDebtLimits_Auth() public {
+        vm.prank(bob);
+        vm.expectRevert("Access denied");
+        wand.setDebtLimits(USDT, FYETH2306, 500_000, 40);
+    }
+
+    function testSetDebtLimits_NoDefaultDebtLimits() public {
+        vm.expectRevert("Default debt limits not set");
+        wand.setDebtLimits(USDT, FYETH2306, 500_000, 40);
+    }
+
+    function testSetDebtLimits() public {
+        wand.addAsset(USDT);
+        wand.setDefaultDebtLimits(500_000, 40);
+
+        wand.setDebtLimits(USDT, FYETH2306, 500_000, 40);
+
+        DataTypes.Debt memory contangoDebtLimits = contangoCauldron.debt(USDT, FYETH2306);
+
+        assertEq(contangoDebtLimits.max, 500_000, "max");
+        assertEq(contangoDebtLimits.min, 40, "min");
+        assertEq(contangoDebtLimits.dec, 6, "dec");
+    }
+
+    function testSetDebtLimits_OutsideDefaultLimits() public {
+        wand.addAsset(USDT);
+
+        wand.setDefaultDebtLimits(500_000, 40);
+
+        vm.expectRevert("Max debt out of bounds");
+        wand.setDebtLimits(USDT, FYETH2306, 500_000 + 1, 40);
+
+        vm.expectRevert("Min debt out of bounds");
+        wand.setDebtLimits(USDT, FYETH2306, 500_000, 40 - 1);
+    }
+
+    function testSetDebtLimits_OverrideLimitsForPair() public {
+        wand.addAsset(USDT);
+        wand.setDefaultDebtLimits(500_000, 40);
+
+        wand.boundDebtLimits(USDT, FYETH2306, 1_000_000, 20);
+
+        wand.setDebtLimits(USDT, FYETH2306, 1_000_000, 20);
+
+        DataTypes.Debt memory contangoDebtLimits = contangoCauldron.debt(USDT, FYETH2306);
+
+        assertEq(contangoDebtLimits.max, 1_000_000, "max");
+        assertEq(contangoDebtLimits.min, 20, "min");
+        assertEq(contangoDebtLimits.dec, 6, "dec");
+    }
 }

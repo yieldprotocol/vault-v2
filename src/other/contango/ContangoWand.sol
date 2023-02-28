@@ -138,9 +138,10 @@ contract ContangoWand is AccessControl {
 
         if (bounds_.max == 0 && bounds_.min == 0) {
             bounds_ = defaultDebtLimits;
+            require(bounds_.max > 0, "Default debt limits not set");
             bounds_.dec = _getDebtDecimals(baseId, ilkId);
-            debt[baseId][ilkId] = bounds_;
         }
+
         require(max <= bounds_.max, "Max debt out of bounds");
         require(min >= bounds_.min, "Min debt out of bounds");
 
