@@ -56,24 +56,28 @@ contract ContangoWitch is Witch, IContangoWitch {
         contango.auctionEnded(vaultId, owner);
     }
 
-    // TODO auth this
     function setInsuranceLine(
         bytes6 ilkId,
         bytes6 baseId,
         uint32 duration,
         uint64 maxInsuredProportion,
         uint64 insurancePremium
-    ) external override {
+    ) external override auth {
         insuranceLines[ilkId][baseId] = InsuranceLine(
             duration,
             maxInsuredProportion,
             insurancePremium
         );
-        emit InsuranceLineSet(duration, maxInsuredProportion, insurancePremium);
+        emit InsuranceLineSet(
+            ilkId,
+            baseId,
+            duration,
+            maxInsuredProportion,
+            insurancePremium
+        );
     }
 
-    // TODO auth this
-    function setInsuranceFund(address insuranceFund_) external override {
+    function setInsuranceFund(address insuranceFund_) external override auth {
         insuranceFund = insuranceFund_;
         emit InsuranceFundSet(insuranceFund);
     }
