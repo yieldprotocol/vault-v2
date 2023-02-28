@@ -60,6 +60,8 @@ contract ContangoWandTest is Test, TestConstants {
         wand.grantRole(wand.boundDebtLimits.selector, address(this));
         AccessControl(address(yieldSpaceOracle)).grantRole(YieldSpaceMultiOracle.setSource.selector, address(wand));
         wand.grantRole(wand.setYieldSpaceOracleSource.selector, address(this));
+        AccessControl(address(compositeOracle)).grantRole(CompositeMultiOracle.setSource.selector, address(wand));
+        wand.grantRole(wand.setCompositeOracleSource.selector, address(this));
         vm.stopPrank();
     }
 
@@ -287,15 +289,35 @@ contract ContangoWandTest is Test, TestConstants {
 
         (IPool pool, bool lending) = yieldSpaceOracle.sources(USDT, FYUSDT2306);
         assertEq(address(pool), 0xc6078e090641cC32b05a7F3F102F272A4Ee19867, "pool");
-        assertFalse(lending, "lending");
+        assertTrue(lending, "lending");
 
         (pool, lending) = yieldSpaceOracle.sources(FYUSDT2306, USDT);
         assertEq(address(pool), 0xc6078e090641cC32b05a7F3F102F272A4Ee19867, "pool");
-        assertTrue(lending, "lending");
+        assertFalse(lending, "lending");
     }
 
     function testSetYieldSpaceOracleSource_InvalidSeries() public {
         vm.expectRevert("Pool not known to the Yield Ladle");
         wand.setYieldSpaceOracleSource("series");
+    }
+
+    function testCompositeOracleSource_Auth() public {
+        vm.prank(bob);
+        vm.expectRevert("Access denied");
+        wand.setCompositeOracleSource(USDT, FYETH2306);
+    }
+
+    function testCompositeOracleSource_InvalidPair() public {
+        vm.expectRevert("YieldSpace oracle not set");
+        wand.setCompositeOracleSource(USDT, FYETH2306);
+    }
+
+    function testCompositeOracleSource() public {
+        wand.setYieldSpaceOracleSource(FYUSDT2306);
+
+        wand.setCompositeOracleSource(USDT, FYUSDT2306);
+
+        IOracle source = compositeOracle.sources(USDT, FYUSDT2306);
+        assertEq(address(source), address(yieldSpaceOracle), "source");
     }
 }

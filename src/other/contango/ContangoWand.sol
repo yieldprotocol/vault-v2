@@ -161,7 +161,7 @@ contract ContangoWand is AccessControl {
         require(address(series_.fyToken) != address(0), "Series not known to the Yield Cauldron");
         require(address(series_.fyToken) == address(pool_.fyToken()), "fyToken mismatch"); // Sanity check
 
-        yieldSpaceOracle.setSource(series_.baseId, seriesId, pool_);
+        yieldSpaceOracle.setSource(seriesId, series_.baseId, pool_);
     }
 
     /// @notice Set the YieldSpace oracle as the source for a given asset pair in the Composite oracle, provided the source is set in the YieldSpace oracle
