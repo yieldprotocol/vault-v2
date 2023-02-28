@@ -62,6 +62,8 @@ contract ContangoWandTest is Test, TestConstants {
         wand.grantRole(wand.setYieldSpaceOracleSource.selector, address(this));
         AccessControl(address(compositeOracle)).grantRole(CompositeMultiOracle.setSource.selector, address(wand));
         wand.grantRole(wand.setCompositeOracleSource.selector, address(this));
+        AccessControl(address(compositeOracle)).grantRole(CompositeMultiOracle.setPath.selector, address(wand));
+        wand.grantRole(wand.setCompositeOraclePath.selector, address(this));
         vm.stopPrank();
     }
 
@@ -312,12 +314,45 @@ contract ContangoWandTest is Test, TestConstants {
         wand.setCompositeOracleSource(USDT, FYETH2306);
     }
 
-    function testCompositeOracleSource() public {
+    function testCompositeOracleSource_FYToken() public {
         wand.setYieldSpaceOracleSource(FYUSDT2306);
 
         wand.setCompositeOracleSource(USDT, FYUSDT2306);
 
         IOracle source = compositeOracle.sources(USDT, FYUSDT2306);
         assertEq(address(source), address(yieldSpaceOracle), "source");
+    }
+
+    function testCompositeOracleSource_Asset() public {
+        wand.setCompositeOracleSource(USDT, ETH);
+
+        IOracle source = compositeOracle.sources(USDT, ETH);
+        assertEq(address(source), 0x8E9696345632796e7D80fB341fF4a2A60aa39C89, "source");
+    }
+
+    function testCompositeOraclePath_Auth() public {
+        vm.prank(bob);
+        vm.expectRevert("Access denied");
+        wand.setCompositeOraclePath(USDT, FYETH2306, new bytes6[](0));
+    }
+
+    // function testCompositeOraclePath_InvalidPair() public {
+    //     vm.expectRevert("Path already set");
+    //     wand.setCompositeOraclePath(USDC, FYETH2306, new bytes6[](0));
+    // }
+
+    function testCompositeOraclePath() public {
+        wand.setYieldSpaceOracleSource(FYUSDT2306);
+        wand.setCompositeOracleSource(USDT, ETH);
+        wand.setCompositeOracleSource(USDT, FYUSDT2306);
+
+        bytes6[] memory path = new bytes6[](1);
+        path[0] = ETH;
+
+        wand.setCompositeOraclePath(USDT, FYETH2306, path);
+
+        (uint256 amountQuote, uint256 updateTime) = compositeOracle.peek(USDT, FYETH2306, 1000e6);
+        assertGt(amountQuote, 0, "amountQuote");
+        assertGt(updateTime, 0, "updateTime");
     }
 }

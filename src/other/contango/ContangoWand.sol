@@ -166,14 +166,21 @@ contract ContangoWand is AccessControl {
 
     /// @notice Set the YieldSpace oracle as the source for a given asset pair in the Composite oracle, provided the source is set in the YieldSpace oracle
     function setCompositeOracleSource(bytes6 baseId, bytes6 ilkId) external auth {
-        (IPool pool_,) = yieldSpaceOracle.sources(baseId, ilkId);
-        require(address(pool_) != address(0), "YieldSpace oracle not set");
-        compositeOracle.setSource(baseId, ilkId, yieldSpaceOracle);
+        DataTypes.Series memory series_ = yieldCauldron.series(ilkId);
+        if (series_.fyToken != IFYToken(address(0))) {
+            (IPool pool_,) = yieldSpaceOracle.sources(baseId, ilkId);
+            require(address(pool_) != address(0), "YieldSpace oracle not set");
+            compositeOracle.setSource(baseId, ilkId, yieldSpaceOracle);
+        } else if (yieldCauldron.assets(ilkId) != address(0)) {
+            DataTypes.SpotOracle memory spotOracle_ = yieldCauldron.spotOracles(baseId, ilkId);
+            compositeOracle.setSource(baseId, ilkId, spotOracle_.oracle);
+        }
     }
 
     /// @notice Set a path in the Composite oracle, as long as the path is not overwriting anything
     function setCompositeOraclePath(bytes6 baseId, bytes6 quoteId, bytes6[] calldata path) external auth {
-        require(compositeOracle.paths(baseId, quoteId, 0) == bytes6(0), "Path already set"); // We check that the first element in the path is empty
+        // This doesn't work because of the way Solidity handles arrays
+        // require(compositeOracle.paths(baseId, quoteId, 0) == bytes6(0), "Path already set"); // We check that the first element in the path is empty
         compositeOracle.setPath(baseId, quoteId, path);
     }
 
