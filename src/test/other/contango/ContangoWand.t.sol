@@ -28,8 +28,8 @@ contract ContangoWandTest is Test, TestConstants {
     ContangoWand internal wand;
 
     bytes6 internal immutable baseId = USDC;
-    bytes6 internal immutable seriesId = FYUSDC2206;
-    bytes6 internal immutable ilkId = FYETH2206;
+    bytes6 internal immutable seriesId = FYUSDC2306;
+    bytes6 internal immutable ilkId = FYETH2306;
 
     function setUp() public virtual {
         vm.createSelectFork("ARBITRUM", 65404751);
@@ -48,9 +48,12 @@ contract ContangoWandTest is Test, TestConstants {
             Cauldron.setSpotOracle.selector,
             address(wand)
         );
-
         AccessControl(address(contangoCauldron)).grantRole(
             Cauldron.setLendingOracle.selector,
+            address(wand)
+        );
+        AccessControl(address(contangoCauldron)).grantRole(
+            Cauldron.setDebtLimits.selector,
             address(wand)
         );
         vm.stopPrank();
@@ -93,5 +96,37 @@ contract ContangoWandTest is Test, TestConstants {
         IOracle contangoOracle = contangoCauldron.lendingOracles(baseId);
 
         assertEq(address(yieldOracle), address(contangoOracle), "oracle");
+    }
+
+    function testCopyDebtLimits_Auth() public {
+        vm.expectRevert("Access denied");
+        wand.copyDebtLimits(baseId, ilkId);
+    }
+
+    function testCopyDebtLimits() public {
+        wand.grantRole(wand.copyDebtLimits.selector, address(this));
+        wand.copyDebtLimits(baseId, ETH);
+
+        DataTypes.Debt memory yieldDebt = yieldCauldron.debt(baseId, ETH);
+        DataTypes.Debt memory contangoDebt = contangoCauldron.debt(baseId, ETH);
+
+        assertEq(yieldDebt.max, contangoDebt.max, "max");
+        assertEq(yieldDebt.min, contangoDebt.min, "min");
+        assertEq(yieldDebt.dec, contangoDebt.dec, "dec");
+    }
+
+    function testCopyDebtLimits_FromSeries() public {
+        wand.grantRole(wand.copyDebtLimits.selector, address(this));
+        wand.copyDebtLimits(baseId, ilkId);
+
+        DataTypes.Debt memory yieldDebt = yieldCauldron.debt(baseId, ETH);
+        DataTypes.Debt memory contangoDebt = contangoCauldron.debt(
+            baseId,
+            ilkId
+        );
+
+        assertEq(yieldDebt.max, contangoDebt.max, "max");
+        assertEq(yieldDebt.min, contangoDebt.min, "min");
+        assertEq(yieldDebt.dec, contangoDebt.dec, "dec");
     }
 }

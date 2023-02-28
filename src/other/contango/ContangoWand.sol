@@ -59,6 +59,9 @@ contract ContangoWand is AccessControl {
     /// @notice Copy the debt limits from the master cauldron
     function copyDebtLimits(bytes6 baseId, bytes6 ilkId) external auth {
         DataTypes.Debt memory debt_ = yieldCauldron.debt(baseId, ilkId);
+        if(debt_.max == 0) {
+            debt_ = yieldCauldron.debt(baseId, yieldCauldron.series(ilkId).baseId);
+        }
         contangoCauldron.setDebtLimits(baseId, ilkId, debt_.max, debt_.min, debt_.dec);
     }
 
