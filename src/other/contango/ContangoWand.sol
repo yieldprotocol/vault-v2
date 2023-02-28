@@ -1,22 +1,22 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity >=0.8.13;
 
-import "../interfaces/ICauldronGov.sol";
-import "../interfaces/ICauldron.sol";
-import "../interfaces/ILadleGov.sol";
-import "../interfaces/ILadle.sol";
-import "../interfaces/IJoin.sol";
-import "../oracles/yieldspace/YieldSpaceMultiOracle.sol";
-import "../oracles/composite/CompositeMultiOracle.sol";
+import "../../interfaces/ICauldronGov.sol";
+import "../../interfaces/ICauldron.sol";
+import "../../interfaces/ILadleGov.sol";
+import "../../interfaces/ILadle.sol";
+import "../../interfaces/IJoin.sol";
+import "../../oracles/yieldspace/YieldSpaceMultiOracle.sol";
+import "../../oracles/composite/CompositeMultiOracle.sol";
 import "@yield-protocol/yieldspace-tv/src/interfaces/IPool.sol";
 import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
 
 /// @title A contract that allows configuring the cauldron and ladle within bounds
 contract ContangoWand is AccessControl {
-    ICauldronGov public immutable cauldron;
-    ICauldron public immutable masterCauldron;
-    ILadleGov public immutable ladle;
-    ILadle public immutable masterLadle;
+    ICauldronGov public immutable contangoCauldron;
+    ICauldron public immutable yieldCauldron;
+    ILadleGov public immutable contangoLadle;
+    ILadle public immutable yieldLadle;
     YieldSpaceMultiOracle public immutable yieldSpaceOracle;
     CompositeMultiOracle public immutable compositeOracle;
 
@@ -27,17 +27,17 @@ contract ContangoWand is AccessControl {
     uint32 public defaultRatio;
 
     constructor(
-        ICauldronGov cauldron_,
-        ICauldron masterCauldron_,
-        ILadleGov ladle_,
-        ILadle masterLadle_,
+        ICauldronGov contangoCauldron_,
+        ICauldron yieldCauldron_,
+        ILadleGov contangoLadle_,
+        ILadle yieldLadle_,
         YieldSpaceMultiOracle yieldSpaceOracle_,
         CompositeMultiOracle compositeOracle_
     ) {
-        cauldron = cauldron_;
-        masterCauldron = masterCauldron_;
-        ladle = ladle_;
-        masterLadle = masterLadle_;
+        contangoCauldron = contangoCauldron_;
+        yieldCauldron = yieldCauldron_;
+        contangoLadle = contangoLadle_;
+        yieldLadle = yieldLadle_;
         yieldSpaceOracle = yieldSpaceOracle_;
         compositeOracle = compositeOracle_;
     }
@@ -46,42 +46,42 @@ contract ContangoWand is AccessControl {
 
     /// @notice Copy the spotOracle and ratio from the master cauldron
     function copySpotOracle(bytes6 baseId, bytes6 ilkId) external auth {
-        DataTypes.SpotOracle memory spotOracle_ = masterCauldron.spotOracles(baseId, ilkId);
-        cauldron.setSpotOracle(baseId, ilkId, spotOracle_.oracle, spotOracle_.ratio);
+        DataTypes.SpotOracle memory spotOracle_ = yieldCauldron.spotOracles(baseId, ilkId);
+        contangoCauldron.setSpotOracle(baseId, ilkId, spotOracle_.oracle, spotOracle_.ratio);
     }
 
     /// @notice Copy the lending oracle from the master cauldron
     function copyLendingOracle(bytes6 baseId) external auth {
-        IOracle lendingOracle_ = masterCauldron.lendingOracles(baseId);
-        cauldron.setLendingOracle(baseId, lendingOracle_);
+        IOracle lendingOracle_ = yieldCauldron.lendingOracles(baseId);
+        contangoCauldron.setLendingOracle(baseId, lendingOracle_);
     }
 
     /// @notice Copy the debt limits from the master cauldron
     function copyDebtLimits(bytes6 baseId, bytes6 ilkId) external auth {
-        DataTypes.Debt memory debt_ = masterCauldron.debt(baseId, ilkId);
-        cauldron.setDebtLimits(baseId, ilkId, debt_.max, debt_.min, debt_.dec);
+        DataTypes.Debt memory debt_ = yieldCauldron.debt(baseId, ilkId);
+        contangoCauldron.setDebtLimits(baseId, ilkId, debt_.max, debt_.min, debt_.dec);
     }
 
     /// @notice Add a new asset in the Cauldron, as long as it is an asset or fyToken known to the Yield Cauldron
     function addAsset(bytes6 assetId) external auth {
-        address asset_ = masterCauldron.assets(assetId);
+        address asset_ = yieldCauldron.assets(assetId);
         require(
             asset_ != address(0) ||
-            address(masterCauldron.series(assetId).fyToken) != address(0),
+            address(yieldCauldron.series(assetId).fyToken) != address(0),
         "Asset not known to the Yield Cauldron");
-        cauldron.addAsset(assetId, asset_);
+        contangoCauldron.addAsset(assetId, asset_);
     }
 
     /// @notice Add a new series, if it exists in the Yield Cauldron
     function addSeries(bytes6 seriesId) external auth {
-        DataTypes.Series memory series_ = masterCauldron.series(seriesId);
+        DataTypes.Series memory series_ = yieldCauldron.series(seriesId);
         require(address(series_.fyToken) != address(0), "Series not known to the Yield Cauldron");
-        cauldron.addSeries(seriesId, series_.baseId, series_.fyToken);
+        contangoCauldron.addSeries(seriesId, series_.baseId, series_.fyToken);
     }
 
     /// @notice Add ilks to series
     function addIlks(bytes6 seriesId, bytes6[] calldata ilkIds) external auth {
-        cauldron.addIlks(seriesId, ilkIds);
+        contangoCauldron.addIlks(seriesId, ilkIds);
     }
 
     /// @notice Bound ratio for a given asset pair
@@ -98,21 +98,21 @@ contract ContangoWand is AccessControl {
     function setRatio(bytes6 baseId, bytes6 ilkId, uint32 ratio_) external auth {
         // If the ilkId is a series and boundaries are not set, set ratio to the default
         uint32 bound_ = ratio[baseId][ilkId];
-        if (bound_ == 0 && cauldron.series(ilkId).fyToken != IFYToken(address(0))) {
+        if (bound_ == 0 && contangoCauldron.series(ilkId).fyToken != IFYToken(address(0))) {
             ratio[baseId][ilkId] = bound_ = defaultRatio;
         }
         require(ratio_ >= bound_, "Ratio out of bounds");
-        cauldron.setSpotOracle(baseId, ilkId, compositeOracle, ratio_);
+        contangoCauldron.setSpotOracle(baseId, ilkId, compositeOracle, ratio_);
     }
 
     function _getDebtDecimals(bytes6 baseId, bytes6 ilkId) internal view returns (uint8 dec) {
             // If the debt is already set in the cauldron, we use the decimals from there
             // Otherwise, we use the decimals of the base
-            DataTypes.Debt memory cauldronDebt_ = ICauldron(address(cauldron)).debt(baseId, ilkId);
+            DataTypes.Debt memory cauldronDebt_ = ICauldron(address(contangoCauldron)).debt(baseId, ilkId);
             if (cauldronDebt_.sum != 0) {
                 dec =  cauldronDebt_.dec;
             } else {
-                dec = IERC20Metadata(cauldron.assets(baseId)).decimals();
+                dec = IERC20Metadata(contangoCauldron.assets(baseId)).decimals();
             }
     }
 
@@ -149,7 +149,7 @@ contract ContangoWand is AccessControl {
         require(max <= bounds_.max, "Max debt out of bounds");
         require(min >= bounds_.min, "Min debt out of bounds");
 
-        cauldron.setDebtLimits(baseId, ilkId, max, min, bounds_.dec);
+        contangoCauldron.setDebtLimits(baseId, ilkId, max, min, bounds_.dec);
     }
 
     /// ----------------- Oracle Governance -----------------
@@ -159,9 +159,9 @@ contract ContangoWand is AccessControl {
     /// - The baseId matches the pool's baseId
     /// - The quoteId matches the pool's seriesId
     function setYieldSpaceOracleSource(bytes6 seriesId) external auth {
-        IPool pool_ = IPool(masterLadle.pools(seriesId));
+        IPool pool_ = IPool(yieldLadle.pools(seriesId));
         require(address(pool_) != address(0), "Pool not known to the Yield Ladle");
-        DataTypes.Series memory series_ = masterCauldron.series(seriesId);
+        DataTypes.Series memory series_ = yieldCauldron.series(seriesId);
         require(address(series_.fyToken) != address(0), "Series not known to the Yield Cauldron");
         require(address(series_.fyToken) == address(pool_.fyToken()), "fyToken mismatch"); // Sanity check
 
@@ -185,24 +185,24 @@ contract ContangoWand is AccessControl {
 
     /// @notice Propagate a pool to the Ladle from the Yield Ladle
     function addPool(bytes6 seriesId) external auth {
-        address pool_ = masterLadle.pools(seriesId);
+        address pool_ = yieldLadle.pools(seriesId);
         require(pool_ != address(0), "Pool not known to the Yield Ladle");
-        ladle.addPool(seriesId, pool_);
+        contangoLadle.addPool(seriesId, pool_);
     }
 
     /// @notice Propagate an integration to the Ladle from the Yield Ladle
     function addIntegration(address integration) external auth {
-        ladle.addIntegration(integration, masterLadle.integrations(integration));
+        contangoLadle.addIntegration(integration, yieldLadle.integrations(integration));
     }
 
     /// @notice Propagate a token to the Ladle from the Yield Ladle
     function addToken(address token) external auth {
-        ladle.addToken(token, masterLadle.tokens(token));
+        contangoLadle.addToken(token, yieldLadle.tokens(token));
     }
 
     /// @notice Add join to the Ladle.
     /// @dev These will often be used to hold fyToken, so it doesn't seem possible to put boundaries. However, it seems low risk. Famous last words.
     function addJoin(bytes6 assetId, address join) external auth {
-        ladle.addJoin(assetId, join);
+        contangoLadle.addJoin(assetId, join);
     }
 }
