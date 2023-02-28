@@ -68,6 +68,8 @@ contract ContangoWandTest is Test, TestConstants {
         wand.grantRole(wand.addPool.selector, address(this));
         AccessControl(address(contangoLadle)).grantRole(ILadle.addIntegration.selector, address(wand));
         wand.grantRole(wand.addIntegration.selector, address(this));
+        AccessControl(address(contangoLadle)).grantRole(ILadle.addToken.selector, address(wand));
+        wand.grantRole(wand.addToken.selector, address(this));
         vm.stopPrank();
     }
 
@@ -395,4 +397,17 @@ contract ContangoWandTest is Test, TestConstants {
         assertTrue(contangoLadle.integrations(0xE779cd75E6c574d83D3FD6C92F3CBE31DD32B1E1), "yield integration");
     }
 
+    function testToken_Auth() public {
+        vm.prank(bob);
+        vm.expectRevert("Access denied");
+        wand.addToken(address(0));
+    }
+
+    function testAddToken() public {
+        assertTrue(yieldLadle.tokens(0xad1983745D6c739537fEaB5bed45795f47A940b3), "yield integration");
+
+        wand.addToken(0xad1983745D6c739537fEaB5bed45795f47A940b3);
+
+        assertTrue(contangoLadle.tokens(0xad1983745D6c739537fEaB5bed45795f47A940b3), "yield integration");
+    }
 }
