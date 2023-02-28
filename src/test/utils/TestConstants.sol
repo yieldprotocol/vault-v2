@@ -46,6 +46,7 @@ contract TestConstants {
     string public constant TIMELOCK = "TIMELOCK";
     string public constant CAULDRON = "CAULDRON";
     string public constant LADLE = "LADLE";
+    string public constant WETH = "WETH";
 
     mapping (string => mapping (string => address)) public addresses;
 
@@ -56,5 +57,6 @@ contract TestConstants {
         addresses[ARBITRUM][TIMELOCK] = 0xd0a22827Aed2eF5198EbEc0093EA33A4CD641b6c;
         addresses[ARBITRUM][CAULDRON] = 0x23cc87FBEBDD67ccE167Fa9Ec6Ad3b7fE3892E30;
         addresses[ARBITRUM][LADLE] = 0x16E25cf364CeCC305590128335B8f327975d0560;
+        addresses[ARBITRUM][WETH] = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
     }
 }

@@ -5,11 +5,13 @@ import "forge-std/src/Test.sol";
 import "../../utils/TestConstants.sol";
 import "../../utils/Mocks.sol";
 
+import "../../../Cauldron.sol";
+import "../../../other/contango/ContangoLadle.sol";
 import "../../../other/contango/ContangoWand.sol";
 
 contract ContangoWandTest is Test, TestConstants {
-    ICauldronGov internal contangoCauldron =
-        ICauldronGov(0x44386ddB4C44E7CB8981f97AF89E928Ddd4258DD);
+    ICauldron internal contangoCauldron =
+        ICauldron(0x44386ddB4C44E7CB8981f97AF89E928Ddd4258DD);
     ICauldron internal yieldCauldron =
         ICauldron(0x23cc87FBEBDD67ccE167Fa9Ec6Ad3b7fE3892E30);
 
@@ -25,20 +27,53 @@ contract ContangoWandTest is Test, TestConstants {
 
     ContangoWand internal wand;
 
+    bytes6 internal immutable baseId = USDC;
+    bytes6 internal immutable seriesId = FYUSDC2206;
+    bytes6 internal immutable ilkId = FYETH2206;
+
     function setUp() public virtual {
         vm.createSelectFork("ARBITRUM", 65404751);
 
         wand = new ContangoWand(
-            contangoCauldron,
+            ICauldronGov(address(contangoCauldron)),
             yieldCauldron,
-            contangoLadle,
+            ILadleGov(address(contangoLadle)),
             yieldLadle,
             yieldSpaceOracle,
             compositeOracle
         );
+        
+        vm.startPrank(addresses[ARBITRUM][TIMELOCK]);
+        AccessControl(address(contangoCauldron)).grantRole(
+            Cauldron.setSpotOracle.selector,
+            address(wand)
+        );
+        vm.stopPrank();
     }
 
-    function testFoo() public {
-
+    function testCopySpotOracle_Auth() public {
+        vm.expectRevert("Access denied");
+        wand.copySpotOracle(baseId, ilkId);
     }
+
+    function testCopySpotOracle() public {
+        wand.grantRole(wand.copySpotOracle.selector, address(this));
+        wand.copySpotOracle(baseId, ETH);
+
+        DataTypes.SpotOracle memory yieldOracle = yieldCauldron.spotOracles(
+            baseId,
+            ETH
+        );
+        DataTypes.SpotOracle memory contangoOracle = contangoCauldron
+            .spotOracles(baseId, ETH);
+
+        assertEq(
+            address(yieldOracle.oracle),
+            address(contangoOracle.oracle),
+            "oracle"
+        );
+        assertEq(yieldOracle.ratio, contangoOracle.ratio, "ratio");
+    }
+
+    
 }
