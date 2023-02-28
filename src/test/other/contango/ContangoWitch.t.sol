@@ -83,6 +83,8 @@ abstract contract ContangoWitchStateZero is
         witch.grantRole(Witch.setLineAndLimit.selector, ada);
         witch.grantRole(Witch.setProtected.selector, ada);
         witch.grantRole(Witch.setAuctioneerReward.selector, ada);
+        witch.grantRole(ContangoWitch.setInsuranceFund.selector, ada);
+        witch.grantRole(ContangoWitch.setInsuranceLine.selector, ada);
         vm.stopPrank();
 
         vm.label(ada, "Ada");
@@ -188,6 +190,49 @@ contract ContangoWitchStateZeroTest is ContangoWitchStateZero {
 
         assertEq(_max, max);
         assertEq(_sum, 0);
+    }
+
+    function testSetInsuranceFundRequiresAuth() public {
+        vm.prank(bob);
+        vm.expectRevert("Access denied");
+        witch.setInsuranceFund(address(0));
+    }
+
+    function testSetInsuranceFund() public {
+        vm.expectEmit(true, true, true, true);
+        emit InsuranceFundSet(insuranceFund);
+
+        vm.prank(ada);
+        witch.setInsuranceFund(insuranceFund);
+    }
+
+    function testSetInsuranceLineRequiresAuth() public {
+        vm.prank(bob);
+        vm.expectRevert("Access denied");
+        witch.setInsuranceLine("", "", 0, 0, 0);
+    }
+
+    function testSetInsuranceLine() public {
+        uint64 maxInsuredProportion = 0.1e18;
+        uint64 insurancePremium = 0.01e18;
+
+        vm.expectEmit(true, true, true, true);
+        emit InsuranceLineSet(
+            ILK_ID,
+            BASE_ID,
+            INSURANCE_AUCTION_DURATION,
+            maxInsuredProportion,
+            insurancePremium
+        );
+
+        vm.prank(ada);
+        witch.setInsuranceLine(
+            ILK_ID,
+            BASE_ID,
+            INSURANCE_AUCTION_DURATION,
+            maxInsuredProportion,
+            insurancePremium
+        );
     }
 
     function testSetProtectedRequiresAuth() public {
@@ -1801,6 +1846,8 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
 
     function setUp() public virtual override {
         super.setUp();
+
+        vm.prank(ada);
         witch.setInsuranceLine(
             ILK_ID,
             BASE_ID,
@@ -2484,7 +2531,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
     }
 
     // testCalcPayoutAfterAuctionForNonAuctioneerWithInsurance
-    
+
     // testDustLimitProportionUnderDustWithInsurance
     // testDustLimitRemainderUnderDustWithInsurance
     // testDustLimitProportionUnderDustAndRemainderUnderDustAfterAdjustingWithInsurance
