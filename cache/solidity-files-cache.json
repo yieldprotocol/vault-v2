@@ -9796,8 +9796,8 @@
       }
     },
     "src/test/other/contango/ContangoWand.t.sol": {
-      "lastModificationDate": 1677587370092,
-      "contentHash": "239733f06859ada12d322cf39b6be91d",
+      "lastModificationDate": 1677587528841,
+      "contentHash": "29bfab734f1dce0143f9416359072ca4",
       "sourceName": "src/test/other/contango/ContangoWand.t.sol",
       "solcConfig": {
         "settings": {

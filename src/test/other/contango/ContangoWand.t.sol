@@ -42,10 +42,15 @@ contract ContangoWandTest is Test, TestConstants {
             yieldSpaceOracle,
             compositeOracle
         );
-        
+
         vm.startPrank(addresses[ARBITRUM][TIMELOCK]);
         AccessControl(address(contangoCauldron)).grantRole(
             Cauldron.setSpotOracle.selector,
+            address(wand)
+        );
+
+        AccessControl(address(contangoCauldron)).grantRole(
+            Cauldron.setLendingOracle.selector,
             address(wand)
         );
         vm.stopPrank();
@@ -75,5 +80,18 @@ contract ContangoWandTest is Test, TestConstants {
         assertEq(yieldOracle.ratio, contangoOracle.ratio, "ratio");
     }
 
-    
+    function testCopyLendingOracle_Auth() public {
+        vm.expectRevert("Access denied");
+        wand.copyLendingOracle(baseId);
+    }
+
+    function testCopyLendingOracle() public {
+        wand.grantRole(wand.copyLendingOracle.selector, address(this));
+        wand.copyLendingOracle(baseId);
+
+        IOracle yieldOracle = yieldCauldron.lendingOracles(baseId);
+        IOracle contangoOracle = contangoCauldron.lendingOracles(baseId);
+
+        assertEq(address(yieldOracle), address(contangoOracle), "oracle");
+    }
 }
