@@ -66,6 +66,8 @@ contract ContangoWandTest is Test, TestConstants {
         wand.grantRole(wand.setCompositeOraclePath.selector, address(this));
         AccessControl(address(contangoLadle)).grantRole(ILadle.addPool.selector, address(wand));
         wand.grantRole(wand.addPool.selector, address(this));
+        AccessControl(address(contangoLadle)).grantRole(ILadle.addIntegration.selector, address(wand));
+        wand.grantRole(wand.addIntegration.selector, address(this));
         vm.stopPrank();
     }
 
@@ -378,4 +380,19 @@ contract ContangoWandTest is Test, TestConstants {
 
         assertEq(contangoLadle.pools(FYUSDT2306), 0xc6078e090641cC32b05a7F3F102F272A4Ee19867, "pool");
     }
+
+    function testIntegration_Auth() public {
+        vm.prank(bob);
+        vm.expectRevert("Access denied");
+        wand.addIntegration(address(0));
+    }
+
+    function testAddIntegration() public {
+        assertTrue(yieldLadle.integrations(0xE779cd75E6c574d83D3FD6C92F3CBE31DD32B1E1), "yield integration");
+
+        wand.addIntegration(0xE779cd75E6c574d83D3FD6C92F3CBE31DD32B1E1);
+
+        assertTrue(contangoLadle.integrations(0xE779cd75E6c574d83D3FD6C92F3CBE31DD32B1E1), "yield integration");
+    }
+
 }
