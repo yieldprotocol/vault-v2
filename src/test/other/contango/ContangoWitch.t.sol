@@ -12,16 +12,40 @@ import "../../../other/contango/ContangoWitch.sol";
 using Math for uint256;
 using Math for uint128;
 
-abstract contract ContangoWitchStateZero is Test, TestConstants, IContangoWitchEvents {
+abstract contract ContangoWitchStateZero is
+    Test,
+    TestConstants,
+    IContangoWitchEvents
+{
     using Mocks for *;
 
-    event Auctioned(bytes12 indexed vaultId, DataTypes.Auction auction, uint256 duration, uint256 initialProportion);
+    event Auctioned(
+        bytes12 indexed vaultId,
+        DataTypes.Auction auction,
+        uint256 duration,
+        uint256 initialProportion
+    );
     event Cancelled(bytes12 indexed vaultId);
     event Ended(bytes12 indexed vaultId);
-    event Bought(bytes12 indexed vaultId, address indexed buyer, uint256 ink, uint256 art);
-    event LineSet(bytes6 indexed ilkId, bytes6 indexed baseId, uint32 duration, uint64 proportion, uint64 initialOffer);
+    event Bought(
+        bytes12 indexed vaultId,
+        address indexed buyer,
+        uint256 ink,
+        uint256 art
+    );
+    event LineSet(
+        bytes6 indexed ilkId,
+        bytes6 indexed baseId,
+        uint32 duration,
+        uint64 proportion,
+        uint64 initialOffer
+    );
     event LimitSet(bytes6 indexed ilkId, bytes6 indexed baseId, uint128 max);
-    event Point(bytes32 indexed param, address indexed oldValue, address indexed newValue);
+    event Point(
+        bytes32 indexed param,
+        address indexed oldValue,
+        address indexed newValue
+    );
     event ProtectedSet(address indexed a, bool protected);
     event AuctioneerRewardSet(uint256 auctioneerReward);
 
@@ -77,7 +101,12 @@ contract ContangoWitchStateZeroTest is ContangoWitchStateZero {
 
     function testPointRequiresLadle() public {
         vm.prank(ada);
-        vm.expectRevert(abi.encodeWithSelector(Witch.UnrecognisedParam.selector, bytes32("cauldron")));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Witch.UnrecognisedParam.selector,
+                bytes32("cauldron")
+            )
+        );
         witch.point("cauldron", bad);
     }
 
@@ -127,15 +156,29 @@ contract ContangoWitchStateZeroTest is ContangoWitchStateZero {
         uint128 max = 100_000_000e18;
 
         vm.expectEmit(true, true, false, true);
-        emit LineSet(ILK_ID, BASE_ID, AUCTION_DURATION, proportion, initialOffer);
+        emit LineSet(
+            ILK_ID,
+            BASE_ID,
+            AUCTION_DURATION,
+            proportion,
+            initialOffer
+        );
 
         vm.expectEmit(true, true, false, true);
         emit LimitSet(ILK_ID, BASE_ID, max);
 
         vm.prank(ada);
-        witch.setLineAndLimit(ILK_ID, BASE_ID, AUCTION_DURATION, proportion, initialOffer, max);
+        witch.setLineAndLimit(
+            ILK_ID,
+            BASE_ID,
+            AUCTION_DURATION,
+            proportion,
+            initialOffer,
+            max
+        );
 
-        (uint32 _duration, uint64 _proportion, uint64 _initialOffer) = witch.lines(ILK_ID, BASE_ID);
+        (uint32 _duration, uint64 _proportion, uint64 _initialOffer) = witch
+            .lines(ILK_ID, BASE_ID);
 
         assertEq(_duration, AUCTION_DURATION);
         assertEq(_proportion, proportion);
@@ -173,7 +216,13 @@ contract ContangoWitchStateZeroTest is ContangoWitchStateZero {
 
     function testSetAuctioneerRewardTooHigh() public {
         vm.prank(ada);
-        vm.expectRevert(abi.encodeWithSelector(Witch.AuctioneerRewardTooHigh.selector, 1e18, 1.00001e18));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Witch.AuctioneerRewardTooHigh.selector,
+                1e18,
+                1.00001e18
+            )
+        );
         witch.setAuctioneerReward(1.00001e18);
     }
 
@@ -206,7 +255,11 @@ abstract contract ContangoWitchWithMetadata is ContangoWitchStateZero {
     function setUp() public virtual override {
         super.setUp();
 
-        vault = DataTypes.Vault({owner: bob, seriesId: SERIES_ID, ilkId: ILK_ID});
+        vault = DataTypes.Vault({
+            owner: bob,
+            seriesId: SERIES_ID,
+            ilkId: ILK_ID
+        });
 
         series = DataTypes.Series({
             fyToken: IFYToken(Mocks.mock("FYToken")),
@@ -229,7 +282,14 @@ abstract contract ContangoWitchWithMetadata is ContangoWitchStateZero {
         cauldron.debt.mock(BASE_ID, ILK_ID, debt);
 
         vm.prank(ada);
-        witch.setLineAndLimit(ILK_ID, BASE_ID, AUCTION_DURATION, proportion, initialOffer, max);
+        witch.setLineAndLimit(
+            ILK_ID,
+            BASE_ID,
+            AUCTION_DURATION,
+            proportion,
+            initialOffer,
+            max
+        );
     }
 
     function _verifyAuctionStarted(bytes12 vaultId) internal {
@@ -237,7 +297,12 @@ abstract contract ContangoWitchWithMetadata is ContangoWitchStateZero {
         contango.auctionStarted.verify(vaultId);
     }
 
-    function _verifyCollateralBought(bytes12 vaultId, address buyer, uint256 ink, uint256 art) internal {
+    function _verifyCollateralBought(
+        bytes12 vaultId,
+        address buyer,
+        uint256 ink,
+        uint256 art
+    ) internal {
         contango.collateralBought.mock(vaultId, buyer, ink, art);
         contango.collateralBought.verify(vaultId, buyer, ink, art);
     }
@@ -254,7 +319,8 @@ contract ContangoWitchWithMetadataTest is ContangoWitchWithMetadata {
     function testCalcPayout() public {
         // 100 * 0.5 * 0.714 = 35.7
         // (ink * proportion * initialOffer)
-        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 artIn) = witch.calcPayout(VAULT_ID, bot, 50_000e6);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 artIn) = witch
+            .calcPayout(VAULT_ID, bot, 50_000e6);
         assertEq(liquidatorCut, 35.7 ether);
         // on a non-started auction it's always assumed that liquidator == auctioneer
         assertEq(auctioneerCut, 0);
@@ -262,24 +328,40 @@ contract ContangoWitchWithMetadataTest is ContangoWitchWithMetadata {
 
         skip(5 minutes);
         // Nothing changes as auction was never started
-        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(VAULT_ID, bot, 50_000e6);
+        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(
+            VAULT_ID,
+            bot,
+            50_000e6
+        );
         assertEq(liquidatorCut, 35.7 ether);
         assertEq(auctioneerCut, 0);
         assertEq(artIn, 50_000e6);
     }
 
     function testCalcPayoutEdgeCases() public {
-        (uint256 liquidatorCut,, uint256 artIn) = witch.calcPayout(VAULT_ID, bot, 0);
+        (uint256 liquidatorCut, , uint256 artIn) = witch.calcPayout(
+            VAULT_ID,
+            bot,
+            0
+        );
         assertEq(liquidatorCut, 0);
         assertEq(artIn, 0);
 
-        (liquidatorCut,, artIn) = witch.calcPayout(VAULT_ID, bot, type(uint256).max);
+        (liquidatorCut, , artIn) = witch.calcPayout(
+            VAULT_ID,
+            bot,
+            type(uint256).max
+        );
         assertEq(liquidatorCut, 35.7 ether);
         assertEq(artIn, 50_000e6);
     }
 
     function testCalcPayoutFuzzArtIn(uint256 maxArtIn) public {
-        (uint256 liquidatorCut,, uint256 artIn) = witch.calcPayout(VAULT_ID, bot, maxArtIn);
+        (uint256 liquidatorCut, , uint256 artIn) = witch.calcPayout(
+            VAULT_ID,
+            bot,
+            maxArtIn
+        );
 
         assertLe(liquidatorCut, 35.7 ether);
         assertGe(liquidatorCut, 0);
@@ -292,9 +374,16 @@ contract ContangoWitchWithMetadataTest is ContangoWitchWithMetadata {
         vm.assume(io <= 1e18 && io >= 0.01e18);
 
         vm.prank(ada);
-        witch.setLineAndLimit(ILK_ID, BASE_ID, AUCTION_DURATION, proportion, io, max);
+        witch.setLineAndLimit(
+            ILK_ID,
+            BASE_ID,
+            AUCTION_DURATION,
+            proportion,
+            io,
+            max
+        );
 
-        (uint256 liquidatorCut,,) = witch.calcPayout(VAULT_ID, bot, 50_000e6);
+        (uint256 liquidatorCut, , ) = witch.calcPayout(VAULT_ID, bot, 50_000e6);
 
         assertLe(liquidatorCut, 50 ether);
         assertGe(liquidatorCut, 0.5 ether);
@@ -303,7 +392,7 @@ contract ContangoWitchWithMetadataTest is ContangoWitchWithMetadata {
     function testCalcPayoutFuzzElapsed(uint16 elapsed) public {
         skip(elapsed);
 
-        (uint256 liquidatorCut,,) = witch.calcPayout(VAULT_ID, bot, 50_000e6);
+        (uint256 liquidatorCut, , ) = witch.calcPayout(VAULT_ID, bot, 50_000e6);
 
         assertLe(liquidatorCut, 50 ether);
     }
@@ -316,7 +405,12 @@ contract ContangoWitchWithMetadataTest is ContangoWitchWithMetadata {
 
     function testVaultNotUndercollateralised() public {
         cauldron.level.mock(VAULT_ID, 0);
-        vm.expectRevert(abi.encodeWithSelector(Witch.NotUnderCollateralised.selector, VAULT_ID));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Witch.NotUnderCollateralised.selector,
+                VAULT_ID
+            )
+        );
         witch.auction(VAULT_ID, bot);
     }
 
@@ -331,7 +425,13 @@ contract ContangoWitchWithMetadataTest is ContangoWitchWithMetadata {
         cauldron.vaults.mock(VAULT_ID, vault);
 
         // When
-        vm.expectRevert(abi.encodeWithSelector(Witch.VaultAlreadyUnderAuction.selector, VAULT_ID, owner));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Witch.VaultAlreadyUnderAuction.selector,
+                VAULT_ID,
+                owner
+            )
+        );
         witch.auction(VAULT_ID, bot);
     }
 
@@ -340,7 +440,13 @@ contract ContangoWitchWithMetadataTest is ContangoWitchWithMetadata {
         witch = new ContangoWitch(contango, cauldron, ladle, insuranceFund);
 
         // When
-        vm.expectRevert(abi.encodeWithSelector(Witch.VaultNotLiquidatable.selector, ILK_ID, BASE_ID));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Witch.VaultNotLiquidatable.selector,
+                ILK_ID,
+                BASE_ID
+            )
+        );
         witch.auction(VAULT_ID, bot);
     }
 
@@ -366,9 +472,9 @@ contract ContangoWitchWithMetadataTest is ContangoWitchWithMetadata {
             }),
             AUCTION_DURATION,
             initialOffer
-            );
+        );
 
-        (DataTypes.Auction memory auction,,) = witch.auction(VAULT_ID, bot);
+        (DataTypes.Auction memory auction, , ) = witch.auction(VAULT_ID, bot);
 
         assertEq(auction.owner, vault.owner);
         assertEq(auction.start, uint32(block.timestamp));
@@ -390,17 +496,32 @@ contract ContangoWitchWithMetadataTest is ContangoWitchWithMetadata {
     }
 
     function testCancelNonExistentAuction() public {
-        vm.expectRevert(abi.encodeWithSelector(Witch.VaultNotUnderAuction.selector, VAULT_ID));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Witch.VaultNotUnderAuction.selector,
+                VAULT_ID
+            )
+        );
         witch.cancel(VAULT_ID);
     }
 
     function testPayBaseNonExistingAuction() public {
-        vm.expectRevert(abi.encodeWithSelector(Witch.VaultNotUnderAuction.selector, VAULT_ID));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Witch.VaultNotUnderAuction.selector,
+                VAULT_ID
+            )
+        );
         witch.payBase(VAULT_ID, address(0), 0, 0);
     }
 
     function testPayFYTokenNonExistingAuction() public {
-        vm.expectRevert(abi.encodeWithSelector(Witch.VaultNotUnderAuction.selector, VAULT_ID));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Witch.VaultNotUnderAuction.selector,
+                VAULT_ID
+            )
+        );
         witch.payFYToken(VAULT_ID, address(0), 0, 0);
     }
 }
@@ -431,8 +552,17 @@ abstract contract ContangoWitchWithAuction is ContangoWitchWithMetadata {
         cauldron.vaults.mock(VAULT_ID, vault);
     }
 
-    function _stubVault(bytes12 vaultId, uint128 ink, uint128 art, int256 level) internal {
-        DataTypes.Vault memory v = DataTypes.Vault({owner: bob, seriesId: SERIES_ID, ilkId: ILK_ID});
+    function _stubVault(
+        bytes12 vaultId,
+        uint128 ink,
+        uint128 art,
+        int256 level
+    ) internal {
+        DataTypes.Vault memory v = DataTypes.Vault({
+            owner: bob,
+            seriesId: SERIES_ID,
+            ilkId: ILK_ID
+        });
         DataTypes.Balances memory b = DataTypes.Balances(art, ink);
         cauldron.vaults.mock(vaultId, v);
         cauldron.balances.mock(vaultId, b);
@@ -449,7 +579,11 @@ abstract contract ContangoWitchWithAuction is ContangoWitchWithMetadata {
         assertEq(auction_.ink, 0);
     }
 
-    function _auctionWasUpdated(bytes12 vaultId, uint128 art, uint128 ink) internal {
+    function _auctionWasUpdated(
+        bytes12 vaultId,
+        uint128 art,
+        uint128 ink
+    ) internal {
         DataTypes.Auction memory auction_ = iWitch.auctions(vaultId);
         assertEq(auction_.owner, auction.owner, "owner");
         assertEq(auction_.start, auction.start, "start");
@@ -471,7 +605,8 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
 
         // 100 * 0.5 * 0.714 = 357
         // (ink * proportion * initialOffer)
-        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 artIn) = witch.calcPayout(VAULT_ID, bot, vaultDebt);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 artIn) = witch
+            .calcPayout(VAULT_ID, bot, vaultDebt);
         assertEqDecimal(liquidatorCut, 35.7 ether, 18, "liquidatorCut");
         assertEqDecimal(auctioneerCut, 0, 18, "auctioneerCut");
         assertEqDecimal(artIn, 50000e6, 6, "artIn");
@@ -479,15 +614,28 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         vm.warp(auctionStart + 5 minutes);
         // 100 * 0.5 * (0.714 + (1 - 0.714) * 300/3600) = 36.8916666667
         // (ink * proportion * (initialOffer + (1 - initialOffer) * timeElapsed)
-        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(VAULT_ID, bot, vaultDebt);
-        assertEqDecimal(liquidatorCut, 36.89166666666666665 ether, 18, "liquidatorCut");
+        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(
+            VAULT_ID,
+            bot,
+            vaultDebt
+        );
+        assertEqDecimal(
+            liquidatorCut,
+            36.89166666666666665 ether,
+            18,
+            "liquidatorCut"
+        );
         assertEqDecimal(auctioneerCut, 0, 18, "auctioneerCut");
         assertEqDecimal(artIn, 50000e6, 6, "artIn");
 
         vm.warp(auctionStart + 30 minutes);
         // 100 * 0.5 * (0.714 + (1 - 0.714) * 1800/3600) = 42.85
         // (ink * proportion * (initialOffer + (1 - initialOffer) * timeElapsed)
-        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(VAULT_ID, bot, vaultDebt);
+        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(
+            VAULT_ID,
+            bot,
+            vaultDebt
+        );
         assertEqDecimal(liquidatorCut, 42.85 ether, 18, "liquidatorCut");
         assertEqDecimal(auctioneerCut, 0, 18, "auctioneerCut");
         assertEqDecimal(artIn, 50000e6, 6, "artIn");
@@ -496,14 +644,22 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         vm.warp(auctionStart + 1 hours);
         // 100 * 0.5 = 50 (ink * proportion)
         // from now on, the liquidatorCut will not change anymore
-        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(VAULT_ID, bot, vaultDebt);
+        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(
+            VAULT_ID,
+            bot,
+            vaultDebt
+        );
         assertEqDecimal(liquidatorCut, 50 ether, 18, "liquidatorCut");
         assertEqDecimal(auctioneerCut, 0, 18, "auctioneerCut");
         assertEqDecimal(artIn, 50000e6, 6, "artIn");
 
         // After the auction ends the value is fixed
         vm.warp(auctionStart + 4 hours);
-        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(VAULT_ID, bot, vaultDebt);
+        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(
+            VAULT_ID,
+            bot,
+            vaultDebt
+        );
         assertEqDecimal(liquidatorCut, 50 ether, 18, "liquidatorCut");
         assertEqDecimal(auctioneerCut, 0, 18, "auctioneerCut");
         assertEqDecimal(artIn, 50000e6, 6, "artIn");
@@ -516,14 +672,22 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         //                 (ink * proportion * initialOffer * (1 - auctioneerReward))
         // auctioneerCut = 100  * 0.5        * 0.714        * 0.01                       = 0.357
         //                 (ink * proportion * initialOffer * auctioneerReward)
-        (uint256 liquidatorCut, uint256 auctioneerCut,) = witch.calcPayout(VAULT_ID, bot2, 50_000e6);
+        (uint256 liquidatorCut, uint256 auctioneerCut, ) = witch.calcPayout(
+            VAULT_ID,
+            bot2,
+            50_000e6
+        );
         assertEq(liquidatorCut, 35.343 ether, "liquidatorCut");
         assertEq(auctioneerCut, 0.357 ether, "auctioneerCut");
 
         skip(5 minutes);
         // 100 * 0.5 * (0.714 + (1 - 0.714) * 300/3600) = 36.8916666667
         // (ink * proportion * (initialOffer + (1 - initialOffer) * timeElapsed)
-        (liquidatorCut, auctioneerCut,) = witch.calcPayout(VAULT_ID, bot2, 50_000e6);
+        (liquidatorCut, auctioneerCut, ) = witch.calcPayout(
+            VAULT_ID,
+            bot2,
+            50_000e6
+        );
         // 36.8916666667 * 0.99
         assertEq(liquidatorCut, 36.522749999999999984 ether);
         // 36.8916666667 * 0.01
@@ -532,7 +696,11 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         skip(25 minutes);
         // 100 * 0.5 * (0.714 + (1 - 0.714) * 1800/3600) = 42.85
         // (ink * proportion * (initialOffer + (1 - initialOffer) * timeElapsed)
-        (liquidatorCut, auctioneerCut,) = witch.calcPayout(VAULT_ID, bot2, 50_000e6);
+        (liquidatorCut, auctioneerCut, ) = witch.calcPayout(
+            VAULT_ID,
+            bot2,
+            50_000e6
+        );
         // 42.85 * 0.99
         assertEq(liquidatorCut, 42.4215 ether);
         // 42.85 * 0.01
@@ -542,7 +710,11 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         skip(30 minutes);
         // 100 * 0.5 = 50
         // (ink * proportion)
-        (liquidatorCut, auctioneerCut,) = witch.calcPayout(VAULT_ID, bot2, 50_000e6);
+        (liquidatorCut, auctioneerCut, ) = witch.calcPayout(
+            VAULT_ID,
+            bot2,
+            50_000e6
+        );
         // 50 * 0.99
         assertEq(liquidatorCut, 49.5 ether);
         // 50 * 0.01
@@ -550,13 +722,23 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
 
         // After the auction ends the value is fixed
         skip(1 hours);
-        (liquidatorCut, auctioneerCut,) = witch.calcPayout(VAULT_ID, bot2, 50_000e6);
+        (liquidatorCut, auctioneerCut, ) = witch.calcPayout(
+            VAULT_ID,
+            bot2,
+            50_000e6
+        );
         assertEq(liquidatorCut, 49.5 ether);
         assertEq(auctioneerCut, 0.5 ether);
     }
 
     function testAuctionAlreadyExists() public {
-        vm.expectRevert(abi.encodeWithSelector(Witch.VaultAlreadyUnderAuction.selector, VAULT_ID, address(witch)));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Witch.VaultAlreadyUnderAuction.selector,
+                VAULT_ID,
+                address(witch)
+            )
+        );
         witch.auction(VAULT_ID, bot);
     }
 
@@ -565,7 +747,12 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
         assertEq(sum, 50 ether);
 
-        _stubVault({vaultId: VAULT_ID_2, ink: 101 ether, art: 100_000e6, level: -1});
+        _stubVault({
+            vaultId: VAULT_ID_2,
+            ink: 101 ether,
+            art: 100_000e6,
+            level: -1
+        });
 
         _verifyAuctionStarted(VAULT_ID_2);
 
@@ -580,10 +767,21 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
 
         // Given
         bytes12 otherVaultId = "other vault";
-        _stubVault({vaultId: otherVaultId, ink: 10 ether, art: 20_000e6, level: -1});
+        _stubVault({
+            vaultId: otherVaultId,
+            ink: 10 ether,
+            art: 20_000e6,
+            level: -1
+        });
 
         // Expect
-        vm.expectRevert(abi.encodeWithSelector(Witch.CollateralLimitExceeded.selector, sum, max));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Witch.CollateralLimitExceeded.selector,
+                sum,
+                max
+            )
+        );
 
         // When
         witch.auction(otherVaultId, bot);
@@ -592,14 +790,29 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
     function testDustLimitProportionUnderDust() public {
         proportion = 0.2e18;
         vm.prank(ada);
-        witch.setLineAndLimit(ILK_ID, BASE_ID, AUCTION_DURATION, proportion, initialOffer, max);
+        witch.setLineAndLimit(
+            ILK_ID,
+            BASE_ID,
+            AUCTION_DURATION,
+            proportion,
+            initialOffer,
+            max
+        );
 
         // 20% of this vault would be less than the min of 5k
-        _stubVault({vaultId: VAULT_ID_2, ink: 20 ether, art: 20_000e6, level: -1});
+        _stubVault({
+            vaultId: VAULT_ID_2,
+            ink: 20 ether,
+            art: 20_000e6,
+            level: -1
+        });
 
         _verifyAuctionStarted(VAULT_ID_2);
 
-        (DataTypes.Auction memory auction2,,) = witch.auction(VAULT_ID_2, bot);
+        (DataTypes.Auction memory auction2, , ) = witch.auction(
+            VAULT_ID_2,
+            bot
+        );
 
         assertEq(auction2.owner, address(0xb0b));
         assertEq(auction2.start, uint32(block.timestamp));
@@ -612,14 +825,29 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
     function testDustLimitRemainderUnderDust() public {
         proportion = 0.6e18;
         vm.prank(ada);
-        witch.setLineAndLimit(ILK_ID, BASE_ID, AUCTION_DURATION, proportion, initialOffer, max);
+        witch.setLineAndLimit(
+            ILK_ID,
+            BASE_ID,
+            AUCTION_DURATION,
+            proportion,
+            initialOffer,
+            max
+        );
 
         // The remainder (40% of this vault) would be less than the min of 5k
-        _stubVault({vaultId: VAULT_ID_2, ink: 10 ether, art: 10_000e6, level: -1});
+        _stubVault({
+            vaultId: VAULT_ID_2,
+            ink: 10 ether,
+            art: 10_000e6,
+            level: -1
+        });
 
         _verifyAuctionStarted(VAULT_ID_2);
 
-        (DataTypes.Auction memory auction2,,) = witch.auction(VAULT_ID_2, bot);
+        (DataTypes.Auction memory auction2, , ) = witch.auction(
+            VAULT_ID_2,
+            bot
+        );
 
         assertEq(auction2.owner, address(0xb0b));
         assertEq(auction2.start, uint32(block.timestamp));
@@ -629,14 +857,24 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         assertEq(auction2.ink, 10 ether, "ink");
     }
 
-    function testDustLimitProportionUnderDustAndRemainderUnderDustAfterAdjusting() public {
+    function testDustLimitProportionUnderDustAndRemainderUnderDustAfterAdjusting()
+        public
+    {
         // 50% of this vault would be less than the min of 5k
         // Increasing the liquidated amount to the 5k min would leave a remainder under the limit (9000 - 5000 = 4000)
-        _stubVault({vaultId: VAULT_ID_2, ink: 9 ether, art: 9_000e6, level: -1});
+        _stubVault({
+            vaultId: VAULT_ID_2,
+            ink: 9 ether,
+            art: 9_000e6,
+            level: -1
+        });
 
         _verifyAuctionStarted(VAULT_ID_2);
 
-        (DataTypes.Auction memory auction2,,) = witch.auction(VAULT_ID_2, bot);
+        (DataTypes.Auction memory auction2, , ) = witch.auction(
+            VAULT_ID_2,
+            bot
+        );
 
         assertEq(auction2.owner, address(0xb0b));
         assertEq(auction2.start, uint32(block.timestamp));
@@ -652,7 +890,10 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         // 4999 is below the min debt of 5k
         _stubVault({vaultId: VAULT_ID_2, ink: 9 ether, art: 4999e6, level: -1});
 
-        (DataTypes.Auction memory auction2,,) = witch.auction(VAULT_ID_2, bot);
+        (DataTypes.Auction memory auction2, , ) = witch.auction(
+            VAULT_ID_2,
+            bot
+        );
 
         assertEq(auction2.owner, address(0xb0b));
         assertEq(auction2.start, uint32(block.timestamp));
@@ -667,7 +908,14 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         assertEq(sum, 50 ether);
 
         vm.prank(ada);
-        witch.setLineAndLimit(ILK_ID, BASE_ID, AUCTION_DURATION, proportion, initialOffer, 1);
+        witch.setLineAndLimit(
+            ILK_ID,
+            BASE_ID,
+            AUCTION_DURATION,
+            proportion,
+            initialOffer,
+            1
+        );
 
         (uint128 _max, uint128 _sum) = witch.limits(ILK_ID, BASE_ID);
 
@@ -677,7 +925,9 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
     }
 
     function testCancelUndercollateralisedAuction() public {
-        vm.expectRevert(abi.encodeWithSelector(Witch.UnderCollateralised.selector, VAULT_ID));
+        vm.expectRevert(
+            abi.encodeWithSelector(Witch.UnderCollateralised.selector, VAULT_ID)
+        );
         witch.cancel(VAULT_ID);
     }
 
@@ -706,7 +956,9 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
     }
 
     function testClearOwnedAuction() public {
-        vm.expectRevert(abi.encodeWithSelector(Witch.AuctionIsCorrect.selector, VAULT_ID));
+        vm.expectRevert(
+            abi.encodeWithSelector(Witch.AuctionIsCorrect.selector, VAULT_ID)
+        );
         witch.clear(VAULT_ID);
     }
 
@@ -737,7 +989,13 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         cauldron.debtFromBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
         cauldron.debtToBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
 
-        vm.expectRevert(abi.encodeWithSelector(Witch.NotEnoughBought.selector, minInkOut, 35.7 ether));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Witch.NotEnoughBought.selector,
+                minInkOut,
+                35.7 ether
+            )
+        );
         witch.payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
     }
 
@@ -749,7 +1007,9 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         cauldron.debtFromBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
         cauldron.debtToBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
 
-        vm.expectRevert(abi.encodeWithSelector(Witch.LeavesDust.selector, 4999e6, 5000e6));
+        vm.expectRevert(
+            abi.encodeWithSelector(Witch.LeavesDust.selector, 4999e6, 5000e6)
+        );
         witch.payBase(VAULT_ID, bot, 0, maxBaseIn);
     }
 
@@ -757,7 +1017,7 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         // Bot Will pay 40% of the debt (for some reason)
         uint128 maxBaseIn = uint128(auction.art.wmul(0.4e18));
         vm.prank(bot);
-        (uint256 minInkOut_,,) = witch.calcPayout(VAULT_ID, bot, maxBaseIn);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, bot, maxBaseIn);
         uint128 minInkOut = uint128(minInkOut_);
 
         _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxBaseIn);
@@ -784,8 +1044,8 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         emit Bought(VAULT_ID, bot, minInkOut, maxBaseIn);
 
         vm.prank(bot);
-        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) =
-            witch.payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) = witch
+            .payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
         assertEq(liquidatorCut, minInkOut);
         assertEq(auctioneerCut, 0);
         assertEq(baseIn, maxBaseIn);
@@ -806,7 +1066,7 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         // Bot Will pay another 20% of the debt (for some reason)
         uint128 maxBaseIn = uint128(auction.art.wmul(0.2e18));
         vm.prank(bot);
-        (uint256 minInkOut_,,) = witch.calcPayout(VAULT_ID, bot, maxBaseIn);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, bot, maxBaseIn);
         uint128 minInkOut = uint128(minInkOut_);
 
         _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxBaseIn);
@@ -833,8 +1093,8 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         emit Bought(VAULT_ID, bot, minInkOut, maxBaseIn);
 
         vm.prank(bot);
-        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) =
-            witch.payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) = witch
+            .payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
         assertEq(liquidatorCut, minInkOut);
         assertEq(auctioneerCut, 0);
         assertEq(baseIn, maxBaseIn);
@@ -849,7 +1109,7 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
     function testPayBaseAll() public {
         uint128 maxBaseIn = uint128(auction.art);
         vm.prank(bot);
-        (uint256 minInkOut_,,) = witch.calcPayout(VAULT_ID, bot, maxBaseIn);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, bot, maxBaseIn);
         uint128 minInkOut = uint128(minInkOut_);
 
         _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxBaseIn);
@@ -882,8 +1142,8 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         emit Bought(VAULT_ID, bot, minInkOut, maxBaseIn);
 
         vm.prank(bot);
-        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) =
-            witch.payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) = witch
+            .payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
         assertEq(liquidatorCut, minInkOut);
         assertEq(auctioneerCut, 0);
         assertEq(baseIn, maxBaseIn);
@@ -900,7 +1160,7 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         vm.warp(uint256(auction.start) + AUCTION_DURATION);
 
         vm.prank(bot);
-        (uint256 minInkOut_,,) = witch.calcPayout(VAULT_ID, bot, maxBaseIn);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, bot, maxBaseIn);
         uint128 minInkOut = uint128(minInkOut_);
 
         _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxBaseIn);
@@ -933,8 +1193,8 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         emit Bought(VAULT_ID, bot, minInkOut, maxBaseIn);
 
         vm.prank(bot);
-        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) =
-            witch.payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) = witch
+            .payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
         assertEq(liquidatorCut, minInkOut);
         assertEq(liquidatorCut, balances.ink.wmul(proportion));
         assertEq(auctioneerCut, 0);
@@ -955,7 +1215,7 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
 
         uint128 maxBaseIn = uint128(auction.art);
         vm.prank(bot);
-        (uint256 minInkOut_,,) = witch.calcPayout(VAULT_ID, bot, maxBaseIn);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, bot, maxBaseIn);
         uint128 minInkOut = uint128(minInkOut_);
 
         _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxBaseIn);
@@ -988,8 +1248,8 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         emit Bought(VAULT_ID, bot, minInkOut, maxBaseIn);
 
         vm.prank(bot);
-        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) =
-            witch.payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) = witch
+            .payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
         assertEq(liquidatorCut, minInkOut);
         assertEq(auctioneerCut, 0);
         assertEq(baseIn, maxBaseIn);
@@ -1006,16 +1266,34 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
 
         uint128 maxBaseIn = uint128(auction.art);
         vm.prank(bot2);
-        (uint256 liquidatorCut_, uint256 auctioneerCut_,) = witch.calcPayout(VAULT_ID, bot2, maxBaseIn);
+        (uint256 liquidatorCut_, uint256 auctioneerCut_, ) = witch.calcPayout(
+            VAULT_ID,
+            bot2,
+            maxBaseIn
+        );
         uint128 liquidatorCut = uint128(liquidatorCut_);
         uint128 auctioneerCut = uint128(auctioneerCut_);
 
-        _verifyCollateralBought(VAULT_ID, bot2, liquidatorCut + auctioneerCut, maxBaseIn);
+        _verifyCollateralBought(
+            VAULT_ID,
+            bot2,
+            liquidatorCut + auctioneerCut,
+            maxBaseIn
+        );
         _verifyAuctionEnded(VAULT_ID, bob);
 
         // Reduce balances on tha vault
-        cauldron.slurp.mock(VAULT_ID, liquidatorCut + auctioneerCut, maxBaseIn, balances);
-        cauldron.slurp.verify(VAULT_ID, liquidatorCut + auctioneerCut, maxBaseIn);
+        cauldron.slurp.mock(
+            VAULT_ID,
+            liquidatorCut + auctioneerCut,
+            maxBaseIn,
+            balances
+        );
+        cauldron.slurp.verify(
+            VAULT_ID,
+            liquidatorCut + auctioneerCut,
+            maxBaseIn
+        );
         // Vault returns to it's owner after all the liquidation is done
         cauldron.give.mock(VAULT_ID, bob, vault);
         cauldron.give.verify(VAULT_ID, bob);
@@ -1045,8 +1323,8 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         emit Bought(VAULT_ID, bot2, liquidatorCut + auctioneerCut, maxBaseIn);
 
         vm.prank(bot2);
-        (uint256 _liquidatorCut, uint256 _auctioneerCut, uint256 baseIn) =
-            witch.payBase(VAULT_ID, bot2, liquidatorCut, maxBaseIn);
+        (uint256 _liquidatorCut, uint256 _auctioneerCut, uint256 baseIn) = witch
+            .payBase(VAULT_ID, bot2, liquidatorCut, maxBaseIn);
         assertEq(_liquidatorCut, liquidatorCut);
         assertEq(_auctioneerCut, auctioneerCut);
         assertEq(baseIn, maxBaseIn);
@@ -1061,16 +1339,25 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
     function testPayBaseOnAnAuctionStartedByMaliciousActor() public {
         address bot2 = address(0xb072);
         address evilAddress = address(0x666);
-        _stubVault({vaultId: VAULT_ID_2, ink: 140 ether, art: 100_000e6, level: -1});
+        _stubVault({
+            vaultId: VAULT_ID_2,
+            ink: 140 ether,
+            art: 100_000e6,
+            level: -1
+        });
 
         _verifyAuctionStarted(VAULT_ID_2);
 
         vm.prank(bot2);
-        (auction,,) = witch.auction(VAULT_ID_2, evilAddress);
+        (auction, , ) = witch.auction(VAULT_ID_2, evilAddress);
 
         uint128 maxBaseIn = uint128(auction.art);
         vm.prank(bot);
-        (uint256 liquidatorCut_, uint256 auctioneerCut_,) = witch.calcPayout(VAULT_ID_2, bot, maxBaseIn);
+        (uint256 liquidatorCut_, uint256 auctioneerCut_, ) = witch.calcPayout(
+            VAULT_ID_2,
+            bot,
+            maxBaseIn
+        );
         uint128 liquidatorCut = uint128(liquidatorCut_);
         uint128 auctioneerCut = uint128(auctioneerCut_);
 
@@ -1113,8 +1400,8 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         emit Bought(VAULT_ID_2, bot, totalCut, maxBaseIn);
 
         vm.prank(bot);
-        (uint256 _liquidatorCut, uint256 _auctioneerCut, uint256 baseIn) =
-            witch.payBase(VAULT_ID_2, bot, liquidatorCut, maxBaseIn);
+        (uint256 _liquidatorCut, uint256 _auctioneerCut, uint256 baseIn) = witch
+            .payBase(VAULT_ID_2, bot, liquidatorCut, maxBaseIn);
 
         // Liquidator gets all
         assertEq(_liquidatorCut, totalCut);
@@ -1129,17 +1416,25 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         uint128 minInkOut = 50 ether;
         uint128 maxArtIn = 50_000e6;
 
-        vm.expectRevert(abi.encodeWithSelector(Witch.NotEnoughBought.selector, minInkOut, 35.7 ether));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Witch.NotEnoughBought.selector,
+                minInkOut,
+                35.7 ether
+            )
+        );
         witch.payFYToken(VAULT_ID, bot, minInkOut, maxArtIn);
     }
 
     function testPayFYTokenLeavesDust() public {
         // Bot tries to pay an amount that'd leaves dust
         uint128 maxArtIn = auction.art - 4999e6;
-        (uint256 minInkOut_,,) = witch.calcPayout(VAULT_ID, bot, maxArtIn);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, bot, maxArtIn);
         uint128 minInkOut = uint128(minInkOut_);
 
-        vm.expectRevert(abi.encodeWithSelector(Witch.LeavesDust.selector, 4999e6, 5000e6));
+        vm.expectRevert(
+            abi.encodeWithSelector(Witch.LeavesDust.selector, 4999e6, 5000e6)
+        );
         witch.payFYToken(VAULT_ID, bot, minInkOut, maxArtIn);
     }
 
@@ -1147,7 +1442,7 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         // Bot Will pay 40% of the debt (for some reason)
         uint128 maxArtIn = uint128(auction.art.wmul(0.4e18));
         vm.prank(bot);
-        (uint256 minInkOut_,,) = witch.calcPayout(VAULT_ID, bot, maxArtIn);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, bot, maxArtIn);
         uint128 minInkOut = uint128(minInkOut_);
 
         _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxArtIn);
@@ -1168,8 +1463,8 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         emit Bought(VAULT_ID, bot, minInkOut, maxArtIn);
 
         vm.prank(bot);
-        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 artIn) =
-            witch.payFYToken(VAULT_ID, bot, minInkOut, maxArtIn);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 artIn) = witch
+            .payFYToken(VAULT_ID, bot, minInkOut, maxArtIn);
         assertEq(liquidatorCut, minInkOut);
         assertEq(auctioneerCut, 0);
         assertEq(artIn, maxArtIn);
@@ -1190,7 +1485,7 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         // Bot Will pay another 20% of the debt (for some reason)
         uint128 maxArtIn = uint128(auction.art.wmul(0.2e18));
         vm.prank(bot);
-        (uint256 minInkOut_,,) = witch.calcPayout(VAULT_ID, bot, maxArtIn);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, bot, maxArtIn);
         uint128 minInkOut = uint128(minInkOut_);
 
         _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxArtIn);
@@ -1211,8 +1506,8 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         emit Bought(VAULT_ID, bot, minInkOut, maxArtIn);
 
         vm.prank(bot);
-        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 artIn) =
-            witch.payFYToken(VAULT_ID, bot, minInkOut, maxArtIn);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 artIn) = witch
+            .payFYToken(VAULT_ID, bot, minInkOut, maxArtIn);
         assertEq(liquidatorCut, minInkOut);
         assertEq(auctioneerCut, 0);
         assertEq(artIn, maxArtIn);
@@ -1229,16 +1524,34 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
 
         uint128 maxArtIn = uint128(auction.art);
         vm.prank(bot2);
-        (uint256 liquidatorCut_, uint256 auctioneerCut_,) = witch.calcPayout(VAULT_ID, bot2, maxArtIn);
+        (uint256 liquidatorCut_, uint256 auctioneerCut_, ) = witch.calcPayout(
+            VAULT_ID,
+            bot2,
+            maxArtIn
+        );
         uint128 liquidatorCut = uint128(liquidatorCut_);
         uint128 auctioneerCut = uint128(auctioneerCut_);
 
-        _verifyCollateralBought(VAULT_ID, bot2, liquidatorCut + auctioneerCut, maxArtIn);
+        _verifyCollateralBought(
+            VAULT_ID,
+            bot2,
+            liquidatorCut + auctioneerCut,
+            maxArtIn
+        );
         _verifyAuctionEnded(VAULT_ID, bob);
 
         // Reduce balances on the vault
-        cauldron.slurp.mock(VAULT_ID, liquidatorCut + auctioneerCut, maxArtIn, balances);
-        cauldron.slurp.verify(VAULT_ID, liquidatorCut + auctioneerCut, maxArtIn);
+        cauldron.slurp.mock(
+            VAULT_ID,
+            liquidatorCut + auctioneerCut,
+            maxArtIn,
+            balances
+        );
+        cauldron.slurp.verify(
+            VAULT_ID,
+            liquidatorCut + auctioneerCut,
+            maxArtIn
+        );
         // Vault returns to it's owner after all the liquidation is done
         cauldron.give.mock(VAULT_ID, bob, vault);
         cauldron.give.verify(VAULT_ID, bob);
@@ -1262,8 +1575,8 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         emit Bought(VAULT_ID, bot2, liquidatorCut + auctioneerCut, maxArtIn);
 
         vm.prank(bot2);
-        (uint256 _liquidatorCut, uint256 _auctioneerCut, uint256 baseIn) =
-            witch.payFYToken(VAULT_ID, bot2, liquidatorCut, maxArtIn);
+        (uint256 _liquidatorCut, uint256 _auctioneerCut, uint256 baseIn) = witch
+            .payFYToken(VAULT_ID, bot2, liquidatorCut, maxArtIn);
         assertEq(_liquidatorCut, liquidatorCut);
         assertEq(_auctioneerCut, auctioneerCut);
         assertEq(baseIn, maxArtIn);
@@ -1278,16 +1591,25 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
     function testPayFYTokenAllOnAuctionStartedByMaliciousActor() public {
         address bot2 = address(0xb072);
         address evilAddress = address(0x666);
-        _stubVault({vaultId: VAULT_ID_2, ink: 140 ether, art: 100_000e6, level: -1});
+        _stubVault({
+            vaultId: VAULT_ID_2,
+            ink: 140 ether,
+            art: 100_000e6,
+            level: -1
+        });
 
         _verifyAuctionStarted(VAULT_ID_2);
 
         vm.prank(bot2);
-        (auction,,) = witch.auction(VAULT_ID_2, evilAddress);
+        (auction, , ) = witch.auction(VAULT_ID_2, evilAddress);
 
         uint128 maxArtIn = uint128(auction.art);
         vm.prank(bot);
-        (uint256 liquidatorCut_, uint256 auctioneerCut_,) = witch.calcPayout(VAULT_ID_2, bot, maxArtIn);
+        (uint256 liquidatorCut_, uint256 auctioneerCut_, ) = witch.calcPayout(
+            VAULT_ID_2,
+            bot,
+            maxArtIn
+        );
         uint128 liquidatorCut = uint128(liquidatorCut_);
         uint128 auctioneerCut = uint128(auctioneerCut_);
 
@@ -1324,8 +1646,8 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         emit Bought(VAULT_ID_2, bot, totalCut, maxArtIn);
 
         vm.prank(bot);
-        (uint256 _liquidatorCut, uint256 _auctioneerCut, uint256 baseIn) =
-            witch.payFYToken(VAULT_ID_2, bot, liquidatorCut, maxArtIn);
+        (uint256 _liquidatorCut, uint256 _auctioneerCut, uint256 baseIn) = witch
+            .payFYToken(VAULT_ID_2, bot, liquidatorCut, maxArtIn);
 
         // Liquidator gets all
         assertEq(_liquidatorCut, totalCut);
@@ -1338,7 +1660,7 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
     function testPayFYTokenAll() public {
         uint128 maxArtIn = uint128(auction.art);
         vm.prank(bot);
-        (uint256 minInkOut_,,) = witch.calcPayout(VAULT_ID, bot, maxArtIn);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, bot, maxArtIn);
         uint128 minInkOut = uint128(minInkOut_);
 
         _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxArtIn);
@@ -1365,8 +1687,8 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         emit Bought(VAULT_ID, bot, minInkOut, maxArtIn);
 
         vm.prank(bot);
-        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) =
-            witch.payFYToken(VAULT_ID, bot, minInkOut, maxArtIn);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) = witch
+            .payFYToken(VAULT_ID, bot, minInkOut, maxArtIn);
         assertEq(liquidatorCut, minInkOut);
         assertEq(auctioneerCut, 0);
         assertEq(baseIn, maxArtIn);
@@ -1383,7 +1705,7 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         vm.warp(uint256(auction.start) + AUCTION_DURATION);
 
         vm.prank(bot);
-        (uint256 minInkOut_,,) = witch.calcPayout(VAULT_ID, bot, maxArtIn);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, bot, maxArtIn);
         uint128 minInkOut = uint128(minInkOut_);
 
         _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxArtIn);
@@ -1410,8 +1732,8 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         emit Bought(VAULT_ID, bot, minInkOut, maxArtIn);
 
         vm.prank(bot);
-        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) =
-            witch.payFYToken(VAULT_ID, bot, minInkOut, maxArtIn);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) = witch
+            .payFYToken(VAULT_ID, bot, minInkOut, maxArtIn);
         assertEq(liquidatorCut, minInkOut);
         assertEq(auctioneerCut, 0);
         assertEq(baseIn, maxArtIn);
@@ -1430,7 +1752,7 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         auction = iWitch.auctions(VAULT_ID);
         uint128 maxArtIn = uint128(auction.art);
         vm.prank(bot);
-        (uint256 minInkOut_,,) = witch.calcPayout(VAULT_ID, bot, maxArtIn);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, bot, maxArtIn);
         uint128 minInkOut = uint128(minInkOut_);
 
         _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxArtIn);
@@ -1457,8 +1779,8 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         emit Bought(VAULT_ID, bot, minInkOut, maxArtIn);
 
         vm.prank(bot);
-        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) =
-            witch.payFYToken(VAULT_ID, bot, minInkOut, maxArtIn);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) = witch
+            .payFYToken(VAULT_ID, bot, minInkOut, maxArtIn);
         assertEq(liquidatorCut, minInkOut);
         assertEq(auctioneerCut, 0);
         assertEq(baseIn, maxArtIn);
@@ -1479,7 +1801,13 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
 
     function setUp() public virtual override {
         super.setUp();
-        witch.setInsuranceLine(ILK_ID, BASE_ID, INSURANCE_AUCTION_DURATION, maxInsuredProportion, insurancePremium);
+        witch.setInsuranceLine(
+            ILK_ID,
+            BASE_ID,
+            INSURANCE_AUCTION_DURATION,
+            maxInsuredProportion,
+            insurancePremium
+        );
     }
 
     function testCalcPayoutAfterAuctionForAuctioneerWithInsurance() public {
@@ -1491,7 +1819,8 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
 
         // 100 * 0.5 * 0.714 * 0.98 = 34.986
         // (ink * proportion * initialOffer * (1 - premium))
-        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 artIn) = witch.calcPayout(VAULT_ID, bot, vaultDebt);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 artIn) = witch
+            .calcPayout(VAULT_ID, bot, vaultDebt);
         assertEqDecimal(liquidatorCut, 34.986 ether, 18, "liquidatorCut");
         assertEqDecimal(auctioneerCut, 0, 18, "auctioneerCut");
         assertEqDecimal(artIn, 50000e6, 6, "artIn");
@@ -1499,32 +1828,53 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         vm.warp(auctionStart + 5 minutes);
         // 100 * 0.5 * (0.714 + (1 - 0.714) * 300/3600) * 0.98 = 36.1538333333
         // (ink * proportion * (initialOffer + (1 - initialOffer) * timeElapsed * (1 - premium))
-        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(VAULT_ID, bot, vaultDebt);
-        assertEqDecimal(liquidatorCut, 36.153833333333333317 ether, 18, "liquidatorCut");
+        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(
+            VAULT_ID,
+            bot,
+            vaultDebt
+        );
+        assertEqDecimal(
+            liquidatorCut,
+            36.153833333333333317 ether,
+            18,
+            "liquidatorCut"
+        );
         assertEqDecimal(auctioneerCut, 0, 18, "auctioneerCut");
         assertEqDecimal(artIn, 50000e6, 6, "artIn");
 
         vm.warp(auctionStart + 30 minutes);
         // 100 * 0.5 * (0.714 + (1 - 0.714) * 1800/3600) * 0.98 = 41.993
         // (ink * proportion * (initialOffer + (1 - initialOffer) * timeElapsed * (1 - premium))
-        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(VAULT_ID, bot, vaultDebt);
+        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(
+            VAULT_ID,
+            bot,
+            vaultDebt
+        );
         assertEqDecimal(liquidatorCut, 41.993 ether, 18, "liquidatorCut");
         assertEqDecimal(auctioneerCut, 0, 18, "auctioneerCut");
         assertEqDecimal(artIn, 50000e6, 6, "artIn");
 
         // Right at auction end and start of the insurance auction
         vm.warp(auctionStart + 1 hours);
-        // 100 * 0.5 = 50 (ink * proportion)
+        // 100 * 0.5 * 0.98 = 49 (ink * proportion)
         // from now on, the liquidatorCut will not change anymore
-        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(VAULT_ID, bot, vaultDebt);
-        assertEqDecimal(liquidatorCut, 50 ether, 18, "liquidatorCut");
+        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(
+            VAULT_ID,
+            bot,
+            vaultDebt
+        );
+        assertEqDecimal(liquidatorCut, 49 ether, 18, "liquidatorCut");
         assertEqDecimal(auctioneerCut, 0, 18, "auctioneerCut");
         assertEqDecimal(artIn, 50000e6, 6, "artIn");
 
         vm.warp(auctionStart + 1.5 hours);
         // 50000 * (1 - ((1800/7200) * 0.2)) = 47500
         // maxArtIn * (1 - (timeElapsed * maxInsuredProportion))
-        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(VAULT_ID, bot, vaultDebt);
+        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(
+            VAULT_ID,
+            bot,
+            vaultDebt
+        );
         assertEqDecimal(liquidatorCut, 50 ether, 18, "liquidatorCut");
         assertEqDecimal(auctioneerCut, 0, 18, "auctioneerCut");
         assertEqDecimal(artIn, 47500e6, 6, "artIn");
@@ -1532,7 +1882,11 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         vm.warp(auctionStart + 2 hours);
         // 50000 * (1 - ((3600/7200) * 0.2)) = 45000
         // maxArtIn * (1 - (timeElapsed * maxInsuredProportion))
-        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(VAULT_ID, bot, vaultDebt);
+        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(
+            VAULT_ID,
+            bot,
+            vaultDebt
+        );
         assertEqDecimal(liquidatorCut, 50 ether, 18, "liquidatorCut");
         assertEqDecimal(auctioneerCut, 0, 18, "auctioneerCut");
         assertEqDecimal(artIn, 45000e6, 6, "artIn");
@@ -1540,7 +1894,11 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         vm.warp(auctionStart + 2.5 hours);
         // 50000 * (1 - ((5400/7200) * 0.2)) = 42500
         // maxArtIn * (1 - (timeElapsed * maxInsuredProportion))
-        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(VAULT_ID, bot, vaultDebt);
+        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(
+            VAULT_ID,
+            bot,
+            vaultDebt
+        );
         assertEqDecimal(liquidatorCut, 50 ether, 18, "liquidatorCut");
         assertEqDecimal(auctioneerCut, 0, 18, "auctioneerCut");
         assertEqDecimal(artIn, 42500e6, 6, "artIn");
@@ -1549,14 +1907,22 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         vm.warp(auctionStart + 3 hours);
         // 50000 * (1 - 0.2) = 40000
         // maxArtIn * (1 - maxInsuredProportion)
-        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(VAULT_ID, bot, vaultDebt);
+        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(
+            VAULT_ID,
+            bot,
+            vaultDebt
+        );
         assertEqDecimal(liquidatorCut, 50 ether, 18, "liquidatorCut");
         assertEqDecimal(auctioneerCut, 0, 18, "auctioneerCut");
         assertEqDecimal(artIn, 40000e6, 6, "artIn");
 
         // After the auction ends the value is fixed
         vm.warp(auctionStart + 4 hours);
-        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(VAULT_ID, bot, vaultDebt);
+        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(
+            VAULT_ID,
+            bot,
+            vaultDebt
+        );
         assertEqDecimal(liquidatorCut, 50 ether, 18, "liquidatorCut");
         assertEqDecimal(auctioneerCut, 0, 18, "auctioneerCut");
         assertEqDecimal(artIn, 40000e6, 6, "artIn");
@@ -1565,15 +1931,18 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
     function testPayBaseAll() public {
         uint128 maxBaseIn = uint128(auction.art);
         vm.prank(bot);
-        (uint256 minInkOut_,,) = witch.calcPayout(VAULT_ID, bot, maxBaseIn);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, bot, maxBaseIn);
         uint128 minInkOut = uint128(minInkOut_);
+        uint128 premium = uint128(
+            minInkOut.wdiv(1e18 - insurancePremium) - minInkOut
+        );
 
         _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxBaseIn);
         _verifyAuctionEnded(VAULT_ID, bob);
 
         // Reduce balances on tha vault
-        cauldron.slurp.mock(VAULT_ID, minInkOut, maxBaseIn, balances);
-        cauldron.slurp.verify(VAULT_ID, minInkOut, maxBaseIn);
+        cauldron.slurp.mock(VAULT_ID, minInkOut + premium, maxBaseIn, balances);
+        cauldron.slurp.verify(VAULT_ID, minInkOut + premium, maxBaseIn);
         // Vault returns to it's owner after all the liquidation is done
         cauldron.give.mock(VAULT_ID, bob, vault);
         cauldron.give.verify(VAULT_ID, bob);
@@ -1587,7 +1956,6 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         ilkJoin.exit.mock(bot, minInkOut, minInkOut);
         ilkJoin.exit.verify(bot, minInkOut);
 
-        uint128 premium = uint128(minInkOut.wdiv(1e18 - insurancePremium) - minInkOut);
         ilkJoin.exit.mock(insuranceFund, premium, premium);
         ilkJoin.exit.verify(insuranceFund, premium);
 
@@ -1602,8 +1970,8 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         emit Bought(VAULT_ID, bot, minInkOut, maxBaseIn);
 
         vm.prank(bot);
-        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) =
-            witch.payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) = witch
+            .payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
         assertEq(liquidatorCut, minInkOut);
         assertEq(auctioneerCut, 0);
         assertEq(baseIn, maxBaseIn);
@@ -1616,10 +1984,18 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
     }
 
     function testPayBaseAllAndTakesAllWithInsurance() public {
-        vm.warp(uint256(auction.start) + AUCTION_DURATION + INSURANCE_AUCTION_DURATION);
+        vm.warp(
+            uint256(auction.start) +
+                AUCTION_DURATION +
+                INSURANCE_AUCTION_DURATION
+        );
 
         vm.prank(bot);
-        (uint256 minInkOut_,, uint256 maxArtIn) = witch.calcPayout(VAULT_ID, bot, auction.art);
+        (uint256 minInkOut_, , uint256 maxArtIn) = witch.calcPayout(
+            VAULT_ID,
+            bot,
+            auction.art
+        );
         assertEq(maxArtIn, auction.art.wmul(1e18 - maxInsuredProportion));
         uint128 minInkOut = uint128(minInkOut_);
         uint128 maxBaseIn = uint128(maxArtIn);
@@ -1640,8 +2016,16 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
 
             // make fyToken 1:1 with base to make things simpler
             cauldron.debtFromBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
-            cauldron.debtToBase.mock(vault.seriesId, expectedArtRepaid, expectedArtRepaid);
-            cauldron.debtToBase.mock(vault.seriesId, expectedArtTopUp, expectedArtTopUp);
+            cauldron.debtToBase.mock(
+                vault.seriesId,
+                expectedArtRepaid,
+                expectedArtRepaid
+            );
+            cauldron.debtToBase.mock(
+                vault.seriesId,
+                expectedArtTopUp,
+                expectedArtTopUp
+            );
 
             IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
             ladle.joins.mock(vault.ilkId, ilkJoin);
@@ -1659,10 +2043,23 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             baseJoin.asset.mock(address(base));
             baseJoin.asset.verify();
 
-            base.transferFrom.mock(insuranceFund, address(baseJoin), expectedArtTopUp, true);
-            base.transferFrom.verify(insuranceFund, address(baseJoin), expectedArtTopUp);
+            base.transferFrom.mock(
+                insuranceFund,
+                address(baseJoin),
+                expectedArtTopUp,
+                true
+            );
+            base.transferFrom.verify(
+                insuranceFund,
+                address(baseJoin),
+                expectedArtTopUp
+            );
 
-            baseJoin.join.mock(address(witch), expectedArtTopUp, expectedArtTopUp);
+            baseJoin.join.mock(
+                address(witch),
+                expectedArtTopUp,
+                expectedArtTopUp
+            );
             baseJoin.join.verify(address(witch), expectedArtTopUp);
         }
 
@@ -1674,8 +2071,8 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         emit Bought(VAULT_ID, bot, minInkOut, auction.art);
 
         vm.prank(bot);
-        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) =
-            witch.payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) = witch
+            .payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
         assertEq(liquidatorCut, minInkOut, "liquidatorCut");
         assertEq(liquidatorCut, balances.ink.wmul(proportion), "liquidatorCut");
         assertEq(auctioneerCut, 0, "auctioneerCut");
@@ -1691,15 +2088,18 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
     function testPayFYTokenAll() public {
         uint128 maxArtIn = uint128(auction.art);
         vm.prank(bot);
-        (uint256 minInkOut_,,) = witch.calcPayout(VAULT_ID, bot, maxArtIn);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, bot, maxArtIn);
         uint128 minInkOut = uint128(minInkOut_);
+        uint128 premium = uint128(
+            minInkOut.wdiv(1e18 - insurancePremium) - minInkOut
+        );
 
         _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxArtIn);
         _verifyAuctionEnded(VAULT_ID, bob);
 
         // Reduce balances on tha vault
-        cauldron.slurp.mock(VAULT_ID, minInkOut, maxArtIn, balances);
-        cauldron.slurp.verify(VAULT_ID, minInkOut, maxArtIn);
+        cauldron.slurp.mock(VAULT_ID, minInkOut + premium, maxArtIn, balances);
+        cauldron.slurp.verify(VAULT_ID, minInkOut + premium, maxArtIn);
         // Vault returns to it's owner after all the liquidation is done
         cauldron.give.mock(VAULT_ID, bob, vault);
         cauldron.give.verify(VAULT_ID, bob);
@@ -1709,7 +2109,6 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         ilkJoin.exit.mock(bot, minInkOut, minInkOut);
         ilkJoin.exit.verify(bot, minInkOut);
 
-        uint128 premium = uint128(minInkOut.wdiv(1e18 - insurancePremium) - minInkOut);
         ilkJoin.exit.mock(insuranceFund, premium, premium);
         ilkJoin.exit.verify(insuranceFund, premium);
 
@@ -1722,8 +2121,8 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         emit Bought(VAULT_ID, bot, minInkOut, maxArtIn);
 
         vm.prank(bot);
-        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) =
-            witch.payFYToken(VAULT_ID, bot, minInkOut, maxArtIn);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) = witch
+            .payFYToken(VAULT_ID, bot, minInkOut, maxArtIn);
         assertEq(liquidatorCut, minInkOut);
         assertEq(auctioneerCut, 0);
         assertEq(baseIn, maxArtIn);
@@ -1737,10 +2136,18 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
 
     function testPayFYTokenAllAndTakesAllWithInsurance() public {
         uint128 maxArtIn = uint128(auction.art);
-        vm.warp(uint256(auction.start) + AUCTION_DURATION + INSURANCE_AUCTION_DURATION);
+        vm.warp(
+            uint256(auction.start) +
+                AUCTION_DURATION +
+                INSURANCE_AUCTION_DURATION
+        );
 
         vm.prank(bot);
-        (uint256 minInkOut_,, uint256 maxArtIn_) = witch.calcPayout(VAULT_ID, bot, maxArtIn);
+        (uint256 minInkOut_, , uint256 maxArtIn_) = witch.calcPayout(
+            VAULT_ID,
+            bot,
+            maxArtIn
+        );
         uint128 minInkOut = uint128(minInkOut_);
         maxArtIn = uint128(maxArtIn_);
 
@@ -1771,14 +2178,27 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
 
             IJoin baseJoin = IJoin(Mocks.mock("BaseJoin"));
             ladle.joins.mock(series.baseId, baseJoin);
-            baseJoin.join.mock(address(witch), expectedArtTopUp, expectedArtTopUp);
+            baseJoin.join.mock(
+                address(witch),
+                expectedArtTopUp,
+                expectedArtTopUp
+            );
             baseJoin.join.verify(address(witch), expectedArtTopUp);
             IERC20 base = IERC20(Mocks.mock("Base"));
             baseJoin.asset.mock(address(base));
             baseJoin.asset.verify();
 
-            base.transferFrom.mock(insuranceFund, address(baseJoin), expectedArtTopUp, true);
-            base.transferFrom.verify(insuranceFund, address(baseJoin), expectedArtTopUp);
+            base.transferFrom.mock(
+                insuranceFund,
+                address(baseJoin),
+                expectedArtTopUp,
+                true
+            );
+            base.transferFrom.verify(
+                insuranceFund,
+                address(baseJoin),
+                expectedArtTopUp
+            );
         }
 
         vm.expectEmit(true, true, true, true);
@@ -1789,8 +2209,8 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         emit Bought(VAULT_ID, bot, minInkOut, auction.art);
 
         vm.prank(bot);
-        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) =
-            witch.payFYToken(VAULT_ID, bot, minInkOut, maxArtIn);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) = witch
+            .payFYToken(VAULT_ID, bot, minInkOut, maxArtIn);
         assertEq(liquidatorCut, minInkOut);
         assertEq(liquidatorCut, balances.ink.wmul(proportion), "liquidatorCut");
         assertEq(auctioneerCut, 0);
@@ -1803,11 +2223,21 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         _auctionWasDeleted(VAULT_ID);
     }
 
-    function testPayBaseAllAndTakesAllWithInsurance_UseFYTokenBalanceFirst() public {
-        vm.warp(uint256(auction.start) + AUCTION_DURATION + INSURANCE_AUCTION_DURATION);
+    function testPayBaseAllAndTakesAllWithInsurance_UseFYTokenBalanceFirst()
+        public
+    {
+        vm.warp(
+            uint256(auction.start) +
+                AUCTION_DURATION +
+                INSURANCE_AUCTION_DURATION
+        );
 
         vm.prank(bot);
-        (uint256 minInkOut_,, uint256 maxArtIn) = witch.calcPayout(VAULT_ID, bot, auction.art);
+        (uint256 minInkOut_, , uint256 maxArtIn) = witch.calcPayout(
+            VAULT_ID,
+            bot,
+            auction.art
+        );
         assertEq(maxArtIn, auction.art.wmul(1e18 - maxInsuredProportion));
         uint128 minInkOut = uint128(minInkOut_);
         uint128 maxBaseIn = uint128(maxArtIn);
@@ -1830,8 +2260,16 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
 
             // make fyToken 1:1 with base to make things simpler
             cauldron.debtFromBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
-            cauldron.debtToBase.mock(vault.seriesId, expectedArtRepaid, expectedArtRepaid);
-            cauldron.debtToBase.mock(vault.seriesId, expectedArtTopUp, expectedArtTopUp);
+            cauldron.debtToBase.mock(
+                vault.seriesId,
+                expectedArtRepaid,
+                expectedArtRepaid
+            );
+            cauldron.debtToBase.mock(
+                vault.seriesId,
+                expectedArtTopUp,
+                expectedArtTopUp
+            );
 
             IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
             ladle.joins.mock(vault.ilkId, ilkJoin);
@@ -1840,8 +2278,17 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
 
             series.fyToken.balanceOf.mock(insuranceFund, expectedFyTokenTopUp);
             series.fyToken.balanceOf.verify(insuranceFund);
-            series.fyToken.transferFrom.mock(insuranceFund, address(series.fyToken), expectedFyTokenTopUp, true);
-            series.fyToken.transferFrom.verify(insuranceFund, address(series.fyToken), expectedFyTokenTopUp);
+            series.fyToken.transferFrom.mock(
+                insuranceFund,
+                address(series.fyToken),
+                expectedFyTokenTopUp,
+                true
+            );
+            series.fyToken.transferFrom.verify(
+                insuranceFund,
+                address(series.fyToken),
+                expectedFyTokenTopUp
+            );
             series.fyToken.burn.mock(address(witch), expectedFyTokenTopUp);
             series.fyToken.burn.verify(address(witch), expectedFyTokenTopUp);
 
@@ -1853,9 +2300,22 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             baseJoin.asset.mock(address(base));
             baseJoin.asset.verify();
 
-            base.transferFrom.mock(insuranceFund, address(baseJoin), expectedBaseTopUp, true);
-            base.transferFrom.verify(insuranceFund, address(baseJoin), expectedBaseTopUp);
-            baseJoin.join.mock(address(witch), expectedBaseTopUp, expectedBaseTopUp);
+            base.transferFrom.mock(
+                insuranceFund,
+                address(baseJoin),
+                expectedBaseTopUp,
+                true
+            );
+            base.transferFrom.verify(
+                insuranceFund,
+                address(baseJoin),
+                expectedBaseTopUp
+            );
+            baseJoin.join.mock(
+                address(witch),
+                expectedBaseTopUp,
+                expectedBaseTopUp
+            );
             baseJoin.join.verify(address(witch), expectedBaseTopUp);
         }
 
@@ -1867,8 +2327,8 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         emit Bought(VAULT_ID, bot, minInkOut, auction.art);
 
         vm.prank(bot);
-        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) =
-            witch.payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) = witch
+            .payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
         assertEq(liquidatorCut, minInkOut, "liquidatorCut");
         assertEq(liquidatorCut, balances.ink.wmul(proportion), "liquidatorCut");
         assertEq(auctioneerCut, 0, "auctioneerCut");
@@ -1881,12 +2341,22 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         _auctionWasDeleted(VAULT_ID);
     }
 
-    function testPayFYTokenAllAndTakesAllWithInsurance_UseFYTokenBalanceFirst() public {
+    function testPayFYTokenAllAndTakesAllWithInsurance_UseFYTokenBalanceFirst()
+        public
+    {
         uint128 maxArtIn = uint128(auction.art);
-        vm.warp(uint256(auction.start) + AUCTION_DURATION + INSURANCE_AUCTION_DURATION);
+        vm.warp(
+            uint256(auction.start) +
+                AUCTION_DURATION +
+                INSURANCE_AUCTION_DURATION
+        );
 
         vm.prank(bot);
-        (uint256 minInkOut_,, uint256 maxArtIn_) = witch.calcPayout(VAULT_ID, bot, maxArtIn);
+        (uint256 minInkOut_, , uint256 maxArtIn_) = witch.calcPayout(
+            VAULT_ID,
+            bot,
+            maxArtIn
+        );
         uint128 minInkOut = uint128(minInkOut_);
         maxArtIn = uint128(maxArtIn_);
 
@@ -1913,8 +2383,17 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
 
             series.fyToken.balanceOf.mock(insuranceFund, expectedFyTokenTopUp);
             series.fyToken.balanceOf.verify(insuranceFund);
-            series.fyToken.transferFrom.mock(insuranceFund, address(series.fyToken), expectedFyTokenTopUp, true);
-            series.fyToken.transferFrom.verify(insuranceFund, address(series.fyToken), expectedFyTokenTopUp);
+            series.fyToken.transferFrom.mock(
+                insuranceFund,
+                address(series.fyToken),
+                expectedFyTokenTopUp,
+                true
+            );
+            series.fyToken.transferFrom.verify(
+                insuranceFund,
+                address(series.fyToken),
+                expectedFyTokenTopUp
+            );
             series.fyToken.burn.mock(address(witch), expectedFyTokenTopUp);
             series.fyToken.burn.verify(address(witch), expectedFyTokenTopUp);
 
@@ -1927,9 +2406,22 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             baseJoin.asset.mock(address(base));
             baseJoin.asset.verify();
 
-            base.transferFrom.mock(insuranceFund, address(baseJoin), expectedBaseTopUp, true);
-            base.transferFrom.verify(insuranceFund, address(baseJoin), expectedBaseTopUp);
-            baseJoin.join.mock(address(witch), expectedBaseTopUp, expectedBaseTopUp);
+            base.transferFrom.mock(
+                insuranceFund,
+                address(baseJoin),
+                expectedBaseTopUp,
+                true
+            );
+            base.transferFrom.verify(
+                insuranceFund,
+                address(baseJoin),
+                expectedBaseTopUp
+            );
+            baseJoin.join.mock(
+                address(witch),
+                expectedBaseTopUp,
+                expectedBaseTopUp
+            );
             baseJoin.join.verify(address(witch), expectedBaseTopUp);
         }
 
@@ -1941,8 +2433,8 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         emit Bought(VAULT_ID, bot, minInkOut, auction.art);
 
         vm.prank(bot);
-        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) =
-            witch.payFYToken(VAULT_ID, bot, minInkOut, maxArtIn);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) = witch
+            .payFYToken(VAULT_ID, bot, minInkOut, maxArtIn);
         assertEq(liquidatorCut, minInkOut);
         assertEq(liquidatorCut, balances.ink.wmul(proportion), "liquidatorCut");
         assertEq(auctioneerCut, 0);

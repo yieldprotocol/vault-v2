@@ -2416,8 +2416,8 @@
       }
     },
     "src/Witch.sol": {
-      "lastModificationDate": 1677505111071,
-      "contentHash": "373e3dcfe8c0a1a52b65f9a4737fb870",
+      "lastModificationDate": 1677580681724,
+      "contentHash": "f93ce57619515054906871ec70325f87",
       "sourceName": "src/Witch.sol",
       "solcConfig": {
         "settings": {
@@ -6595,8 +6595,8 @@
       }
     },
     "src/other/contango/ContangoWitch.sol": {
-      "lastModificationDate": 1677505388881,
-      "contentHash": "909030d6d734dd8d729f45e0afdaaaf5",
+      "lastModificationDate": 1677580681724,
+      "contentHash": "7672cde960104e79478662b73cbf2a86",
       "sourceName": "src/other/contango/ContangoWitch.sol",
       "solcConfig": {
         "settings": {
@@ -6718,8 +6718,8 @@
       }
     },
     "src/other/contango/interfaces/IContangoWitch.sol": {
-      "lastModificationDate": 1677505111062,
-      "contentHash": "bfde717f7f3f536677ec06e9c53cc3df",
+      "lastModificationDate": 1677580681724,
+      "contentHash": "ed9436d20209ee00c08409076567fbbe",
       "sourceName": "src/other/contango/interfaces/IContangoWitch.sol",
       "solcConfig": {
         "settings": {
@@ -9751,8 +9751,8 @@
       }
     },
     "src/test/other/contango/ContangoWitch.t.sol": {
-      "lastModificationDate": 1677505411817,
-      "contentHash": "98be4b41dbf7d85ce585ebc1c51225fe",
+      "lastModificationDate": 1677580920753,
+      "contentHash": "edd5ceb74027f7e739e4d99a895df02b",
       "sourceName": "src/test/other/contango/ContangoWitch.t.sol",
       "solcConfig": {
         "settings": {
