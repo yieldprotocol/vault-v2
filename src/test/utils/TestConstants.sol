@@ -23,6 +23,7 @@ contract TestConstants {
     bytes6 public constant RETH = 0xE03016000000;
     bytes6 public constant CRAB = 0x333800000000;
     bytes6 public constant OSQTH = 0x333900000000;
+    bytes6 public constant USDT = 0x30A000000000;
 
     bytes6 public constant FYETH2206 = bytes6("0006");
     bytes6 public constant FYDAI2206 = bytes6("0106");
@@ -32,6 +33,7 @@ contract TestConstants {
     bytes6 public constant FYDAI2212 = bytes6("0108");
     bytes6 public constant FYETH2306 = 0x0_030_FF_000_28B;
     bytes6 public constant FYUSDC2306 = 0x0_032_FF_000_28B;
+    bytes6 public constant FYUSDT2306 = 0x0_0A0_FF_000_28B;
 
     uint32 public constant EOJUN22 = 1656039600;
 

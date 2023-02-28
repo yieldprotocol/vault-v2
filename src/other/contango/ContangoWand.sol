@@ -20,8 +20,8 @@ contract ContangoWand is AccessControl {
     YieldSpaceMultiOracle public immutable yieldSpaceOracle;
     CompositeMultiOracle public immutable compositeOracle;
 
-    mapping (bytes6 => mapping(bytes6 => uint32)) public ratio;
-    mapping (bytes6 => mapping(bytes6 => DataTypes.Debt)) public debt;
+    mapping(bytes6 => mapping(bytes6 => uint32)) public ratio;
+    mapping(bytes6 => mapping(bytes6 => DataTypes.Debt)) public debt;
 
     DataTypes.Debt public defaultDebtLimits;
     uint32 public defaultRatio;
@@ -59,7 +59,7 @@ contract ContangoWand is AccessControl {
     /// @notice Copy the debt limits from the master cauldron
     function copyDebtLimits(bytes6 baseId, bytes6 ilkId) external auth {
         DataTypes.Debt memory debt_ = yieldCauldron.debt(baseId, ilkId);
-        if(debt_.max == 0) {
+        if (debt_.max == 0) {
             debt_ = yieldCauldron.debt(baseId, yieldCauldron.series(ilkId).baseId);
         }
         contangoCauldron.setDebtLimits(baseId, ilkId, debt_.max, debt_.min, debt_.dec);
@@ -68,10 +68,10 @@ contract ContangoWand is AccessControl {
     /// @notice Add a new asset in the Cauldron, as long as it is an asset or fyToken known to the Yield Cauldron
     function addAsset(bytes6 assetId) external auth {
         address asset_ = yieldCauldron.assets(assetId);
-        require(
-            asset_ != address(0) ||
-            address(yieldCauldron.series(assetId).fyToken) != address(0),
-        "Asset not known to the Yield Cauldron");
+        if (asset_ == address(0)) {
+            asset_ = address(yieldCauldron.series(assetId).fyToken);
+        }
+        require(asset_ != address(0), "Asset not known to the Yield Cauldron");
         contangoCauldron.addAsset(assetId, asset_);
     }
 
@@ -109,34 +109,24 @@ contract ContangoWand is AccessControl {
     }
 
     function _getDebtDecimals(bytes6 baseId, bytes6 ilkId) internal view returns (uint8 dec) {
-            // If the debt is already set in the cauldron, we use the decimals from there
-            // Otherwise, we use the decimals of the base
-            DataTypes.Debt memory cauldronDebt_ = ICauldron(address(contangoCauldron)).debt(baseId, ilkId);
-            if (cauldronDebt_.sum != 0) {
-                dec =  cauldronDebt_.dec;
-            } else {
-                dec = IERC20Metadata(contangoCauldron.assets(baseId)).decimals();
-            }
+        // If the debt is already set in the cauldron, we use the decimals from there
+        // Otherwise, we use the decimals of the base
+        DataTypes.Debt memory cauldronDebt_ = ICauldron(address(contangoCauldron)).debt(baseId, ilkId);
+        if (cauldronDebt_.sum != 0) {
+            dec = cauldronDebt_.dec;
+        } else {
+            dec = IERC20Metadata(contangoCauldron.assets(baseId)).decimals();
+        }
     }
 
     /// @notice Bound debt limits for a given asset pair
     function boundDebtLimits(bytes6 baseId, bytes6 ilkId, uint96 max, uint24 min) external auth {
-        debt[baseId][ilkId] = DataTypes.Debt({
-            max: max,
-            min: min,
-            dec: _getDebtDecimals(baseId, ilkId),
-            sum: 0
-        });
+        debt[baseId][ilkId] = DataTypes.Debt({max: max, min: min, dec: _getDebtDecimals(baseId, ilkId), sum: 0});
     }
 
     /// @notice Set the default debt limits
     function setDefaultDebtLimits(uint96 max, uint24 min) external auth {
-        defaultDebtLimits = DataTypes.Debt({
-            max: max,
-            min: min,
-            dec: 0,
-            sum: 0
-        });
+        defaultDebtLimits = DataTypes.Debt({max: max, min: min, dec: 0, sum: 0});
     }
 
     /// @notice Set the debt limits for a given asset pair in the Cauldron, within bounds
@@ -173,7 +163,7 @@ contract ContangoWand is AccessControl {
 
     /// @notice Set the YieldSpace oracle as the source for a given asset pair in the Composite oracle, provided the source is set in the YieldSpace oracle
     function setCompositeOracleSource(bytes6 baseId, bytes6 ilkId) external auth {
-        (IPool pool_, ) = yieldSpaceOracle.sources(baseId, ilkId);
+        (IPool pool_,) = yieldSpaceOracle.sources(baseId, ilkId);
         require(address(pool_) != address(0), "YieldSpace oracle not set");
         compositeOracle.setSource(baseId, ilkId, yieldSpaceOracle);
     }
