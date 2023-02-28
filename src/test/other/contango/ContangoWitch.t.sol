@@ -2211,6 +2211,20 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         assertEq(auction2.ink, 9 ether, "ink");
     }
 
+    function testPayBaseLeavesDustWithInsurance() public {
+        // Bot tries to pay an amount that'd leaves dust
+        uint128 maxBaseIn = auction.art - 4999e6;
+
+        // make fyToken 1:1 with base to make things simpler
+        cauldron.debtFromBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+        cauldron.debtToBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(Witch.LeavesDust.selector, 4999e6, 5000e6)
+        );
+        witch.payBase(VAULT_ID, bot, 0, maxBaseIn);
+    }
+
     function testPayBaseAll() public {
         uint128 maxBaseIn = uint128(auction.art);
         vm.prank(bot);
@@ -2766,7 +2780,6 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         _auctionWasDeleted(VAULT_ID);
     }
 
-    // testPayBaseLeavesDustWithInsurance
     // testPayBasePartialWithInsurance
     // testPayBasePartialOnPartiallyLiquidatedVaultWithInsurance
     // testPayBaseAllOnPartiallyLiquidatedVaultWithInsurance
