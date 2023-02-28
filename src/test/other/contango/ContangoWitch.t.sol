@@ -1067,7 +1067,7 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
 
         _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxBaseIn);
 
-        // Reduce balances on tha vault
+        // Reduce balances on the vault
         cauldron.slurp.mock(VAULT_ID, minInkOut, maxBaseIn, balances);
         cauldron.slurp.verify(VAULT_ID, minInkOut, maxBaseIn);
 
@@ -1116,7 +1116,7 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
 
         _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxBaseIn);
 
-        // Reduce balances on tha vault
+        // Reduce balances on the vault
         cauldron.slurp.mock(VAULT_ID, minInkOut, maxBaseIn, balances);
         cauldron.slurp.verify(VAULT_ID, minInkOut, maxBaseIn);
 
@@ -1160,7 +1160,7 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxBaseIn);
         _verifyAuctionEnded(VAULT_ID, bob);
 
-        // Reduce balances on tha vault
+        // Reduce balances on the vault
         cauldron.slurp.mock(VAULT_ID, minInkOut, maxBaseIn, balances);
         cauldron.slurp.verify(VAULT_ID, minInkOut, maxBaseIn);
         // Vault returns to it's owner after all the liquidation is done
@@ -1211,7 +1211,7 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxBaseIn);
         _verifyAuctionEnded(VAULT_ID, bob);
 
-        // Reduce balances on tha vault
+        // Reduce balances on the vault
         cauldron.slurp.mock(VAULT_ID, minInkOut, maxBaseIn, balances);
         cauldron.slurp.verify(VAULT_ID, minInkOut, maxBaseIn);
         // Vault returns to it's owner after all the liquidation is done
@@ -1266,7 +1266,7 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxBaseIn);
         _verifyAuctionEnded(VAULT_ID, bob);
 
-        // Reduce balances on tha vault
+        // Reduce balances on the vault
         cauldron.slurp.mock(VAULT_ID, minInkOut, maxBaseIn, balances);
         cauldron.slurp.verify(VAULT_ID, minInkOut, maxBaseIn);
         // Vault returns to it's owner after all the liquidation is done
@@ -1327,7 +1327,7 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         );
         _verifyAuctionEnded(VAULT_ID, bob);
 
-        // Reduce balances on tha vault
+        // Reduce balances on the vault
         cauldron.slurp.mock(
             VAULT_ID,
             liquidatorCut + auctioneerCut,
@@ -1411,7 +1411,7 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         _verifyCollateralBought(VAULT_ID_2, bot, totalCut, maxBaseIn);
         _verifyAuctionEnded(VAULT_ID_2, bob);
 
-        // Reduce balances on tha vault
+        // Reduce balances on the vault
         cauldron.slurp.mock(VAULT_ID_2, totalCut, maxBaseIn, balances);
         cauldron.slurp.verify(VAULT_ID_2, totalCut, maxBaseIn);
         // Vault returns to it's owner after all the liquidation is done
@@ -1492,7 +1492,7 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
 
         _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxArtIn);
 
-        // Reduce balances on tha vault
+        // Reduce balances on the vault
         cauldron.slurp.mock(VAULT_ID, minInkOut, maxArtIn, balances);
         cauldron.slurp.verify(VAULT_ID, minInkOut, maxArtIn);
 
@@ -1535,7 +1535,7 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
 
         _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxArtIn);
 
-        // Reduce balances on tha vault
+        // Reduce balances on the vault
         cauldron.slurp.mock(VAULT_ID, minInkOut, maxArtIn, balances);
         cauldron.slurp.verify(VAULT_ID, minInkOut, maxArtIn);
 
@@ -1663,7 +1663,7 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         _verifyCollateralBought(VAULT_ID_2, bot, totalCut, maxArtIn);
         _verifyAuctionEnded(VAULT_ID_2, bob);
 
-        // Reduce balances on tha vault
+        // Reduce balances on the vault
         cauldron.slurp.mock(VAULT_ID_2, totalCut, maxArtIn, balances);
         cauldron.slurp.verify(VAULT_ID_2, totalCut, maxArtIn);
         // Vault returns to it's owner after all the liquidation is done
@@ -1711,7 +1711,7 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxArtIn);
         _verifyAuctionEnded(VAULT_ID, bob);
 
-        // Reduce balances on tha vault
+        // Reduce balances on the vault
         cauldron.slurp.mock(VAULT_ID, minInkOut, maxArtIn, balances);
         cauldron.slurp.verify(VAULT_ID, minInkOut, maxArtIn);
         // Vault returns to it's owner after all the liquidation is done
@@ -1756,7 +1756,7 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxArtIn);
         _verifyAuctionEnded(VAULT_ID, bob);
 
-        // Reduce balances on tha vault
+        // Reduce balances on the vault
         cauldron.slurp.mock(VAULT_ID, minInkOut, maxArtIn, balances);
         cauldron.slurp.verify(VAULT_ID, minInkOut, maxArtIn);
         // Vault returns to it's owner after all the liquidation is done
@@ -1803,7 +1803,7 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxArtIn);
         _verifyAuctionEnded(VAULT_ID, bob);
 
-        // Reduce balances on tha vault
+        // Reduce balances on the vault
         cauldron.slurp.mock(VAULT_ID, minInkOut, maxArtIn, balances);
         cauldron.slurp.verify(VAULT_ID, minInkOut, maxArtIn);
         // Vault returns to it's owner after all the liquidation is done
@@ -2225,6 +2225,254 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         witch.payBase(VAULT_ID, bot, 0, maxBaseIn);
     }
 
+    function testPayBasePartialWithInsurance() public {
+        // Bot Will pay 40% of the debt (for some reason)
+        uint128 maxBaseIn = uint128(auction.art.wmul(0.4e18));
+        vm.prank(bot);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, bot, maxBaseIn);
+        uint128 minInkOut = uint128(minInkOut_);
+        uint128 premium = uint128(
+            minInkOut.wdiv(1e18 - insurancePremium) - minInkOut
+        );
+
+        _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxBaseIn);
+
+        // Reduce balances on the vault
+        cauldron.slurp.mock(VAULT_ID, minInkOut + premium, maxBaseIn, balances);
+        cauldron.slurp.verify(VAULT_ID, minInkOut + premium, maxBaseIn);
+
+        // make fyToken 1:1 with base to make things simpler
+        cauldron.debtFromBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+        cauldron.debtToBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+
+        IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
+        ladle.joins.mock(vault.ilkId, ilkJoin);
+        ilkJoin.exit.mock(bot, minInkOut, minInkOut);
+        ilkJoin.exit.verify(bot, minInkOut);
+
+        ilkJoin.exit.mock(insuranceFund, premium, premium);
+        ilkJoin.exit.verify(insuranceFund, premium);
+
+        IJoin baseJoin = IJoin(Mocks.mock("BaseJoin"));
+        ladle.joins.mock(series.baseId, baseJoin);
+        baseJoin.join.mock(bot, maxBaseIn, maxBaseIn);
+        baseJoin.join.verify(bot, maxBaseIn);
+
+        vm.expectEmit(true, true, true, true);
+        emit Bought(VAULT_ID, bot, minInkOut, maxBaseIn);
+
+        vm.prank(bot);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) = witch
+            .payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
+        assertEq(liquidatorCut, minInkOut);
+        assertEq(auctioneerCut, 0);
+        assertEq(baseIn, maxBaseIn);
+
+        // sum is reduced by auction.ink
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, auction.ink - minInkOut - premium, "sum");
+
+        _auctionWasUpdated(VAULT_ID, maxBaseIn, minInkOut + premium);
+    }
+
+    function testPayBasePartialOnPartiallyLiquidatedVaultWithInsurance()
+        public
+    {
+        // liquidate 40% of the vault
+        testPayBasePartialWithInsurance();
+        // Refresh auction copy
+        auction = iWitch.auctions(VAULT_ID);
+
+        // Bot Will pay another 20% of the debt (for some reason)
+        uint128 maxBaseIn = uint128(auction.art.wmul(0.2e18));
+        vm.prank(bot);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, bot, maxBaseIn);
+        uint128 minInkOut = uint128(minInkOut_);
+        uint128 premium = uint128(
+            minInkOut.wdiv(1e18 - insurancePremium) - minInkOut
+        );
+
+        _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxBaseIn);
+
+        // Reduce balances on the vault
+        cauldron.slurp.mock(VAULT_ID, minInkOut + premium, maxBaseIn, balances);
+        cauldron.slurp.verify(VAULT_ID, minInkOut + premium, maxBaseIn);
+
+        // make fyToken 1:1 with base to make things simpler
+        cauldron.debtFromBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+        cauldron.debtToBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+
+        IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
+        ladle.joins.mock(vault.ilkId, ilkJoin);
+        ilkJoin.exit.mock(bot, minInkOut, minInkOut);
+        ilkJoin.exit.verify(bot, minInkOut);
+
+        ilkJoin.exit.mock(insuranceFund, premium, premium);
+        ilkJoin.exit.verify(insuranceFund, premium);
+
+        IJoin baseJoin = IJoin(Mocks.mock("BaseJoin"));
+        ladle.joins.mock(series.baseId, baseJoin);
+        baseJoin.join.mock(bot, maxBaseIn, maxBaseIn);
+        baseJoin.join.verify(bot, maxBaseIn);
+
+        vm.expectEmit(true, true, true, true);
+        emit Bought(VAULT_ID, bot, minInkOut, maxBaseIn);
+
+        vm.prank(bot);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) = witch
+            .payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
+        assertEq(liquidatorCut, minInkOut);
+        assertEq(auctioneerCut, 0);
+        assertEq(baseIn, maxBaseIn);
+
+        // sum is reduced by auction.ink
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, auction.ink - minInkOut - premium, "sum");
+
+        _auctionWasUpdated(VAULT_ID, maxBaseIn, minInkOut + premium);
+    }
+
+    function testPayBaseAllOnPartiallyLiquidatedVaultWithInsurance() public {
+        // liquidate 40% of the vault
+        testPayBasePartialWithInsurance();
+        // Refresh auction copy
+        auction = iWitch.auctions(VAULT_ID);
+
+        uint128 maxBaseIn = uint128(auction.art);
+        vm.prank(bot);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, bot, maxBaseIn);
+        uint128 minInkOut = uint128(minInkOut_);
+        uint128 premium = uint128(
+            minInkOut.wdiv(1e18 - insurancePremium) - minInkOut
+        );
+
+        _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxBaseIn);
+        _verifyAuctionEnded(VAULT_ID, bob);
+
+        // Reduce balances on the vault
+        cauldron.slurp.mock(VAULT_ID, minInkOut + premium, maxBaseIn, balances);
+        cauldron.slurp.verify(VAULT_ID, minInkOut + premium, maxBaseIn);
+        // Vault returns to it's owner after all the liquidation is done
+        cauldron.give.mock(VAULT_ID, bob, vault);
+        cauldron.give.verify(VAULT_ID, bob);
+
+        // make fyToken 1:1 with base to make things simpler
+        cauldron.debtFromBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+        cauldron.debtToBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+
+        IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
+        ladle.joins.mock(vault.ilkId, ilkJoin);
+        ilkJoin.exit.mock(bot, minInkOut, minInkOut);
+        ilkJoin.exit.verify(bot, minInkOut);
+
+        ilkJoin.exit.mock(insuranceFund, premium, premium);
+        ilkJoin.exit.verify(insuranceFund, premium);
+
+        IJoin baseJoin = IJoin(Mocks.mock("BaseJoin"));
+        ladle.joins.mock(series.baseId, baseJoin);
+        baseJoin.join.mock(bot, maxBaseIn, maxBaseIn);
+        baseJoin.join.verify(bot, maxBaseIn);
+
+        vm.expectEmit(true, true, true, true);
+        emit Ended(VAULT_ID);
+        vm.expectEmit(true, true, true, true);
+        emit Bought(VAULT_ID, bot, minInkOut, maxBaseIn);
+
+        vm.prank(bot);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) = witch
+            .payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
+        assertEq(liquidatorCut, minInkOut);
+        assertEq(auctioneerCut, 0);
+        assertEq(baseIn, maxBaseIn);
+
+        // sum is reduced by auction.ink
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, 0, "sum");
+
+        _auctionWasDeleted(VAULT_ID);
+    }
+
+    function testPayBaseOnAnAuctionStartedBySomeoneElseWithInsurance() public {
+        address bot2 = address(0xb072);
+
+        uint128 maxBaseIn = uint128(auction.art);
+        vm.prank(bot2);
+        (uint256 liquidatorCut_, uint256 auctioneerCut_, ) = witch.calcPayout(
+            VAULT_ID,
+            bot2,
+            maxBaseIn
+        );
+        uint128 liquidatorCut = uint128(liquidatorCut_);
+        uint128 auctioneerCut = uint128(auctioneerCut_);
+        uint128 premium = uint128(
+            liquidatorCut.wdiv(1e18 - insurancePremium) - liquidatorCut
+        );
+
+        _verifyCollateralBought(
+            VAULT_ID,
+            bot2,
+            liquidatorCut + auctioneerCut,
+            maxBaseIn
+        );
+        _verifyAuctionEnded(VAULT_ID, bob);
+
+        // Reduce balances on the vault
+        cauldron.slurp.mock(
+            VAULT_ID,
+            liquidatorCut + auctioneerCut + premium,
+            maxBaseIn,
+            balances
+        );
+        cauldron.slurp.verify(
+            VAULT_ID,
+            liquidatorCut + auctioneerCut + premium,
+            maxBaseIn
+        );
+        // Vault returns to it's owner after all the liquidation is done
+        cauldron.give.mock(VAULT_ID, bob, vault);
+        cauldron.give.verify(VAULT_ID, bob);
+
+        // make fyToken 1:1 with base to make things simpler
+        cauldron.debtFromBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+        cauldron.debtToBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+
+        IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
+        ladle.joins.mock(vault.ilkId, ilkJoin);
+
+        // Liquidator share
+        ilkJoin.exit.mock(bot2, liquidatorCut, liquidatorCut);
+        ilkJoin.exit.verify(bot2, liquidatorCut);
+        // Auctioneer share
+        ilkJoin.exit.mock(bot, auctioneerCut, auctioneerCut);
+        ilkJoin.exit.verify(bot, auctioneerCut);
+        // Insurance Fund share
+        ilkJoin.exit.mock(insuranceFund, premium, premium);
+        ilkJoin.exit.verify(insuranceFund, premium);
+
+        IJoin baseJoin = IJoin(Mocks.mock("BaseJoin"));
+        ladle.joins.mock(series.baseId, baseJoin);
+        baseJoin.join.mock(bot2, maxBaseIn, maxBaseIn);
+        baseJoin.join.verify(bot2, maxBaseIn);
+
+        vm.expectEmit(true, true, true, true);
+        emit Ended(VAULT_ID);
+        vm.expectEmit(true, true, true, true);
+        emit Bought(VAULT_ID, bot2, liquidatorCut + auctioneerCut, maxBaseIn);
+
+        vm.prank(bot2);
+        (uint256 _liquidatorCut, uint256 _auctioneerCut, uint256 baseIn) = witch
+            .payBase(VAULT_ID, bot2, liquidatorCut, maxBaseIn);
+        assertEq(_liquidatorCut, liquidatorCut);
+        assertEq(_auctioneerCut, auctioneerCut);
+        assertEq(baseIn, maxBaseIn);
+
+        // sum is reduced by auction.ink
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, 0, "sum");
+
+        _auctionWasDeleted(VAULT_ID);
+    }
+
     function testPayBaseAll() public {
         uint128 maxBaseIn = uint128(auction.art);
         vm.prank(bot);
@@ -2237,7 +2485,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxBaseIn);
         _verifyAuctionEnded(VAULT_ID, bob);
 
-        // Reduce balances on tha vault
+        // Reduce balances on the vault
         cauldron.slurp.mock(VAULT_ID, minInkOut + premium, maxBaseIn, balances);
         cauldron.slurp.verify(VAULT_ID, minInkOut + premium, maxBaseIn);
         // Vault returns to it's owner after all the liquidation is done
@@ -2324,7 +2572,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         uint128 expectedArtRepaid = auction.art - expectedArtTopUp;
 
         {
-            // Reduce balances on tha vault
+            // Reduce balances on the vault
             cauldron.slurp.mock(VAULT_ID, minInkOut, auction.art, balances);
             cauldron.slurp.verify(VAULT_ID, minInkOut, auction.art);
             // Vault returns to it's owner after all the liquidation is done
@@ -2414,7 +2662,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxArtIn);
         _verifyAuctionEnded(VAULT_ID, bob);
 
-        // Reduce balances on tha vault
+        // Reduce balances on the vault
         cauldron.slurp.mock(VAULT_ID, minInkOut + premium, maxArtIn, balances);
         cauldron.slurp.verify(VAULT_ID, minInkOut + premium, maxArtIn);
         // Vault returns to it's owner after all the liquidation is done
@@ -2491,7 +2739,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         uint128 expectedArtRepaid = auction.art - expectedArtTopUp;
 
         {
-            // Reduce balances on tha vault
+            // Reduce balances on the vault
             cauldron.slurp.mock(VAULT_ID, minInkOut, auction.art, balances);
             cauldron.slurp.verify(VAULT_ID, minInkOut, auction.art);
             // Vault returns to it's owner after all the liquidation is done
@@ -2584,7 +2832,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         uint128 expectedArtRepaid = auction.art - expectedArtTopUp;
 
         {
-            // Reduce balances on tha vault
+            // Reduce balances on the vault
             cauldron.slurp.mock(VAULT_ID, minInkOut, auction.art, balances);
             cauldron.slurp.verify(VAULT_ID, minInkOut, auction.art);
             // Vault returns to it's owner after all the liquidation is done
@@ -2702,7 +2950,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         uint128 expectedArtRepaid = auction.art - expectedArtTopUp;
 
         {
-            // Reduce balances on tha vault
+            // Reduce balances on the vault
             cauldron.slurp.mock(VAULT_ID, minInkOut, auction.art, balances);
             cauldron.slurp.verify(VAULT_ID, minInkOut, auction.art);
             // Vault returns to it's owner after all the liquidation is done
@@ -2779,11 +3027,6 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
 
         _auctionWasDeleted(VAULT_ID);
     }
-
-    // testPayBasePartialWithInsurance
-    // testPayBasePartialOnPartiallyLiquidatedVaultWithInsurance
-    // testPayBaseAllOnPartiallyLiquidatedVaultWithInsurance
-    // testPayBaseOnAnAuctionStartedBySomeoneElseWithInsurance
 
     // testPayFYTokenLeavesDustWithInsurance
     // testPayFYTokenPartialWithInsurance
