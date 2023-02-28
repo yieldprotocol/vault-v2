@@ -24,6 +24,7 @@ contract ContangoWand is AccessControl {
     mapping(bytes6 => mapping(bytes6 => DataTypes.Debt)) public debt;
 
     DataTypes.Debt public defaultDebtLimits;
+    uint32 public defaultRatio;
 
     constructor(
         ICauldronGov contangoCauldron_,
@@ -85,21 +86,18 @@ contract ContangoWand is AccessControl {
     function setRatio(bytes6 baseId, bytes6 ilkId, uint32 ratio_) external auth {
         // If the ilkId is a series and boundaries are not set, set ratio to the default
         uint32 bound_ = ratio[baseId][ilkId];
-        if (bound_ == 0) {
-            DataTypes.Series memory yieldSeries = contangoCauldron.series(ilkId);
-            if (yieldSeries.fyToken != IFYToken(address(0))) {
-                bound_ = yieldCauldron.spotOracles(baseId, yieldSeries.baseId).ratio;
-            }
-
-            if (bound_ == 0) {
-                bound_ = yieldCauldron.spotOracles(baseId, ilkId).ratio;
-            }
+        if (bound_ == 0 && yieldCauldron.series(ilkId).fyToken != IFYToken(address(0))) {
+            ratio[baseId][ilkId] = bound_ = defaultRatio;
         }
-
-        require(bound_ != 0, "No bound set");
+        require(bound_ > 0, "Default ratio not set");
         require(ratio_ >= bound_, "Ratio out of bounds");
 
         contangoCauldron.setSpotOracle(baseId, ilkId, compositeOracle, ratio_);
+    }
+
+    /// @notice Set the default ratio
+    function setDefaultRatio(uint32 ratio_) external auth {
+        defaultRatio = ratio_;
     }
 
     /// @notice Bound ratio for a given asset pair
