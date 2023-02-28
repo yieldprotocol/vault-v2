@@ -6607,8 +6607,8 @@
       }
     },
     "src/other/contango/ContangoWand.sol": {
-      "lastModificationDate": 1677603976743,
-      "contentHash": "b410c3dbd14924d2a3cdfb96ab9c9989",
+      "lastModificationDate": 1677605001004,
+      "contentHash": "61c7561599ce636f8e1490bc5061af1d",
       "sourceName": "src/other/contango/ContangoWand.sol",
       "solcConfig": {
         "settings": {
@@ -9796,8 +9796,8 @@
       }
     },
     "src/test/other/contango/ContangoWand.t.sol": {
-      "lastModificationDate": 1677604705969,
-      "contentHash": "f296e340cac233ca73e104027cd8b6a3",
+      "lastModificationDate": 1677605131493,
+      "contentHash": "6a6d1060eb6289364ab6c03f0a87878a",
       "sourceName": "src/test/other/contango/ContangoWand.t.sol",
       "solcConfig": {
         "settings": {
@@ -9828,6 +9828,8 @@
         }
       },
       "imports": [
+        "lib/ERC3156/contracts/interfaces/IERC3156FlashBorrower.sol",
+        "lib/ERC3156/contracts/interfaces/IERC3156FlashLender.sol",
         "lib/dss-interfaces/src/dss/DaiAbstract.sol",
         "lib/forge-std/lib/ds-test/src/test.sol",
         "lib/forge-std/src/Base.sol",
@@ -9860,6 +9862,7 @@
         "lib/yieldspace-tv/src/interfaces/IPool.sol",
         "lib/yieldspace-tv/src/interfaces/IPoolOracle.sol",
         "src/Cauldron.sol",
+        "src/Join.sol",
         "src/Ladle.sol",
         "src/LadleStorage.sol",
         "src/Router.sol",
@@ -9870,6 +9873,7 @@
         "src/interfaces/IERC5095.sol",
         "src/interfaces/IFYToken.sol",
         "src/interfaces/IJoin.sol",
+        "src/interfaces/IJoinFactory.sol",
         "src/interfaces/ILadle.sol",
         "src/interfaces/ILadleGov.sol",
         "src/interfaces/IOracle.sol",

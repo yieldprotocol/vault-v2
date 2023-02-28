@@ -205,7 +205,7 @@ contract ContangoWand is AccessControl {
 
     /// @notice Add join to the Ladle.
     /// @dev These will often be used to hold fyToken, so it doesn't seem possible to put boundaries. However, it seems low risk. Famous last words.
-    function addJoin(bytes6 assetId, address join) external auth {
-        contangoLadle.addJoin(assetId, IJoin(join));
+    function addJoin(bytes6 assetId, IJoin join) external auth {
+        contangoLadle.addJoin(assetId, join);
     }
 }

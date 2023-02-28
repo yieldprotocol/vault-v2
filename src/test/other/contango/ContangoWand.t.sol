@@ -6,6 +6,7 @@ import "../../utils/TestConstants.sol";
 import "../../utils/Mocks.sol";
 
 import "../../../Cauldron.sol";
+import "../../../Join.sol";
 import "../../../other/contango/ContangoLadle.sol";
 import "../../../other/contango/ContangoWand.sol";
 
@@ -70,6 +71,8 @@ contract ContangoWandTest is Test, TestConstants {
         wand.grantRole(wand.addIntegration.selector, address(this));
         AccessControl(address(contangoLadle)).grantRole(ILadle.addToken.selector, address(wand));
         wand.grantRole(wand.addToken.selector, address(this));
+        AccessControl(address(contangoLadle)).grantRole(ILadle.addJoin.selector, address(wand));
+        wand.grantRole(wand.addJoin.selector, address(this));
         vm.stopPrank();
     }
 
@@ -409,5 +412,21 @@ contract ContangoWandTest is Test, TestConstants {
         wand.addToken(0xad1983745D6c739537fEaB5bed45795f47A940b3);
 
         assertTrue(contangoLadle.tokens(0xad1983745D6c739537fEaB5bed45795f47A940b3), "yield integration");
+    }
+
+    function testAddJoin_Auth() public {
+        vm.prank(bob);
+        vm.expectRevert("Access denied");
+        wand.addJoin(FYUSDT2306, IJoin(address(0)));
+    }
+
+    function testAddJoin() public {
+        wand.addAsset(USDT);
+
+        IJoin join = new Join(contangoCauldron.assets(USDT));
+
+        wand.addJoin(USDT, join);
+
+        assertEq(address(contangoLadle.joins(USDT)), address(join), "pool");
     }
 }
