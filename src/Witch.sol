@@ -38,16 +38,28 @@ contract Witch is AccessControl {
     // ==================== User events ====================
 
     event Auctioned(
-        bytes12 indexed vaultId, DataTypes.Auction auction, uint256 duration, uint256 initialCollateralProportion
+        bytes12 indexed vaultId,
+        DataTypes.Auction auction,
+        uint256 duration,
+        uint256 initialCollateralProportion
     );
     event Cancelled(bytes12 indexed vaultId);
     event Cleared(bytes12 indexed vaultId);
     event Ended(bytes12 indexed vaultId);
-    event Bought(bytes12 indexed vaultId, address indexed buyer, uint256 ink, uint256 art);
+    event Bought(
+        bytes12 indexed vaultId,
+        address indexed buyer,
+        uint256 ink,
+        uint256 art
+    );
 
     // ==================== Governance events ====================
 
-    event Point(bytes32 indexed param, address indexed oldValue, address indexed newValue);
+    event Point(
+        bytes32 indexed param,
+        address indexed oldValue,
+        address indexed newValue
+    );
     event LineSet(
         bytes6 indexed ilkId,
         bytes6 indexed baseId,
@@ -110,9 +122,18 @@ contract Witch is AccessControl {
         uint64 collateralProportion,
         uint128 max
     ) external auth {
-        require(collateralProportion <= ONE_HUNDRED_PERCENT, "Collateral Proportion above 100%");
-        require(vaultProportion <= ONE_HUNDRED_PERCENT, "Vault Proportion above 100%");
-        require(collateralProportion >= ONE_PERCENT, "Collateral Proportion below 1%");
+        require(
+            collateralProportion <= ONE_HUNDRED_PERCENT,
+            "Collateral Proportion above 100%"
+        );
+        require(
+            vaultProportion <= ONE_HUNDRED_PERCENT,
+            "Vault Proportion above 100%"
+        );
+        require(
+            collateralProportion >= ONE_PERCENT,
+            "Collateral Proportion below 1%"
+        );
         require(vaultProportion >= ONE_PERCENT, "Vault Proportion below 1%");
 
         lines[ilkId][baseId] = DataTypes.Line({
@@ -120,7 +141,13 @@ contract Witch is AccessControl {
             vaultProportion: vaultProportion,
             collateralProportion: collateralProportion
         });
-        emit LineSet(ilkId, baseId, duration, vaultProportion, collateralProportion);
+        emit LineSet(
+            ilkId,
+            baseId,
+            duration,
+            vaultProportion,
+            collateralProportion
+        );
 
         limits[ilkId][baseId] = DataTypes.Limits({
             max: max,
@@ -141,7 +168,10 @@ contract Witch is AccessControl {
     /// @param auctioneerReward_ New % to be used, must have 18 dec precision
     function setAuctioneerReward(uint256 auctioneerReward_) external auth {
         if (auctioneerReward_ > ONE_HUNDRED_PERCENT) {
-            revert AuctioneerRewardTooHigh(ONE_HUNDRED_PERCENT, auctioneerReward_);
+            revert AuctioneerRewardTooHigh(
+                ONE_HUNDRED_PERCENT,
+                auctioneerReward_
+            );
         }
         auctioneerReward = auctioneerReward_;
         emit AuctioneerRewardSet(auctioneerReward_);
@@ -157,9 +187,16 @@ contract Witch is AccessControl {
     /// @return auction_ Info associated to the auction itself
     /// @return vault Vault that's being auctioned
     /// @return series Series for the vault that's being auctioned
-    function auction(bytes12 vaultId, address to)
+    function auction(
+        bytes12 vaultId,
+        address to
+    )
         external
-        returns (DataTypes.Auction memory auction_, DataTypes.Vault memory vault, DataTypes.Series memory series)
+        returns (
+            DataTypes.Auction memory auction_,
+            DataTypes.Vault memory vault,
+            DataTypes.Series memory series
+        )
     {
         // If the world has not turned to ashes and darkness, auctions will malfunction on
         // the 7th of February 2106, at 06:28:16 GMT
@@ -206,14 +243,19 @@ contract Witch is AccessControl {
     /// @dev Moves the vault ownership to the witch.
     /// Useful as a method so it can be overridden by specialised witches that may need to do extra accounting or notify 3rd parties
     /// @param vaultId Id of the vault to liquidate
-    function _auctionStarted(bytes12 vaultId, DataTypes.Auction memory auction_, DataTypes.Line memory line)
-        internal
-        virtual
-        returns (DataTypes.Vault memory vault)
-    {
+    function _auctionStarted(
+        bytes12 vaultId,
+        DataTypes.Auction memory auction_,
+        DataTypes.Line memory line
+    ) internal virtual returns (DataTypes.Vault memory vault) {
         // The Witch is now in control of the vault under auction
         vault = cauldron.give(vaultId, address(this));
-        emit Auctioned(vaultId, auction_, line.duration, line.collateralProportion);
+        emit Auctioned(
+            vaultId,
+            auction_,
+            line.duration,
+            line.collateralProportion
+        );
     }
 
     /// @dev Calculates the auction initial values, the 2 non-trivial values are how much art must be repaid
@@ -232,7 +274,11 @@ contract Witch is AccessControl {
         address to,
         DataTypes.Balances memory balances,
         DataTypes.Debt memory debt
-    ) internal view returns (DataTypes.Auction memory auction_, DataTypes.Line memory line) {
+    )
+        internal
+        view
+        returns (DataTypes.Auction memory auction_, DataTypes.Line memory line)
+    {
         // We try to partially liquidate the vault if possible.
         line = lines[vault.ilkId][series.baseId];
         uint256 vaultProportion = line.vaultProportion;
@@ -340,7 +386,12 @@ contract Witch is AccessControl {
     /// @return liquidatorCut Amount paid to `to`.
     /// @return auctioneerCut Amount paid to an address specified by whomever started the auction. 0 if it's the same as the `to` address
     /// @return baseIn Amount of underlying taken
-    function payBase(bytes12 vaultId, address to, uint128 minInkOut, uint128 maxBaseIn)
+    function payBase(
+        bytes12 vaultId,
+        address to,
+        uint128 minInkOut,
+        uint128 maxBaseIn
+    )
         external
         returns (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn)
     {
@@ -355,14 +406,28 @@ contract Witch is AccessControl {
         uint256 totalArtIn = _topUpDebt(vaultId, auction_, artIn, true);
 
         // Calculate the collateral to be sold
-        (liquidatorCut, auctioneerCut,) = _calcPayout(auction_, to, totalArtIn);
-        _validateInkOut(liquidatorCut, minInkOut);
+        (liquidatorCut, auctioneerCut, ) = _calcPayout(
+            auction_,
+            to,
+            totalArtIn
+        );
+        _validateInkOut(auction_, liquidatorCut, minInkOut);
 
         // Update Cauldron and local auction data
-        _updateAccounting(vaultId, auction_, (liquidatorCut + auctioneerCut).u128(), totalArtIn.u128());
+        _updateAccounting(
+            vaultId,
+            auction_,
+            (liquidatorCut + auctioneerCut).u128(),
+            totalArtIn.u128()
+        );
 
         // Move the assets
-        (liquidatorCut, auctioneerCut) = _payInk(auction_, to, liquidatorCut, auctioneerCut);
+        (liquidatorCut, auctioneerCut) = _payInk(
+            auction_,
+            to,
+            liquidatorCut,
+            auctioneerCut
+        );
 
         baseIn = cauldron.debtToBase(auction_.seriesId, artIn.u128());
         if (baseIn != 0) {
@@ -370,14 +435,20 @@ contract Witch is AccessControl {
             _join(auction_.baseId).join(msg.sender, baseIn.u128());
         }
 
-        _collateralBought(vaultId, to, liquidatorCut + auctioneerCut, totalArtIn);
+        _collateralBought(
+            vaultId,
+            to,
+            liquidatorCut + auctioneerCut,
+            totalArtIn
+        );
     }
 
-    function _topUpDebt(bytes12 vaultId, DataTypes.Auction memory auction_, uint256 artIn, bool baseTopUp)
-        internal
-        virtual
-        returns (uint256 requiredArtIn)
-    {
+    function _topUpDebt(
+        bytes12 vaultId,
+        DataTypes.Auction memory auction_,
+        uint256 artIn,
+        bool baseTopUp
+    ) internal virtual returns (uint256 requiredArtIn) {
         return artIn;
     }
 
@@ -390,7 +461,12 @@ contract Witch is AccessControl {
     /// @return liquidatorCut Amount paid to `to`.
     /// @return auctioneerCut Amount paid to an address specified by whomever started the auction. 0 if it's the same as the `to` address
     /// @return artIn Amount of fyToken taken
-    function payFYToken(bytes12 vaultId, address to, uint128 minInkOut, uint128 maxArtIn)
+    function payFYToken(
+        bytes12 vaultId,
+        address to,
+        uint128 minInkOut,
+        uint128 maxArtIn
+    )
         external
         returns (uint256 liquidatorCut, uint256 auctioneerCut, uint128 artIn)
     {
@@ -402,24 +478,48 @@ contract Witch is AccessControl {
         uint256 totalArtIn = _topUpDebt(vaultId, auction_, artIn, false);
 
         // Calculate the collateral to be sold
-        (liquidatorCut, auctioneerCut,) = _calcPayout(auction_, to, totalArtIn);
-        _validateInkOut(liquidatorCut, minInkOut);
+        (liquidatorCut, auctioneerCut, ) = _calcPayout(
+            auction_,
+            to,
+            totalArtIn
+        );
+        _validateInkOut(auction_, liquidatorCut, minInkOut);
 
         // Update Cauldron and local auction data
-        _updateAccounting(vaultId, auction_, (liquidatorCut + auctioneerCut).u128(), totalArtIn.u128());
+        _updateAccounting(
+            vaultId,
+            auction_,
+            (liquidatorCut + auctioneerCut).u128(),
+            totalArtIn.u128()
+        );
 
         // Move the assets
-        (liquidatorCut, auctioneerCut) = _payInk(auction_, to, liquidatorCut, auctioneerCut);
+        (liquidatorCut, auctioneerCut) = _payInk(
+            auction_,
+            to,
+            liquidatorCut,
+            auctioneerCut
+        );
 
         if (artIn != 0) {
             // Burn fyToken from liquidator
             cauldron.series(auction_.seriesId).fyToken.burn(msg.sender, artIn);
         }
 
-        _collateralBought(vaultId, to, liquidatorCut + auctioneerCut, totalArtIn);
+        _collateralBought(
+            vaultId,
+            to,
+            liquidatorCut + auctioneerCut,
+            totalArtIn
+        );
     }
 
-    function _validateInkOut(uint256 liquidatorCut, uint256 minInkOut) internal pure virtual {
+    function _validateInkOut(
+        DataTypes.Auction memory auction_,
+        uint256 liquidatorCut,
+        uint256 minInkOut
+    ) internal view virtual {
+        liquidatorCut = _discountInsurancePremium(auction_, liquidatorCut);
         if (liquidatorCut < minInkOut) {
             revert NotEnoughBought(minInkOut, liquidatorCut);
         }
@@ -431,18 +531,20 @@ contract Witch is AccessControl {
     /// @param liquidatorCut How much collateral the liquidator is expected to get
     /// @param auctioneerCut How much collateral the auctioneer is expected to get. 0 if liquidator == auctioneer
     /// @return updated liquidatorCut & auctioneerCut
-    function _payInk(DataTypes.Auction memory auction_, address to, uint256 liquidatorCut, uint256 auctioneerCut)
-        internal
-        virtual
-        returns (uint256, uint256)
-    {
+    function _payInk(
+        DataTypes.Auction memory auction_,
+        address to,
+        uint256 liquidatorCut,
+        uint256 auctioneerCut
+    ) internal virtual returns (uint256, uint256) {
         IJoin ilkJoin = _join(auction_.ilkId);
 
         // Pay auctioneer's cut if necessary
         if (auctioneerCut > 0) {
             // A transfer revert would block the auction, in that case the liquidator gets the auctioneer's cut as well
-            try ilkJoin.exit(auction_.auctioneer, auctioneerCut.u128()) returns (uint128) {}
-            catch {
+            try
+                ilkJoin.exit(auction_.auctioneer, auctioneerCut.u128())
+            returns (uint128) {} catch {
                 liquidatorCut += auctioneerCut;
                 auctioneerCut = 0;
             }
@@ -462,15 +564,20 @@ contract Witch is AccessControl {
     /// @param inkOut How much collateral was sold
     /// @param artIn How much debt was repaid
     /// This function doesn't verify the vaultId matches the vault and auction passed. Check before calling.
-    function _updateAccounting(bytes12 vaultId, DataTypes.Auction memory auction_, uint128 inkOut, uint128 artIn)
-        internal
-    {
+    function _updateAccounting(
+        bytes12 vaultId,
+        DataTypes.Auction memory auction_,
+        uint128 inkOut,
+        uint128 artIn
+    ) internal {
         // Duplicate check, but guarantees data integrity
         if (auction_.start == 0) {
             revert VaultNotUnderAuction(vaultId);
         }
 
-        DataTypes.Limits memory limits_ = limits[auction_.ilkId][auction_.baseId];
+        DataTypes.Limits memory limits_ = limits[auction_.ilkId][
+            auction_.baseId
+        ];
 
         // Update local auction
         {
@@ -482,7 +589,10 @@ contract Witch is AccessControl {
                 limits_.sum -= auction_.ink;
             } else {
                 // Ensure enough dust is left
-                DataTypes.Debt memory debt = cauldron.debt(auction_.baseId, auction_.ilkId);
+                DataTypes.Debt memory debt = cauldron.debt(
+                    auction_.baseId,
+                    auction_.ilkId
+                );
 
                 uint256 remainder = auction_.art - artIn;
                 uint256 min = debt.min * (10 ** debt.dec);
@@ -515,7 +625,12 @@ contract Witch is AccessControl {
     /// @param buyer Who liquidated the vault
     /// @param ink How much collateral was sold
     /// @param art How much debt was repaid
-    function _collateralBought(bytes12 vaultId, address buyer, uint256 ink, uint256 art) internal virtual {
+    function _collateralBought(
+        bytes12 vaultId,
+        address buyer,
+        uint256 ink,
+        uint256 art
+    ) internal virtual {
         emit Bought(vaultId, buyer, ink, art);
     }
 
@@ -574,7 +689,11 @@ contract Witch is AccessControl {
     /// @return liquidatorCut How much collateral the liquidator is expected to get
     /// @return auctioneerCut How much collateral the auctioneer is expected to get. 0 if liquidator == auctioneer
     /// @return artIn How much debt the liquidator is expected to pay
-    function calcPayout(bytes12 vaultId, address to, uint256 maxArtIn)
+    function calcPayout(
+        bytes12 vaultId,
+        address to,
+        uint256 maxArtIn
+    )
         external
         view
         returns (uint256 liquidatorCut, uint256 auctioneerCut, uint256 artIn)
@@ -586,23 +705,28 @@ contract Witch is AccessControl {
         if (auction_.start == 0) {
             DataTypes.Series memory series = cauldron.series(vault.seriesId);
             DataTypes.Balances memory balances = cauldron.balances(vaultId);
-            DataTypes.Debt memory debt = cauldron.debt(series.baseId, vault.ilkId);
-            (auction_,) = _calcAuction(vault, series, to, balances, debt);
+            DataTypes.Debt memory debt = cauldron.debt(
+                series.baseId,
+                vault.ilkId
+            );
+            (auction_, ) = _calcAuction(vault, series, to, balances, debt);
         }
 
         // GT check is to cater for partial buys right before this method executes
         artIn = maxArtIn > auction_.art ? auction_.art : maxArtIn;
 
-        (liquidatorCut, auctioneerCut, artIn) = _calcPayout(auction_, to, artIn);
+        (liquidatorCut, auctioneerCut, artIn) = _calcPayout(
+            auction_,
+            to,
+            artIn
+        );
         liquidatorCut = _discountInsurancePremium(auction_, liquidatorCut);
     }
 
-    function _discountInsurancePremium(DataTypes.Auction memory auction_, uint256 liquidatorCut)
-        internal
-        view
-        virtual
-        returns (uint256 discountedLiquidatorCut)
-    {
+    function _discountInsurancePremium(
+        DataTypes.Auction memory auction_,
+        uint256 liquidatorCut
+    ) internal view virtual returns (uint256 discountedLiquidatorCut) {
         return liquidatorCut;
     }
 
@@ -615,11 +739,19 @@ contract Witch is AccessControl {
     /// @return auctioneerCut how much collateral will be paid to whomever started the auction
     /// @return requiredArtIn how much art is required to be paid to get the liquidatorCut
     /// Formula: (artIn / totalArt) * totalInk * (initialProportion + (1 - initialProportion) * t)
-    function _calcPayout(DataTypes.Auction memory auction_, address to, uint256 artIn)
+    function _calcPayout(
+        DataTypes.Auction memory auction_,
+        address to,
+        uint256 artIn
+    )
         internal
         view
         virtual
-        returns (uint256 liquidatorCut, uint256 auctioneerCut, uint256 requiredArtIn)
+        returns (
+            uint256 liquidatorCut,
+            uint256 auctioneerCut,
+            uint256 requiredArtIn
+        )
     {
         DataTypes.Line memory line_ = lines[auction_.ilkId][auction_.baseId];
         uint256 duration = line_.duration;
@@ -633,10 +765,19 @@ contract Witch is AccessControl {
             collateralProportionNow = initialCollateralProportion;
         } else if (elapsed >= duration) {
             collateralProportionNow = ONE_HUNDRED_PERCENT;
-            requiredArtIn = _discountDebt(auction_.ilkId, auction_.baseId, auction_.start, duration, requiredArtIn);
+            requiredArtIn = _discountDebt(
+                auction_.ilkId,
+                auction_.baseId,
+                auction_.start,
+                duration,
+                requiredArtIn
+            );
         } else {
             collateralProportionNow =
-                initialCollateralProportion + ((ONE_HUNDRED_PERCENT - initialCollateralProportion) * elapsed) / duration;
+                initialCollateralProportion +
+                ((ONE_HUNDRED_PERCENT - initialCollateralProportion) *
+                    elapsed) /
+                duration;
         }
 
         uint256 inkAtEnd = artIn.wdiv(auction_.art).wmul(auction_.ink);
@@ -650,7 +791,9 @@ contract Witch is AccessControl {
     /// @dev Loads the auction data for a given `vaultId` (if valid)
     /// @param vaultId Id of the vault for which we need the auction data
     /// @return auction_ Auction data for `vaultId`
-    function _auction(bytes12 vaultId) internal view returns (DataTypes.Auction memory auction_) {
+    function _auction(
+        bytes12 vaultId
+    ) internal view returns (DataTypes.Auction memory auction_) {
         auction_ = auctions[vaultId];
 
         if (auction_.start == 0) {
@@ -658,12 +801,13 @@ contract Witch is AccessControl {
         }
     }
 
-    function _discountDebt(bytes6 ilkId, bytes6 baseId, uint256 auctionStart, uint256 auctionDuration, uint256 artIn)
-        internal
-        view
-        virtual
-        returns (uint256 requiredArtIn)
-    {
+    function _discountDebt(
+        bytes6 ilkId,
+        bytes6 baseId,
+        uint256 auctionStart,
+        uint256 auctionDuration,
+        uint256 artIn
+    ) internal view virtual returns (uint256 requiredArtIn) {
         requiredArtIn = artIn;
     }
 

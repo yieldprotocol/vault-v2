@@ -1983,6 +1983,26 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         _auctionWasDeleted(VAULT_ID);
     }
 
+    function testPayBase_NotEnoughBought() public {
+        uint128 maxBaseIn = uint128(auction.art);
+        vm.prank(bot);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, bot, maxBaseIn);
+        uint128 minInkOut = uint128(minInkOut_);
+
+        // make fyToken 1:1 with base to make things simpler
+        cauldron.debtFromBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+        cauldron.debtToBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Witch.NotEnoughBought.selector,
+                minInkOut + 1,
+                minInkOut
+            )
+        );
+        witch.payBase(VAULT_ID, bot, minInkOut + 1, maxBaseIn);
+    }
+
     function testPayBaseAllAndTakesAllWithInsurance() public {
         vm.warp(
             uint256(auction.start) +
@@ -2132,6 +2152,22 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         assertEq(sum, 0, "sum");
 
         _auctionWasDeleted(VAULT_ID);
+    }
+
+    function testPayFYToken_NotEnoughBought() public {
+        uint128 maxArtIn = uint128(auction.art);
+        vm.prank(bot);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, bot, maxArtIn);
+        uint128 minInkOut = uint128(minInkOut_);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Witch.NotEnoughBought.selector,
+                minInkOut + 1,
+                minInkOut
+            )
+        );
+        witch.payFYToken(VAULT_ID, bot, minInkOut+1, maxArtIn);
     }
 
     function testPayFYTokenAllAndTakesAllWithInsurance() public {
