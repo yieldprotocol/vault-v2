@@ -231,4 +231,24 @@ contract ContangoWandTest is Test, TestConstants {
         assertEq(address(contangoOracle.oracle), address(compositeOracle), "oracle");
         assertEq(contangoOracle.ratio, 1.05e6, "ratio");
     }
+
+    function testAddIlks_Auth() public {
+        vm.prank(bob);
+        vm.expectRevert("Access denied");
+        wand.addSeries(FYUSDT2306);
+    }
+
+    function testAddIlks() public {
+        wand.addAsset(USDT);
+        wand.copyLendingOracle(USDT);
+        wand.addSeries(FYUSDT2306);
+        wand.setRatio(USDT, FYETH2306, 1.4e6);
+
+        bytes6[] memory ilkIds = new bytes6[](1);
+        ilkIds[0] = FYETH2306;
+
+        wand.addIlks(FYUSDT2306, ilkIds);
+
+        assertTrue(contangoCauldron.ilks(FYUSDT2306, FYETH2306), "ilk");
+    }
 }
