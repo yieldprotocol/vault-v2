@@ -52,6 +52,8 @@ contract ContangoWandTest is Test, TestConstants {
         AccessControl(address(contangoCauldron)).grantRole(Cauldron.addSeries.selector, address(wand));
         wand.grantRole(wand.addIlks.selector, address(this));
         AccessControl(address(contangoCauldron)).grantRole(Cauldron.addIlks.selector, address(wand));
+        wand.grantRole(wand.setRatio.selector, address(this));
+        wand.grantRole(wand.boundRatio.selector, address(this));
         vm.stopPrank();
     }
 
@@ -150,4 +152,83 @@ contract ContangoWandTest is Test, TestConstants {
         assertEq(yieldSeries.maturity, contangoSeries.maturity, "maturity");
     }
 
+    function testSetRatio_Auth() public {
+        vm.prank(bob);
+        vm.expectRevert("Access denied");
+        wand.setRatio(USDT, FYETH2306, 1.4e6);
+    }
+
+    function testSetRatio_FYToken() public {
+        wand.addAsset(USDT);
+
+        wand.setRatio(USDT, FYETH2306, 1.4e6);
+
+        DataTypes.SpotOracle memory contangoOracle = contangoCauldron.spotOracles(USDT, FYETH2306);
+
+        assertEq(address(contangoOracle.oracle), address(compositeOracle), "oracle");
+        assertEq(contangoOracle.ratio, 1.4e6, "ratio");
+    }
+
+    function testSetRatio_Asset() public {
+        wand.addAsset(USDT);
+
+        wand.setRatio(USDT, ETH, 1.4e6);
+
+        DataTypes.SpotOracle memory contangoOracle = contangoCauldron.spotOracles(USDT, ETH);
+
+        assertEq(address(contangoOracle.oracle), address(compositeOracle), "oracle");
+        assertEq(contangoOracle.ratio, 1.4e6, "ratio");
+    }
+
+    function testSetRatio_LessThanYieldCauldron_FYToken() public {
+        wand.addAsset(USDT);
+
+        DataTypes.SpotOracle memory yieldOracle = yieldCauldron.spotOracles(USDT, ETH);
+        assertEq(yieldOracle.ratio, 1.4e6, "yield oracle ratio");
+
+        vm.expectRevert("Ratio out of bounds");
+        wand.setRatio(USDT, FYETH2306, yieldOracle.ratio - 1);
+    }
+
+    function testSetRatio_LessThanYieldCauldron_Asset() public {
+        wand.addAsset(USDT);
+
+        DataTypes.SpotOracle memory yieldOracle = yieldCauldron.spotOracles(USDT, ETH);
+        assertEq(yieldOracle.ratio, 1.4e6, "yield oracle ratio");
+
+        vm.expectRevert("Ratio out of bounds");
+        wand.setRatio(USDT, ETH, yieldOracle.ratio - 1);
+    }
+
+    function testSetRatio_FYToken_CustomBoundaries() public {
+        wand.addAsset(USDT);
+
+        wand.boundRatio(USDT, FYETH2306, 1.05e6);
+
+        DataTypes.SpotOracle memory yieldOracle = yieldCauldron.spotOracles(USDT, ETH);
+        assertEq(yieldOracle.ratio, 1.4e6, "yield oracle ratio");
+        
+        wand.setRatio(USDT, FYETH2306, 1.05e6);
+
+        DataTypes.SpotOracle memory contangoOracle = contangoCauldron.spotOracles(USDT, FYETH2306);
+
+        assertEq(address(contangoOracle.oracle), address(compositeOracle), "oracle");
+        assertEq(contangoOracle.ratio, 1.05e6, "ratio");
+    }
+
+    function testSetRatio_Asset_CustomBoundaries() public {
+        wand.addAsset(USDT);
+
+        wand.boundRatio(USDT, ETH, 1.05e6);
+
+        DataTypes.SpotOracle memory yieldOracle = yieldCauldron.spotOracles(USDT, ETH);
+        assertEq(yieldOracle.ratio, 1.4e6, "yield oracle ratio");
+        
+        wand.setRatio(USDT, ETH, 1.05e6);
+
+        DataTypes.SpotOracle memory contangoOracle = contangoCauldron.spotOracles(USDT, ETH);
+
+        assertEq(address(contangoOracle.oracle), address(compositeOracle), "oracle");
+        assertEq(contangoOracle.ratio, 1.05e6, "ratio");
+    }
 }

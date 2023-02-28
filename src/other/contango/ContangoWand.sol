@@ -24,7 +24,6 @@ contract ContangoWand is AccessControl {
     mapping(bytes6 => mapping(bytes6 => DataTypes.Debt)) public debt;
 
     DataTypes.Debt public defaultDebtLimits;
-    uint32 public defaultRatio;
 
     constructor(
         ICauldronGov contangoCauldron_,
@@ -82,9 +81,25 @@ contract ContangoWand is AccessControl {
         contangoCauldron.addSeries(seriesId, series_.baseId, series_.fyToken);
     }
 
-    /// @notice Add ilks to series
-    function addIlks(bytes6 seriesId, bytes6[] calldata ilkIds) external auth {
-        contangoCauldron.addIlks(seriesId, ilkIds);
+    /// @notice Set the ratio for a given asset pair in the Cauldron, within bounds. Set the spot oracle always to the composite oracle.
+    function setRatio(bytes6 baseId, bytes6 ilkId, uint32 ratio_) external auth {
+        // If the ilkId is a series and boundaries are not set, set ratio to the default
+        uint32 bound_ = ratio[baseId][ilkId];
+        if (bound_ == 0) {
+            DataTypes.Series memory yieldSeries = contangoCauldron.series(ilkId);
+            if (yieldSeries.fyToken != IFYToken(address(0))) {
+                bound_ = yieldCauldron.spotOracles(baseId, yieldSeries.baseId).ratio;
+            }
+
+            if (bound_ == 0) {
+                bound_ = yieldCauldron.spotOracles(baseId, ilkId).ratio;
+            }
+        }
+
+        require(bound_ != 0, "No bound set");
+        require(ratio_ >= bound_, "Ratio out of bounds");
+
+        contangoCauldron.setSpotOracle(baseId, ilkId, compositeOracle, ratio_);
     }
 
     /// @notice Bound ratio for a given asset pair
@@ -92,20 +107,9 @@ contract ContangoWand is AccessControl {
         ratio[baseId][ilkId] = ratio_;
     }
 
-    /// @notice Set the default ratio
-    function setDefaultRatio(uint32 ratio_) external auth {
-        defaultRatio = ratio_;
-    }
-
-    /// @notice Set the ratio for a given asset pair in the Cauldron, within bounds. Set the spot oracle always to the composite oracle.
-    function setRatio(bytes6 baseId, bytes6 ilkId, uint32 ratio_) external auth {
-        // If the ilkId is a series and boundaries are not set, set ratio to the default
-        uint32 bound_ = ratio[baseId][ilkId];
-        if (bound_ == 0 && contangoCauldron.series(ilkId).fyToken != IFYToken(address(0))) {
-            ratio[baseId][ilkId] = bound_ = defaultRatio;
-        }
-        require(ratio_ >= bound_, "Ratio out of bounds");
-        contangoCauldron.setSpotOracle(baseId, ilkId, compositeOracle, ratio_);
+    /// @notice Add ilks to series
+    function addIlks(bytes6 seriesId, bytes6[] calldata ilkIds) external auth {
+        contangoCauldron.addIlks(seriesId, ilkIds);
     }
 
     function _getDebtDecimals(bytes6 baseId, bytes6 ilkId) internal view returns (uint8 dec) {
