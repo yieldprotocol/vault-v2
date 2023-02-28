@@ -2167,7 +2167,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
                 minInkOut
             )
         );
-        witch.payFYToken(VAULT_ID, bot, minInkOut+1, maxArtIn);
+        witch.payFYToken(VAULT_ID, bot, minInkOut + 1, maxArtIn);
     }
 
     function testPayFYTokenAllAndTakesAllWithInsurance() public {
@@ -2482,4 +2482,28 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
 
         _auctionWasDeleted(VAULT_ID);
     }
+
+    // testCalcPayoutAfterAuctionForNonAuctioneerWithInsurance
+    
+    // testDustLimitProportionUnderDustWithInsurance
+    // testDustLimitRemainderUnderDustWithInsurance
+    // testDustLimitProportionUnderDustAndRemainderUnderDustAfterAdjustingWithInsurance
+
+    // testPayBaseLeavesDustWithInsurance
+    // testPayBasePartialWithInsurance
+    // testPayBasePartialOnPartiallyLiquidatedVaultWithInsurance
+    // testPayBaseAllOnPartiallyLiquidatedVaultWithInsurance
+    // testPayBaseOnAnAuctionStartedBySomeoneElseWithInsurance
+
+    // testPayFYTokenLeavesDustWithInsurance
+    // testPayFYTokenPartialWithInsurance
+    // testPayFYTokenPartialOnPartiallyLiquidatedVaultWithInsurance
+    // testPayFYTokenAllOnPartiallyLiquidatedVaultWithInsurance
+    // testPayFYTokenAllStartedBySomeoneElseWithInsurance
+
+    // testCapTopUpToInsuranceFundBalance
+    // testDonNotPayMoreThanAuctionArt
+
+    // testChargeInsurancePremiumOnNonInsuredPairs
+    // testUseGlobalInsurancePremium
 }
