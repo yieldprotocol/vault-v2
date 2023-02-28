@@ -15,7 +15,7 @@ import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
 contract ContangoWand is AccessControl {
     ICauldronGov public immutable contangoCauldron;
     ICauldron public immutable yieldCauldron;
-    ILadleGov public immutable contangoLadle;
+    ILadle public immutable contangoLadle;
     ILadle public immutable yieldLadle;
     YieldSpaceMultiOracle public immutable yieldSpaceOracle;
     CompositeMultiOracle public immutable compositeOracle;
@@ -29,7 +29,7 @@ contract ContangoWand is AccessControl {
     constructor(
         ICauldronGov contangoCauldron_,
         ICauldron yieldCauldron_,
-        ILadleGov contangoLadle_,
+        ILadle contangoLadle_,
         ILadle yieldLadle_,
         YieldSpaceMultiOracle yieldSpaceOracle_,
         CompositeMultiOracle compositeOracle_
@@ -190,7 +190,7 @@ contract ContangoWand is AccessControl {
     function addPool(bytes6 seriesId) external auth {
         address pool_ = yieldLadle.pools(seriesId);
         require(pool_ != address(0), "Pool not known to the Yield Ladle");
-        contangoLadle.addPool(seriesId, pool_);
+        contangoLadle.addPool(seriesId, IPool(pool_));
     }
 
     /// @notice Propagate an integration to the Ladle from the Yield Ladle
@@ -206,6 +206,6 @@ contract ContangoWand is AccessControl {
     /// @notice Add join to the Ladle.
     /// @dev These will often be used to hold fyToken, so it doesn't seem possible to put boundaries. However, it seems low risk. Famous last words.
     function addJoin(bytes6 assetId, address join) external auth {
-        contangoLadle.addJoin(assetId, join);
+        contangoLadle.addJoin(assetId, IJoin(join));
     }
 }

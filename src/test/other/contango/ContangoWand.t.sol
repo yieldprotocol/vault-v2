@@ -13,7 +13,7 @@ contract ContangoWandTest is Test, TestConstants {
     ICauldron internal contangoCauldron = ICauldron(0x44386ddB4C44E7CB8981f97AF89E928Ddd4258DD);
     ICauldron internal yieldCauldron = ICauldron(0x23cc87FBEBDD67ccE167Fa9Ec6Ad3b7fE3892E30);
 
-    ILadleGov public immutable contangoLadle = ILadleGov(0x93343C08e2055b7793a3336d659Be348FC1B08f9);
+    ILadle public immutable contangoLadle = ILadle(0x93343C08e2055b7793a3336d659Be348FC1B08f9);
     ILadle public immutable yieldLadle = ILadle(0x16E25cf364CeCC305590128335B8f327975d0560);
 
     YieldSpaceMultiOracle public immutable yieldSpaceOracle =
@@ -31,7 +31,7 @@ contract ContangoWandTest is Test, TestConstants {
         wand = new ContangoWand(
             ICauldronGov(address(contangoCauldron)),
             yieldCauldron,
-            ILadleGov(address(contangoLadle)),
+            contangoLadle,
             yieldLadle,
             yieldSpaceOracle,
             compositeOracle
@@ -64,6 +64,8 @@ contract ContangoWandTest is Test, TestConstants {
         wand.grantRole(wand.setCompositeOracleSource.selector, address(this));
         AccessControl(address(compositeOracle)).grantRole(CompositeMultiOracle.setPath.selector, address(wand));
         wand.grantRole(wand.setCompositeOraclePath.selector, address(this));
+        AccessControl(address(contangoLadle)).grantRole(ILadle.addPool.selector, address(wand));
+        wand.grantRole(wand.addPool.selector, address(this));
         vm.stopPrank();
     }
 
@@ -354,5 +356,26 @@ contract ContangoWandTest is Test, TestConstants {
         (uint256 amountQuote, uint256 updateTime) = compositeOracle.peek(USDT, FYETH2306, 1000e6);
         assertGt(amountQuote, 0, "amountQuote");
         assertGt(updateTime, 0, "updateTime");
+    }
+
+    function testAddPool_Auth() public {
+        vm.prank(bob);
+        vm.expectRevert("Access denied");
+        wand.addPool(FYUSDT2306);
+    }
+
+    function testAddPool_Invalid() public {
+        vm.expectRevert("Pool not known to the Yield Ladle");
+        wand.addPool("meh");
+    }
+
+    function testAddPool() public {
+        wand.addAsset(USDT);
+        wand.copyLendingOracle(USDT);
+        wand.addSeries(FYUSDT2306);
+
+        wand.addPool(FYUSDT2306);
+
+        assertEq(contangoLadle.pools(FYUSDT2306), 0xc6078e090641cC32b05a7F3F102F272A4Ee19867, "pool");
     }
 }

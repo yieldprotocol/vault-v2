@@ -6607,8 +6607,8 @@
       }
     },
     "src/other/contango/ContangoWand.sol": {
-      "lastModificationDate": 1677600843322,
-      "contentHash": "d0e37c1e73f7d73d6807860278c19a07",
+      "lastModificationDate": 1677603976743,
+      "contentHash": "b410c3dbd14924d2a3cdfb96ab9c9989",
       "sourceName": "src/other/contango/ContangoWand.sol",
       "solcConfig": {
         "settings": {
@@ -9796,8 +9796,8 @@
       }
     },
     "src/test/other/contango/ContangoWand.t.sol": {
-      "lastModificationDate": 1677600931649,
-      "contentHash": "95bd446681df5ca6533ab98979b61741",
+      "lastModificationDate": 1677604196739,
+      "contentHash": "8e98b8e5bdfb1a6acce00fbcc4ecc5e8",
       "sourceName": "src/test/other/contango/ContangoWand.t.sol",
       "solcConfig": {
         "settings": {
