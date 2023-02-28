@@ -21,6 +21,8 @@ contract ContangoWandTest is Test, TestConstants {
     CompositeMultiOracle public immutable compositeOracle =
         CompositeMultiOracle(0x750B3a18115fe090Bc621F9E4B90bd442bcd02F2);
 
+    address internal bob = address(0xb0b);
+
     ContangoWand internal wand;
 
     function setUp() public virtual {
@@ -35,22 +37,31 @@ contract ContangoWandTest is Test, TestConstants {
             compositeOracle
         );
 
+        wand.grantRole(wand.ROOT(), addresses[ARBITRUM][TIMELOCK]);
+
         vm.startPrank(addresses[ARBITRUM][TIMELOCK]);
+        wand.grantRole(wand.copySpotOracle.selector, address(this));
         AccessControl(address(contangoCauldron)).grantRole(Cauldron.setSpotOracle.selector, address(wand));
+        wand.grantRole(wand.copyLendingOracle.selector, address(this));
         AccessControl(address(contangoCauldron)).grantRole(Cauldron.setLendingOracle.selector, address(wand));
+        wand.grantRole(wand.copyDebtLimits.selector, address(this));
         AccessControl(address(contangoCauldron)).grantRole(Cauldron.setDebtLimits.selector, address(wand));
+        wand.grantRole(wand.addAsset.selector, address(this));
         AccessControl(address(contangoCauldron)).grantRole(Cauldron.addAsset.selector, address(wand));
+        wand.grantRole(wand.addSeries.selector, address(this));
         AccessControl(address(contangoCauldron)).grantRole(Cauldron.addSeries.selector, address(wand));
+        wand.grantRole(wand.addIlks.selector, address(this));
+        AccessControl(address(contangoCauldron)).grantRole(Cauldron.addIlks.selector, address(wand));
         vm.stopPrank();
     }
 
     function testCopySpotOracle_Auth() public {
+        vm.prank(bob);
         vm.expectRevert("Access denied");
         wand.copySpotOracle(USDC, FYETH2306);
     }
 
     function testCopySpotOracle() public {
-        wand.grantRole(wand.copySpotOracle.selector, address(this));
         wand.copySpotOracle(USDC, ETH);
 
         DataTypes.SpotOracle memory yieldOracle = yieldCauldron.spotOracles(USDC, ETH);
@@ -61,12 +72,12 @@ contract ContangoWandTest is Test, TestConstants {
     }
 
     function testCopyLendingOracle_Auth() public {
+        vm.prank(bob);
         vm.expectRevert("Access denied");
         wand.copyLendingOracle(USDC);
     }
 
     function testCopyLendingOracle() public {
-        wand.grantRole(wand.copyLendingOracle.selector, address(this));
         wand.copyLendingOracle(USDC);
 
         IOracle yieldOracle = yieldCauldron.lendingOracles(USDC);
@@ -76,12 +87,12 @@ contract ContangoWandTest is Test, TestConstants {
     }
 
     function testCopyDebtLimits_Auth() public {
+        vm.prank(bob);
         vm.expectRevert("Access denied");
         wand.copyDebtLimits(USDC, FYETH2306);
     }
 
     function testCopyDebtLimits() public {
-        wand.grantRole(wand.copyDebtLimits.selector, address(this));
         wand.copyDebtLimits(USDC, ETH);
 
         DataTypes.Debt memory yieldDebt = yieldCauldron.debt(USDC, ETH);
@@ -93,7 +104,6 @@ contract ContangoWandTest is Test, TestConstants {
     }
 
     function testCopyDebtLimits_FromSeries() public {
-        wand.grantRole(wand.copyDebtLimits.selector, address(this));
         wand.copyDebtLimits(USDC, FYETH2306);
 
         DataTypes.Debt memory yieldDebt = yieldCauldron.debt(USDC, ETH);
@@ -105,34 +115,31 @@ contract ContangoWandTest is Test, TestConstants {
     }
 
     function testAddAsset_Auth() public {
+        vm.prank(bob);
         vm.expectRevert("Access denied");
         wand.addAsset(USDT);
     }
 
     function testAddAsset() public {
-        wand.grantRole(wand.addAsset.selector, address(this));
         wand.addAsset(USDT);
         assertEq(contangoCauldron.assets(USDT), 0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9, "asset");
     }
 
     function testAddAsset_FromSeries() public {
-        wand.grantRole(wand.addAsset.selector, address(this));
         wand.addAsset(FYUSDT2306);
         assertEq(contangoCauldron.assets(FYUSDT2306), 0x035072cb2912DAaB7B578F468Bd6F0d32a269E32, "asset");
     }
 
     function testAddSeries_Auth() public {
+        vm.prank(bob);
         vm.expectRevert("Access denied");
         wand.addSeries(FYUSDT2306);
     }
 
     function testAddSeries() public {
-        wand.grantRole(wand.addAsset.selector, address(this));
         wand.addAsset(USDT);
-        wand.grantRole(wand.copyLendingOracle.selector, address(this));
         wand.copyLendingOracle(USDT);
 
-        wand.grantRole(wand.addSeries.selector, address(this));
         wand.addSeries(FYUSDT2306);
 
         DataTypes.Series memory yieldSeries = yieldCauldron.series(FYUSDT2306);
@@ -142,4 +149,5 @@ contract ContangoWandTest is Test, TestConstants {
         assertEq(yieldSeries.baseId, contangoSeries.baseId, "baseId");
         assertEq(yieldSeries.maturity, contangoSeries.maturity, "maturity");
     }
+
 }
