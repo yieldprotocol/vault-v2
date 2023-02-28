@@ -2650,6 +2650,113 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         _auctionWasDeleted(VAULT_ID);
     }
 
+    function testPayFYTokenLeavesDustWithInsurance() public {
+        // Bot tries to pay an amount that'd leaves dust
+        uint128 maxArtIn = auction.art - 4999e6;
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, bot, maxArtIn);
+        uint128 minInkOut = uint128(minInkOut_);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(Witch.LeavesDust.selector, 4999e6, 5000e6)
+        );
+        witch.payFYToken(VAULT_ID, bot, minInkOut, maxArtIn);
+    }
+
+    function testPayFYTokenPartialWithInsurance() public {
+        // Bot Will pay 40% of the debt (for some reason)
+        uint128 maxArtIn = uint128(auction.art.wmul(0.4e18));
+        vm.prank(bot);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, bot, maxArtIn);
+        uint128 minInkOut = uint128(minInkOut_);
+        uint128 premium = uint128(
+            minInkOut.wdiv(1e18 - insurancePremium) - minInkOut
+        );
+
+        _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxArtIn);
+
+        // Reduce balances on the vault
+        cauldron.slurp.mock(VAULT_ID, minInkOut + premium, maxArtIn, balances);
+        cauldron.slurp.verify(VAULT_ID, minInkOut + premium, maxArtIn);
+
+        IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
+        ladle.joins.mock(vault.ilkId, ilkJoin);
+        ilkJoin.exit.mock(bot, minInkOut, minInkOut);
+        ilkJoin.exit.verify(bot, minInkOut);
+
+        ilkJoin.exit.mock(insuranceFund, premium, premium);
+        ilkJoin.exit.verify(insuranceFund, premium);
+
+        series.fyToken.burn.mock(bot, maxArtIn);
+        series.fyToken.burn.verify(bot, maxArtIn);
+
+        vm.expectEmit(true, true, true, true);
+        emit Bought(VAULT_ID, bot, minInkOut, maxArtIn);
+
+        vm.prank(bot);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 artIn) = witch
+            .payFYToken(VAULT_ID, bot, minInkOut, maxArtIn);
+        assertEq(liquidatorCut, minInkOut);
+        assertEq(auctioneerCut, 0);
+        assertEq(artIn, maxArtIn);
+
+        // sum is reduced by auction.ink
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, auction.ink - minInkOut - premium, "sum");
+
+        _auctionWasUpdated(VAULT_ID, maxArtIn, minInkOut + premium);
+    }
+
+    function testPayFYTokenPartialOnPartiallyLiquidatedVaultWithInsurance()
+        public
+    {
+        // liquidate 40% of the vault
+        testPayFYTokenPartialWithInsurance();
+        // Refresh auction copy
+        auction = iWitch.auctions(VAULT_ID);
+
+        // Bot Will pay another 20% of the debt (for some reason)
+        uint128 maxArtIn = uint128(auction.art.wmul(0.2e18));
+        vm.prank(bot);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, bot, maxArtIn);
+        uint128 minInkOut = uint128(minInkOut_);
+        uint128 premium = uint128(
+            minInkOut.wdiv(1e18 - insurancePremium) - minInkOut
+        );
+
+        _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxArtIn);
+
+        // Reduce balances on the vault
+        cauldron.slurp.mock(VAULT_ID, minInkOut + premium, maxArtIn, balances);
+        cauldron.slurp.verify(VAULT_ID, minInkOut + premium, maxArtIn);
+
+        IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
+        ladle.joins.mock(vault.ilkId, ilkJoin);
+        ilkJoin.exit.mock(bot, minInkOut, minInkOut);
+        ilkJoin.exit.verify(bot, minInkOut);
+
+        ilkJoin.exit.mock(insuranceFund, premium, premium);
+        ilkJoin.exit.verify(insuranceFund, premium);
+
+        series.fyToken.burn.mock(bot, maxArtIn);
+        series.fyToken.burn.verify(bot, maxArtIn);
+
+        vm.expectEmit(true, true, true, true);
+        emit Bought(VAULT_ID, bot, minInkOut, maxArtIn);
+
+        vm.prank(bot);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 artIn) = witch
+            .payFYToken(VAULT_ID, bot, minInkOut, maxArtIn);
+        assertEq(liquidatorCut, minInkOut);
+        assertEq(auctioneerCut, 0);
+        assertEq(artIn, maxArtIn);
+
+        // sum is reduced by auction.ink
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, auction.ink - minInkOut - premium, "sum");
+
+        _auctionWasUpdated(VAULT_ID, maxArtIn, minInkOut + premium);
+    }
+
     function testPayFYTokenAll() public {
         uint128 maxArtIn = uint128(auction.art);
         vm.prank(bot);
@@ -2795,6 +2902,134 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         assertEq(liquidatorCut, minInkOut);
         assertEq(liquidatorCut, balances.ink.wmul(proportion), "liquidatorCut");
         assertEq(auctioneerCut, 0);
+        assertEq(baseIn, maxArtIn);
+
+        // sum is reduced by auction.ink
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, 0, "sum");
+
+        _auctionWasDeleted(VAULT_ID);
+    }
+
+    function testPayFYTokenAllOnPartiallyLiquidatedVaultWithInsurance() public {
+        // liquidate 40% of the vault
+        testPayFYTokenPartialWithInsurance();
+        // Refresh auction copy
+        auction = iWitch.auctions(VAULT_ID);
+        uint128 maxArtIn = uint128(auction.art);
+        vm.prank(bot);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, bot, maxArtIn);
+        uint128 minInkOut = uint128(minInkOut_);
+        uint128 premium = uint128(
+            minInkOut.wdiv(1e18 - insurancePremium) - minInkOut
+        );
+
+        _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxArtIn);
+        _verifyAuctionEnded(VAULT_ID, bob);
+
+        // Reduce balances on the vault
+        cauldron.slurp.mock(VAULT_ID, minInkOut + premium, maxArtIn, balances);
+        cauldron.slurp.verify(VAULT_ID, minInkOut + premium, maxArtIn);
+        // Vault returns to it's owner after all the liquidation is done
+        cauldron.give.mock(VAULT_ID, bob, vault);
+        cauldron.give.verify(VAULT_ID, bob);
+
+        IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
+        ladle.joins.mock(vault.ilkId, ilkJoin);
+        ilkJoin.exit.mock(bot, minInkOut, minInkOut);
+        ilkJoin.exit.verify(bot, minInkOut);
+
+        ilkJoin.exit.mock(insuranceFund, premium, premium);
+        ilkJoin.exit.verify(insuranceFund, premium);
+
+        series.fyToken.burn.mock(bot, maxArtIn);
+        series.fyToken.burn.verify(bot, maxArtIn);
+
+        vm.expectEmit(true, true, true, true);
+        emit Ended(VAULT_ID);
+        vm.expectEmit(true, true, true, true);
+        emit Bought(VAULT_ID, bot, minInkOut, maxArtIn);
+
+        vm.prank(bot);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) = witch
+            .payFYToken(VAULT_ID, bot, minInkOut, maxArtIn);
+        assertEq(liquidatorCut, minInkOut);
+        assertEq(auctioneerCut, 0);
+        assertEq(baseIn, maxArtIn);
+
+        // sum is reduced by auction.ink
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, 0, "sum");
+
+        _auctionWasDeleted(VAULT_ID);
+    }
+
+    function testPayFYTokenAllStartedBySomeoneElseWithInsurance() public {
+        address bot2 = address(0xb072);
+
+        uint128 maxArtIn = uint128(auction.art);
+        vm.prank(bot2);
+        (uint256 liquidatorCut_, uint256 auctioneerCut_, ) = witch.calcPayout(
+            VAULT_ID,
+            bot2,
+            maxArtIn
+        );
+        uint128 liquidatorCut = uint128(liquidatorCut_);
+        uint128 auctioneerCut = uint128(auctioneerCut_);
+        uint128 premium = uint128(
+            liquidatorCut.wdiv(1e18 - insurancePremium) - liquidatorCut
+        );
+
+        _verifyCollateralBought(
+            VAULT_ID,
+            bot2,
+            liquidatorCut + auctioneerCut,
+            maxArtIn
+        );
+        _verifyAuctionEnded(VAULT_ID, bob);
+
+        // Reduce balances on the vault
+        cauldron.slurp.mock(
+            VAULT_ID,
+            liquidatorCut + auctioneerCut + premium,
+            maxArtIn,
+            balances
+        );
+        cauldron.slurp.verify(
+            VAULT_ID,
+            liquidatorCut + auctioneerCut + premium,
+            maxArtIn
+        );
+        // Vault returns to it's owner after all the liquidation is done
+        cauldron.give.mock(VAULT_ID, bob, vault);
+        cauldron.give.verify(VAULT_ID, bob);
+
+        IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
+        ladle.joins.mock(vault.ilkId, ilkJoin);
+
+        // Liquidator share
+        ilkJoin.exit.mock(bot2, liquidatorCut, liquidatorCut);
+        ilkJoin.exit.verify(bot2, liquidatorCut);
+        // Auctioneer share
+        ilkJoin.exit.mock(bot, auctioneerCut, auctioneerCut);
+        ilkJoin.exit.verify(bot, auctioneerCut);
+        // Insurance fund share
+        ilkJoin.exit.mock(insuranceFund, premium, premium);
+        ilkJoin.exit.verify(insuranceFund, premium);
+
+        series.fyToken.burn.mock(bot2, maxArtIn);
+        series.fyToken.burn.verify(bot2, maxArtIn);
+
+        vm.expectEmit(true, true, true, true);
+        emit Ended(VAULT_ID);
+        vm.expectEmit(true, true, true, true);
+        emit Bought(VAULT_ID, bot2, liquidatorCut + auctioneerCut, maxArtIn);
+
+        vm.prank(bot2);
+        (uint256 _liquidatorCut, uint256 _auctioneerCut, uint256 baseIn) = witch
+            .payFYToken(VAULT_ID, bot2, liquidatorCut, maxArtIn);
+        assertEq(_liquidatorCut, liquidatorCut);
+        assertEq(_auctioneerCut, auctioneerCut);
         assertEq(baseIn, maxArtIn);
 
         // sum is reduced by auction.ink
@@ -3028,15 +3263,11 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         _auctionWasDeleted(VAULT_ID);
     }
 
-    // testPayFYTokenLeavesDustWithInsurance
-    // testPayFYTokenPartialWithInsurance
-    // testPayFYTokenPartialOnPartiallyLiquidatedVaultWithInsurance
-    // testPayFYTokenAllOnPartiallyLiquidatedVaultWithInsurance
-    // testPayFYTokenAllStartedBySomeoneElseWithInsurance
-
     // testCapTopUpToInsuranceFundBalance
     // testDonNotPayMoreThanAuctionArt
 
     // testChargeInsurancePremiumOnNonInsuredPairs
     // testUseGlobalInsurancePremium
+
+    // fix Bought event quantities
 }
