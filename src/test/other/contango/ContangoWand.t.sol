@@ -5,6 +5,7 @@ import "forge-std/src/Test.sol";
 import "../../utils/TestConstants.sol";
 import "../../utils/Mocks.sol";
 
+import "../../../interfaces/IWitch.sol";
 import "../../../Cauldron.sol";
 import "../../../Join.sol";
 import "../../../other/contango/ContangoLadle.sol";
@@ -12,10 +13,12 @@ import "../../../other/contango/ContangoWand.sol";
 
 contract ContangoWandTest is Test, TestConstants {
     ICauldron internal contangoCauldron = ICauldron(0x44386ddB4C44E7CB8981f97AF89E928Ddd4258DD);
-    ICauldron internal yieldCauldron = ICauldron(0x23cc87FBEBDD67ccE167Fa9Ec6Ad3b7fE3892E30);
-
     ILadle public immutable contangoLadle = ILadle(0x93343C08e2055b7793a3336d659Be348FC1B08f9);
+    IWitch internal immutable contangoWitch = IWitch(0x89343a24a217172A569A0bD68763Bf0671A3efd8);
+
+    ICauldron internal yieldCauldron = ICauldron(0x23cc87FBEBDD67ccE167Fa9Ec6Ad3b7fE3892E30);
     ILadle public immutable yieldLadle = ILadle(0x16E25cf364CeCC305590128335B8f327975d0560);
+    address internal immutable yieldTimelock = 0xd0a22827Aed2eF5198EbEc0093EA33A4CD641b6c;
 
     YieldSpaceMultiOracle public immutable yieldSpaceOracle =
         YieldSpaceMultiOracle(0xb958bA862D70C0a4bD0ea976f9a1907686dd41e2);
@@ -30,17 +33,24 @@ contract ContangoWandTest is Test, TestConstants {
         vm.createSelectFork("ARBITRUM", 65404751);
 
         wand = new ContangoWand(
-            ICauldronGov(address(contangoCauldron)),
+            contangoCauldron,
             yieldCauldron,
             contangoLadle,
             yieldLadle,
             yieldSpaceOracle,
-            compositeOracle
+            compositeOracle,
+            yieldTimelock,
+            contangoWitch
         );
 
-        wand.grantRole(wand.ROOT(), addresses[ARBITRUM][TIMELOCK]);
+        bytes4 root = 0x0;
+        wand.grantRole(root, addresses[ARBITRUM][TIMELOCK]);
 
         vm.startPrank(addresses[ARBITRUM][TIMELOCK]);
+
+        AccessControl(address(yieldLadle.joins(USDT))).grantRole(root, address(wand));
+        AccessControl(address(yieldCauldron.series(FYUSDT2306).fyToken)).grantRole(root, address(wand));
+
         wand.grantRole(wand.copySpotOracle.selector, address(this));
         AccessControl(address(contangoCauldron)).grantRole(Cauldron.setSpotOracle.selector, address(wand));
         wand.grantRole(wand.copyLendingOracle.selector, address(this));
@@ -158,9 +168,6 @@ contract ContangoWandTest is Test, TestConstants {
     }
 
     function testAddSeries() public {
-        wand.addAsset(USDT);
-        wand.copyLendingOracle(USDT);
-
         wand.addSeries(FYUSDT2306);
 
         DataTypes.Series memory yieldSeries = yieldCauldron.series(FYUSDT2306);
@@ -423,7 +430,7 @@ contract ContangoWandTest is Test, TestConstants {
     function testAddJoin() public {
         wand.addAsset(USDT);
 
-        IJoin join = new Join(contangoCauldron.assets(USDT));
+        IJoin join = yieldLadle.joins(USDT);
 
         wand.addJoin(USDT, join);
 

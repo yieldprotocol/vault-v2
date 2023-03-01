@@ -3421,9 +3421,69 @@
       }
     },
     "src/interfaces/IWitch.sol": {
-      "lastModificationDate": 1677585086205,
-      "contentHash": "9c7cbc5e6e506d664972afc0301d09c2",
+      "lastModificationDate": 1677692998745,
+      "contentHash": "8d853d1edd96e5fa77f6be325963e45f",
       "sourceName": "src/interfaces/IWitch.sol",
+      "solcConfig": {
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "metadata": {
+            "bytecodeHash": "ipfs",
+            "appendCBOR": true
+          },
+          "outputSelection": {
+            "*": {
+              "": [
+                "ast"
+              ],
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ]
+            }
+          },
+          "evmVersion": "london",
+          "libraries": {}
+        }
+      },
+      "imports": [
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/interfaces/IWETH9.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/token/ERC20.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/token/IERC20.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/token/IERC20Metadata.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/token/IERC2612.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/IsContract.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/RevertMsgExtractor.sol",
+        "lib/yieldspace-tv/src/interfaces/IMaturingToken.sol",
+        "lib/yieldspace-tv/src/interfaces/IPool.sol",
+        "src/Router.sol",
+        "src/interfaces/DataTypes.sol",
+        "src/interfaces/ICauldron.sol",
+        "src/interfaces/ICauldronGov.sol",
+        "src/interfaces/IERC5095.sol",
+        "src/interfaces/IFYToken.sol",
+        "src/interfaces/IJoin.sol",
+        "src/interfaces/ILadle.sol",
+        "src/interfaces/IOracle.sol",
+        "src/interfaces/IWitchGov.sol"
+      ],
+      "versionRequirement": "^0.8.0",
+      "artifacts": {
+        "IWitch": {
+          "0.8.15+commit.e14f2714.Darwin.appleclang": "IWitch.sol/IWitch.json"
+        }
+      }
+    },
+    "src/interfaces/IWitchGov.sol": {
+      "lastModificationDate": 1677692998745,
+      "contentHash": "8ac63c848c2a23972234964a105b17e1",
+      "sourceName": "src/interfaces/IWitchGov.sol",
       "solcConfig": {
         "settings": {
           "optimizer": {
@@ -3474,8 +3534,8 @@
       ],
       "versionRequirement": "^0.8.0",
       "artifacts": {
-        "IWitch": {
-          "0.8.15+commit.e14f2714.Darwin.appleclang": "IWitch.sol/IWitch.json"
+        "IWitchGov": {
+          "0.8.15+commit.e14f2714.Darwin.appleclang": "IWitchGov.sol/IWitchGov.json"
         }
       }
     },
@@ -6607,8 +6667,8 @@
       }
     },
     "src/other/contango/ContangoWand.sol": {
-      "lastModificationDate": 1677605001004,
-      "contentHash": "61c7561599ce636f8e1490bc5061af1d",
+      "lastModificationDate": 1677692998746,
+      "contentHash": "e1df3b52d3f725c5edf965e5e23d9cfc",
       "sourceName": "src/other/contango/ContangoWand.sol",
       "solcConfig": {
         "settings": {
@@ -6639,18 +6699,23 @@
         }
       },
       "imports": [
+        "lib/ERC3156/contracts/interfaces/IERC3156FlashBorrower.sol",
+        "lib/ERC3156/contracts/interfaces/IERC3156FlashLender.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/access/AccessControl.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/interfaces/IWETH9.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/token/ERC20.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/token/IERC20.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/token/IERC20Metadata.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/token/IERC2612.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/token/TransferHelper.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/Cast.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/IsContract.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/Math.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/RevertMsgExtractor.sol",
         "lib/yieldspace-tv/src/interfaces/IMaturingToken.sol",
         "lib/yieldspace-tv/src/interfaces/IPool.sol",
         "lib/yieldspace-tv/src/interfaces/IPoolOracle.sol",
+        "src/Join.sol",
         "src/Router.sol",
         "src/interfaces/DataTypes.sol",
         "src/interfaces/ICauldron.sol",
@@ -6658,9 +6723,12 @@
         "src/interfaces/IERC5095.sol",
         "src/interfaces/IFYToken.sol",
         "src/interfaces/IJoin.sol",
+        "src/interfaces/IJoinFactory.sol",
         "src/interfaces/ILadle.sol",
         "src/interfaces/ILadleGov.sol",
         "src/interfaces/IOracle.sol",
+        "src/interfaces/IWitch.sol",
+        "src/interfaces/IWitchGov.sol",
         "src/oracles/composite/CompositeMultiOracle.sol",
         "src/oracles/yieldspace/YieldSpaceMultiOracle.sol"
       ],
@@ -7744,6 +7812,7 @@
         "src/interfaces/ILadle.sol",
         "src/interfaces/IOracle.sol",
         "src/interfaces/IWitch.sol",
+        "src/interfaces/IWitchGov.sol",
         "src/test/utils/Mocks.sol",
         "src/test/utils/TestConstants.sol"
       ],
@@ -9796,8 +9865,8 @@
       }
     },
     "src/test/other/contango/ContangoWand.t.sol": {
-      "lastModificationDate": 1677605131493,
-      "contentHash": "6a6d1060eb6289364ab6c03f0a87878a",
+      "lastModificationDate": 1677693593105,
+      "contentHash": "1ebf52493547998daf24e0e5dddf5f11",
       "sourceName": "src/test/other/contango/ContangoWand.t.sol",
       "solcConfig": {
         "settings": {
@@ -9877,6 +9946,8 @@
         "src/interfaces/ILadle.sol",
         "src/interfaces/ILadleGov.sol",
         "src/interfaces/IOracle.sol",
+        "src/interfaces/IWitch.sol",
+        "src/interfaces/IWitchGov.sol",
         "src/oracles/composite/CompositeMultiOracle.sol",
         "src/oracles/yieldspace/YieldSpaceMultiOracle.sol",
         "src/other/contango/ContangoLadle.sol",
