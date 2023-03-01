@@ -763,6 +763,7 @@ contract Witch is AccessControl {
             requiredArtIn = _discountDebt(
                 auction_.ilkId,
                 auction_.baseId,
+                auction_.seriesId,
                 auction_.start,
                 duration,
                 requiredArtIn
@@ -808,6 +809,7 @@ contract Witch is AccessControl {
     function _discountDebt(
         bytes6 ilkId,
         bytes6 baseId,
+        bytes6 seriesId,
         uint256 auctionStart,
         uint256 auctionDuration,
         uint256 artIn
