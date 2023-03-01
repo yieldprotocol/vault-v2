@@ -406,18 +406,22 @@ contract Witch is AccessControl {
         uint256 totalArtIn = _topUpDebt(vaultId, auction_, artIn, true);
 
         // Calculate the collateral to be sold
-        (liquidatorCut, auctioneerCut, ) = _calcPayout(
+        uint256 insurancePremium;
+        (liquidatorCut, auctioneerCut, insurancePremium, ) = _calcPayout(
             auction_,
             to,
             totalArtIn
         );
-        _validateInkOut(auction_, liquidatorCut, minInkOut);
+
+        if (liquidatorCut < minInkOut) {
+            revert NotEnoughBought(minInkOut, liquidatorCut);
+        }
 
         // Update Cauldron and local auction data
         _updateAccounting(
             vaultId,
             auction_,
-            (liquidatorCut + auctioneerCut).u128(),
+            (liquidatorCut + auctioneerCut + insurancePremium).u128(),
             totalArtIn.u128()
         );
 
@@ -426,7 +430,8 @@ contract Witch is AccessControl {
             auction_,
             to,
             liquidatorCut,
-            auctioneerCut
+            auctioneerCut,
+            insurancePremium
         );
 
         baseIn = cauldron.debtToBase(auction_.seriesId, artIn.u128());
@@ -438,18 +443,9 @@ contract Witch is AccessControl {
         _collateralBought(
             vaultId,
             to,
-            liquidatorCut + auctioneerCut,
+            liquidatorCut + auctioneerCut + insurancePremium,
             totalArtIn
         );
-    }
-
-    function _topUpDebt(
-        bytes12 vaultId,
-        DataTypes.Auction memory auction_,
-        uint256 artIn,
-        bool baseTopUp
-    ) internal virtual returns (uint256 requiredArtIn) {
-        return artIn;
     }
 
     /// @notice If too much fyToken are offered, only the necessary amount are taken.
@@ -478,18 +474,22 @@ contract Witch is AccessControl {
         uint256 totalArtIn = _topUpDebt(vaultId, auction_, artIn, false);
 
         // Calculate the collateral to be sold
-        (liquidatorCut, auctioneerCut, ) = _calcPayout(
+        uint256 insurancePremium;
+        (liquidatorCut, auctioneerCut, insurancePremium, ) = _calcPayout(
             auction_,
             to,
             totalArtIn
         );
-        _validateInkOut(auction_, liquidatorCut, minInkOut);
+
+        if (liquidatorCut < minInkOut) {
+            revert NotEnoughBought(minInkOut, liquidatorCut);
+        }
 
         // Update Cauldron and local auction data
         _updateAccounting(
             vaultId,
             auction_,
-            (liquidatorCut + auctioneerCut).u128(),
+            (liquidatorCut + auctioneerCut + insurancePremium).u128(),
             totalArtIn.u128()
         );
 
@@ -498,7 +498,8 @@ contract Witch is AccessControl {
             auction_,
             to,
             liquidatorCut,
-            auctioneerCut
+            auctioneerCut,
+            insurancePremium
         );
 
         if (artIn != 0) {
@@ -509,20 +510,18 @@ contract Witch is AccessControl {
         _collateralBought(
             vaultId,
             to,
-            liquidatorCut + auctioneerCut,
+            liquidatorCut + auctioneerCut + insurancePremium,
             totalArtIn
         );
     }
 
-    function _validateInkOut(
+    function _topUpDebt(
+        bytes12 vaultId,
         DataTypes.Auction memory auction_,
-        uint256 liquidatorCut,
-        uint256 minInkOut
-    ) internal view virtual {
-        liquidatorCut = _discountInsurancePremium(auction_, liquidatorCut);
-        if (liquidatorCut < minInkOut) {
-            revert NotEnoughBought(minInkOut, liquidatorCut);
-        }
+        uint256 artIn,
+        bool baseTopUp
+    ) internal virtual returns (uint256 requiredArtIn) {
+        return artIn;
     }
 
     /// @dev transfers funds from the ilkJoin to the liquidator (and potentially the auctioneer if they're different people)
@@ -530,12 +529,14 @@ contract Witch is AccessControl {
     /// @param to Who's gonna get the `liquidatorCut`
     /// @param liquidatorCut How much collateral the liquidator is expected to get
     /// @param auctioneerCut How much collateral the auctioneer is expected to get. 0 if liquidator == auctioneer
+    /// @param insurancePremium How much collateral is being paid to the insurance fund
     /// @return updated liquidatorCut & auctioneerCut
     function _payInk(
         DataTypes.Auction memory auction_,
         address to,
         uint256 liquidatorCut,
-        uint256 auctioneerCut
+        uint256 auctioneerCut,
+        uint256 insurancePremium
     ) internal virtual returns (uint256, uint256) {
         IJoin ilkJoin = _join(auction_.ilkId);
 
@@ -715,19 +716,11 @@ contract Witch is AccessControl {
         // GT check is to cater for partial buys right before this method executes
         artIn = maxArtIn > auction_.art ? auction_.art : maxArtIn;
 
-        (liquidatorCut, auctioneerCut, artIn) = _calcPayout(
+        (liquidatorCut, auctioneerCut, , artIn) = _calcPayout(
             auction_,
             to,
             artIn
         );
-        liquidatorCut = _discountInsurancePremium(auction_, liquidatorCut);
-    }
-
-    function _discountInsurancePremium(
-        DataTypes.Auction memory auction_,
-        uint256 liquidatorCut
-    ) internal view virtual returns (uint256 discountedLiquidatorCut) {
-        return liquidatorCut;
     }
 
     /// @notice Return how much collateral should be given out.
@@ -737,6 +730,7 @@ contract Witch is AccessControl {
     /// @param artIn How much debt is being repaid
     /// @return liquidatorCut how much collateral will be paid to `to`
     /// @return auctioneerCut how much collateral will be paid to whomever started the auction
+    /// @return insurancePremium how much collateral will be paid to the insurance fund
     /// @return requiredArtIn how much art is required to be paid to get the liquidatorCut
     /// Formula: (artIn / totalArt) * totalInk * (initialProportion + (1 - initialProportion) * t)
     function _calcPayout(
@@ -750,6 +744,7 @@ contract Witch is AccessControl {
         returns (
             uint256 liquidatorCut,
             uint256 auctioneerCut,
+            uint256 insurancePremium,
             uint256 requiredArtIn
         )
     {
@@ -786,6 +781,15 @@ contract Witch is AccessControl {
             auctioneerCut = liquidatorCut.wmul(auctioneerReward);
             liquidatorCut -= auctioneerCut;
         }
+        insurancePremium = _calcInsurancePremium(auction_, liquidatorCut);
+        liquidatorCut -= insurancePremium;
+    }
+
+    function _calcInsurancePremium(
+        DataTypes.Auction memory auction_,
+        uint256 liquidatorCut
+    ) internal view virtual returns (uint256 premium) {
+        return 0;
     }
 
     /// @dev Loads the auction data for a given `vaultId` (if valid)

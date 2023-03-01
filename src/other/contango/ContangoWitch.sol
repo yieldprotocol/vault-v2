@@ -174,20 +174,16 @@ contract ContangoWitch is Witch, IContangoWitch {
         }
     }
 
-    function _discountInsurancePremium(
+    function _calcInsurancePremium(
         DataTypes.Auction memory auction_,
         uint256 liquidatorCut
-    ) internal view override returns (uint256 discountedLiquidatorCut) {
+    ) internal view override returns (uint256 premium) {
         uint256 insurancePremium = insuranceLines[auction_.ilkId][
             auction_.baseId
         ].insurancePremium;
 
         if (_shouldItPayInsurancePremium(insurancePremium, auction_)) {
-            discountedLiquidatorCut = liquidatorCut.wmul(
-                ONE_HUNDRED_PERCENT - insurancePremium
-            );
-        } else {
-            discountedLiquidatorCut = liquidatorCut;
+            premium = liquidatorCut.wmul(insurancePremium);
         }
     }
 
@@ -195,18 +191,21 @@ contract ContangoWitch is Witch, IContangoWitch {
         DataTypes.Auction memory auction,
         address to,
         uint256 liquidatorCut,
-        uint256 auctioneerCut
+        uint256 auctioneerCut,
+        uint256 insurancePremium
     ) internal override returns (uint256, uint256) {
-        uint256 insurancePremium = insuranceLines[auction.ilkId][auction.baseId]
-            .insurancePremium;
-
-        if (_shouldItPayInsurancePremium(insurancePremium, auction)) {
-            uint256 premium = liquidatorCut.wmul(insurancePremium);
-            _join(auction.ilkId).exit(insuranceFund, premium.u128());
-            liquidatorCut -= premium;
+        if (insurancePremium > 0) {
+            _join(auction.ilkId).exit(insuranceFund, insurancePremium.u128());
         }
 
-        return super._payInk(auction, to, liquidatorCut, auctioneerCut);
+        return
+            super._payInk(
+                auction,
+                to,
+                liquidatorCut,
+                auctioneerCut,
+                insurancePremium
+            );
     }
 
     function _shouldItPayInsurancePremium(
