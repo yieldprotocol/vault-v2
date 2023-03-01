@@ -598,7 +598,8 @@ contract ETHTests is ETHVaultBuiltState {
     function testPourWithoutSendingETHReverts() public {
         console.log("pour without sending eth reverts");
         weth.approve(address(wethJoin), 0);
-        vm.expectRevert("ERC20: Insufficient approval");
+        // Since weth doesn't have a error message for insufficient allowance https://etherscan.io/address/0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2#code#L70
+        vm.expectRevert("Transaction reverted silently");
         ladle.pour(ethVaultId, address(this), INK.i128(), 0);
     }
 

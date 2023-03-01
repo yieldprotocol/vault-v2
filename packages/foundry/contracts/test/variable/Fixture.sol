@@ -142,8 +142,9 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
     }
 
     function setUpOracles() internal {
-        chiRateOracle = new AccumulatorMultiOracle();
+        chiRateOracle = AccumulatorMultiOracle(0x95750d6F5fba4ed1cc4Dc42D2c01dFD3DB9a11eC);
 
+        vm.startPrank(timelock);
         chiRateOracle.grantRole(
             AccumulatorMultiOracle.setSource.selector,
             address(this)
@@ -152,8 +153,8 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
             AccumulatorMultiOracle.updatePerSecondRate.selector,
             address(this)
         );
+        vm.stopPrank();
         chiRateOracle.setSource(baseId, RATE, WAD, WAD * 2);
-        chiRateOracle.setSource(baseId, CHI, WAD, WAD * 2);
 
         ethAggregator = new ChainlinkAggregatorV3Mock();
         ethAggregator.set(1e18 / 2);
