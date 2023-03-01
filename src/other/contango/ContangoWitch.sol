@@ -85,16 +85,38 @@ contract ContangoWitch is Witch, IContangoWitch {
     function _discountDebt(
         bytes6 ilkId,
         bytes6 baseId,
+        bytes6 seriesId,
         uint256 auctionStart,
         uint256 auctionDuration,
         uint256 artIn
     ) internal view virtual override returns (uint256 requiredArtIn) {
         InsuranceLine memory line = insuranceLines[ilkId][baseId];
-        requiredArtIn = line.duration == 0
-            ? artIn
+        uint256 topUp = line.duration == 0
+            ? 0
             : artIn.wmul(
-                _debtProportionNow(line, auctionStart, auctionDuration)
+                // TODO remove this and return only the discount
+                ONE_HUNDRED_PERCENT -
+                    _debtProportionNow(line, auctionStart, auctionDuration)
             );
+
+        if (topUp > 0) {
+            // two step verification to avoid possible overflow when summing up both balances
+            uint256 insuranceFYTokenBalance = cauldron
+                .series(seriesId)
+                .fyToken
+                .balanceOf(insuranceFund);
+            if (insuranceFYTokenBalance < topUp) {
+                uint256 insuranceBaseBalance = IERC20(
+                    ladle.joins(baseId).asset()
+                ).balanceOf(insuranceFund);
+                if (insuranceBaseBalance < topUp - insuranceFYTokenBalance) {
+                    // TODO assumes 1:1 fyToken:base
+                    topUp = insuranceFYTokenBalance + insuranceBaseBalance;
+                }
+            }
+        }
+
+        requiredArtIn = artIn - topUp;
     }
 
     function _debtProportionNow(
