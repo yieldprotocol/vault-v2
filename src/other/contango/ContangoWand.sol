@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity >=0.8.13;
 
+import "../../Join.sol";
 import "../../interfaces/ICauldronGov.sol";
 import "../../interfaces/ICauldron.sol";
 import "../../interfaces/ILadleGov.sol";
@@ -13,12 +14,13 @@ import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
 
 /// @title A contract that allows configuring the cauldron and ladle within bounds
 contract ContangoWand is AccessControl {
-    ICauldronGov public immutable contangoCauldron;
+    ICauldron public immutable contangoCauldron;
     ICauldron public immutable yieldCauldron;
     ILadle public immutable contangoLadle;
     ILadle public immutable yieldLadle;
     YieldSpaceMultiOracle public immutable yieldSpaceOracle;
     CompositeMultiOracle public immutable compositeOracle;
+    address internal immutable yieldTimelock;
 
     mapping(bytes6 => mapping(bytes6 => uint32)) public ratio;
     mapping(bytes6 => mapping(bytes6 => DataTypes.Debt)) public debt;
@@ -27,12 +29,13 @@ contract ContangoWand is AccessControl {
     uint32 public defaultRatio;
 
     constructor(
-        ICauldronGov contangoCauldron_,
+        ICauldron contangoCauldron_,
         ICauldron yieldCauldron_,
         ILadle contangoLadle_,
         ILadle yieldLadle_,
         YieldSpaceMultiOracle yieldSpaceOracle_,
-        CompositeMultiOracle compositeOracle_
+        CompositeMultiOracle compositeOracle_,
+        address yieldTimelock_
     ) {
         contangoCauldron = contangoCauldron_;
         yieldCauldron = yieldCauldron_;
@@ -40,6 +43,7 @@ contract ContangoWand is AccessControl {
         yieldLadle = yieldLadle_;
         yieldSpaceOracle = yieldSpaceOracle_;
         compositeOracle = compositeOracle_;
+        yieldTimelock = yieldTimelock_;
     }
 
     /// ----------------- Cauldron Governance -----------------
@@ -52,8 +56,11 @@ contract ContangoWand is AccessControl {
 
     /// @notice Copy the lending oracle from the master cauldron
     function copyLendingOracle(bytes6 baseId) external auth {
-        IOracle lendingOracle_ = yieldCauldron.lendingOracles(baseId);
-        contangoCauldron.setLendingOracle(baseId, lendingOracle_);
+        _copyLendingOracle(baseId);
+    }
+
+    function _copyLendingOracle(bytes6 baseId) internal {
+        contangoCauldron.setLendingOracle(baseId, yieldCauldron.lendingOracles(baseId));
     }
 
     /// @notice Copy the debt limits from the master cauldron
@@ -66,8 +73,12 @@ contract ContangoWand is AccessControl {
     }
 
     /// @notice Add a new asset in the Cauldron, as long as it is an asset or fyToken known to the Yield Cauldron
-    function addAsset(bytes6 assetId) external auth {
-        address asset_ = yieldCauldron.assets(assetId);
+    function addAsset(bytes6 assetId) external auth returns (address asset_) {
+        asset_ = _addAsset(assetId);
+    }
+
+    function _addAsset(bytes6 assetId) internal returns (address asset_) {
+        asset_ = yieldCauldron.assets(assetId);
         if (asset_ == address(0)) {
             asset_ = address(yieldCauldron.series(assetId).fyToken);
         }
@@ -76,9 +87,13 @@ contract ContangoWand is AccessControl {
     }
 
     /// @notice Add a new series, if it exists in the Yield Cauldron
-    function addSeries(bytes6 seriesId) external auth {
-        DataTypes.Series memory series_ = yieldCauldron.series(seriesId);
+    function addSeries(bytes6 seriesId) external auth returns (DataTypes.Series memory series_) {
+        series_ = yieldCauldron.series(seriesId);
         require(address(series_.fyToken) != address(0), "Series not known to the Yield Cauldron");
+        if (contangoCauldron.assets(series_.baseId) == address(0)) {
+            _addAsset(series_.baseId);
+            _copyLendingOracle(series_.baseId);
+        }
         contangoCauldron.addSeries(seriesId, series_.baseId, series_.fyToken);
     }
 
@@ -173,6 +188,10 @@ contract ContangoWand is AccessControl {
             compositeOracle.setSource(baseId, ilkId, yieldSpaceOracle);
         } else if (yieldCauldron.assets(ilkId) != address(0)) {
             DataTypes.SpotOracle memory spotOracle_ = yieldCauldron.spotOracles(baseId, ilkId);
+            if (address(spotOracle_.oracle) == address(0)) {
+                spotOracle_ = yieldCauldron.spotOracles(ilkId, baseId);
+            }
+            require(address(spotOracle_.oracle) != address(0), "Spot oracle not known to the Yield Cauldron");
             compositeOracle.setSource(baseId, ilkId, spotOracle_.oracle);
         }
     }
@@ -187,10 +206,10 @@ contract ContangoWand is AccessControl {
     /// ----------------- Ladle Governance -----------------
 
     /// @notice Propagate a pool to the Ladle from the Yield Ladle
-    function addPool(bytes6 seriesId) external auth {
-        address pool_ = yieldLadle.pools(seriesId);
-        require(pool_ != address(0), "Pool not known to the Yield Ladle");
-        contangoLadle.addPool(seriesId, IPool(pool_));
+    function addPool(bytes6 seriesId) external auth returns (IPool pool_) {
+        pool_ = IPool(yieldLadle.pools(seriesId));
+        require(address(pool_) != address(0), "Pool not known to the Yield Ladle");
+        contangoLadle.addPool(seriesId, pool_);
     }
 
     /// @notice Propagate an integration to the Ladle from the Yield Ladle
@@ -206,6 +225,22 @@ contract ContangoWand is AccessControl {
     /// @notice Add join to the Ladle.
     /// @dev These will often be used to hold fyToken, so it doesn't seem possible to put boundaries. However, it seems low risk. Famous last words.
     function addJoin(bytes6 assetId, IJoin join) external auth {
+        contangoLadle.addJoin(assetId, join);
+    }
+
+    function deployJoin(bytes6 assetId) external auth returns (IJoin join) {
+        address asset = contangoCauldron.assets(assetId);
+        require(asset != address(0), "Asset not known to the Cauldron");
+        Join join_ = new Join(asset);
+        
+        join_.grantRole(IJoin.join.selector, address(contangoLadle));
+        join_.grantRole(IJoin.exit.selector, address(contangoLadle));
+
+        bytes4 root = join_.ROOT();
+        join_.grantRole(root, yieldTimelock);
+        join_.revokeRole(root, address(this));
+
+        join = IJoin(address(join_));
         contangoLadle.addJoin(assetId, join);
     }
 }
