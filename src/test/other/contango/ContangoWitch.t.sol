@@ -2007,7 +2007,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         // 36.8916666667 * 0.99 * 0.98 = 35.792295
         assertEqDecimal(
             liquidatorCut,
-            35.792294999999999984 ether,
+            35.792294999999999985 ether,
             18,
             "liquidatorCut"
         );
@@ -2235,7 +2235,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             minInkOut.wdiv(1e18 - insurancePremium) - minInkOut
         );
 
-        _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxBaseIn);
+        _verifyCollateralBought(VAULT_ID, bot, minInkOut + premium, maxBaseIn);
 
         // Reduce balances on the vault
         cauldron.slurp.mock(VAULT_ID, minInkOut + premium, maxBaseIn, balances);
@@ -2259,7 +2259,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         baseJoin.join.verify(bot, maxBaseIn);
 
         vm.expectEmit(true, true, true, true);
-        emit Bought(VAULT_ID, bot, minInkOut, maxBaseIn);
+        emit Bought(VAULT_ID, bot, minInkOut + premium, maxBaseIn);
 
         vm.prank(bot);
         (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) = witch
@@ -2292,7 +2292,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             minInkOut.wdiv(1e18 - insurancePremium) - minInkOut
         );
 
-        _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxBaseIn);
+        _verifyCollateralBought(VAULT_ID, bot, minInkOut + premium, maxBaseIn);
 
         // Reduce balances on the vault
         cauldron.slurp.mock(VAULT_ID, minInkOut + premium, maxBaseIn, balances);
@@ -2316,7 +2316,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         baseJoin.join.verify(bot, maxBaseIn);
 
         vm.expectEmit(true, true, true, true);
-        emit Bought(VAULT_ID, bot, minInkOut, maxBaseIn);
+        emit Bought(VAULT_ID, bot, minInkOut + premium, maxBaseIn);
 
         vm.prank(bot);
         (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) = witch
@@ -2346,7 +2346,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             minInkOut.wdiv(1e18 - insurancePremium) - minInkOut
         );
 
-        _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxBaseIn);
+        _verifyCollateralBought(VAULT_ID, bot, minInkOut + premium, maxBaseIn);
         _verifyAuctionEnded(VAULT_ID, bob);
 
         // Reduce balances on the vault
@@ -2376,7 +2376,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         vm.expectEmit(true, true, true, true);
         emit Ended(VAULT_ID);
         vm.expectEmit(true, true, true, true);
-        emit Bought(VAULT_ID, bot, minInkOut, maxBaseIn);
+        emit Bought(VAULT_ID, bot, minInkOut + premium, maxBaseIn);
 
         vm.prank(bot);
         (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) = witch
@@ -2411,7 +2411,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         _verifyCollateralBought(
             VAULT_ID,
             bot2,
-            liquidatorCut + auctioneerCut,
+            liquidatorCut + auctioneerCut + premium,
             maxBaseIn
         );
         _verifyAuctionEnded(VAULT_ID, bob);
@@ -2457,7 +2457,12 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         vm.expectEmit(true, true, true, true);
         emit Ended(VAULT_ID);
         vm.expectEmit(true, true, true, true);
-        emit Bought(VAULT_ID, bot2, liquidatorCut + auctioneerCut, maxBaseIn);
+        emit Bought(
+            VAULT_ID,
+            bot2,
+            liquidatorCut + auctioneerCut + premium,
+            maxBaseIn
+        );
 
         vm.prank(bot2);
         (uint256 _liquidatorCut, uint256 _auctioneerCut, uint256 baseIn) = witch
@@ -2473,7 +2478,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         _auctionWasDeleted(VAULT_ID);
     }
 
-    function testPayBaseAll() public {
+    function testPayBaseAllWithInsurance() public {
         uint128 maxBaseIn = uint128(auction.art);
         vm.prank(bot);
         (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, bot, maxBaseIn);
@@ -2482,7 +2487,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             minInkOut.wdiv(1e18 - insurancePremium) - minInkOut
         );
 
-        _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxBaseIn);
+        _verifyCollateralBought(VAULT_ID, bot, minInkOut + premium, maxBaseIn);
         _verifyAuctionEnded(VAULT_ID, bob);
 
         // Reduce balances on the vault
@@ -2512,7 +2517,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         vm.expectEmit(true, true, true, true);
         emit Ended(VAULT_ID);
         vm.expectEmit(true, true, true, true);
-        emit Bought(VAULT_ID, bot, minInkOut, maxBaseIn);
+        emit Bought(VAULT_ID, bot, minInkOut + premium, maxBaseIn);
 
         vm.prank(bot);
         (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) = witch
@@ -2528,7 +2533,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         _auctionWasDeleted(VAULT_ID);
     }
 
-    function testPayBase_NotEnoughBought() public {
+    function testPayBaseWithInsuranceNotEnoughBought() public {
         uint128 maxBaseIn = uint128(auction.art);
         vm.prank(bot);
         (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, bot, maxBaseIn);
@@ -2672,7 +2677,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             minInkOut.wdiv(1e18 - insurancePremium) - minInkOut
         );
 
-        _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxArtIn);
+        _verifyCollateralBought(VAULT_ID, bot, minInkOut + premium, maxArtIn);
 
         // Reduce balances on the vault
         cauldron.slurp.mock(VAULT_ID, minInkOut + premium, maxArtIn, balances);
@@ -2690,7 +2695,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         series.fyToken.burn.verify(bot, maxArtIn);
 
         vm.expectEmit(true, true, true, true);
-        emit Bought(VAULT_ID, bot, minInkOut, maxArtIn);
+        emit Bought(VAULT_ID, bot, minInkOut + premium, maxArtIn);
 
         vm.prank(bot);
         (uint256 liquidatorCut, uint256 auctioneerCut, uint256 artIn) = witch
@@ -2723,7 +2728,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             minInkOut.wdiv(1e18 - insurancePremium) - minInkOut
         );
 
-        _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxArtIn);
+        _verifyCollateralBought(VAULT_ID, bot, minInkOut + premium, maxArtIn);
 
         // Reduce balances on the vault
         cauldron.slurp.mock(VAULT_ID, minInkOut + premium, maxArtIn, balances);
@@ -2741,7 +2746,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         series.fyToken.burn.verify(bot, maxArtIn);
 
         vm.expectEmit(true, true, true, true);
-        emit Bought(VAULT_ID, bot, minInkOut, maxArtIn);
+        emit Bought(VAULT_ID, bot, minInkOut + premium, maxArtIn);
 
         vm.prank(bot);
         (uint256 liquidatorCut, uint256 auctioneerCut, uint256 artIn) = witch
@@ -2757,7 +2762,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         _auctionWasUpdated(VAULT_ID, maxArtIn, minInkOut + premium);
     }
 
-    function testPayFYTokenAll() public {
+    function testPayFYTokenAllWithInsurance() public {
         uint128 maxArtIn = uint128(auction.art);
         vm.prank(bot);
         (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, bot, maxArtIn);
@@ -2766,7 +2771,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             minInkOut.wdiv(1e18 - insurancePremium) - minInkOut
         );
 
-        _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxArtIn);
+        _verifyCollateralBought(VAULT_ID, bot, minInkOut + premium, maxArtIn);
         _verifyAuctionEnded(VAULT_ID, bob);
 
         // Reduce balances on the vault
@@ -2790,7 +2795,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         vm.expectEmit(true, true, true, true);
         emit Ended(VAULT_ID);
         vm.expectEmit(true, true, true, true);
-        emit Bought(VAULT_ID, bot, minInkOut, maxArtIn);
+        emit Bought(VAULT_ID, bot, minInkOut + premium, maxArtIn);
 
         vm.prank(bot);
         (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) = witch
@@ -2806,7 +2811,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         _auctionWasDeleted(VAULT_ID);
     }
 
-    function testPayFYToken_NotEnoughBought() public {
+    function testPayFYTokenWithInsuranceNotEnoughBought() public {
         uint128 maxArtIn = uint128(auction.art);
         vm.prank(bot);
         (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, bot, maxArtIn);
@@ -2924,7 +2929,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             minInkOut.wdiv(1e18 - insurancePremium) - minInkOut
         );
 
-        _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxArtIn);
+        _verifyCollateralBought(VAULT_ID, bot, minInkOut + premium, maxArtIn);
         _verifyAuctionEnded(VAULT_ID, bob);
 
         // Reduce balances on the vault
@@ -2948,7 +2953,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         vm.expectEmit(true, true, true, true);
         emit Ended(VAULT_ID);
         vm.expectEmit(true, true, true, true);
-        emit Bought(VAULT_ID, bot, minInkOut, maxArtIn);
+        emit Bought(VAULT_ID, bot, minInkOut + premium, maxArtIn);
 
         vm.prank(bot);
         (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) = witch
@@ -2983,7 +2988,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         _verifyCollateralBought(
             VAULT_ID,
             bot2,
-            liquidatorCut + auctioneerCut,
+            liquidatorCut + auctioneerCut + premium,
             maxArtIn
         );
         _verifyAuctionEnded(VAULT_ID, bob);
@@ -3023,7 +3028,12 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         vm.expectEmit(true, true, true, true);
         emit Ended(VAULT_ID);
         vm.expectEmit(true, true, true, true);
-        emit Bought(VAULT_ID, bot2, liquidatorCut + auctioneerCut, maxArtIn);
+        emit Bought(
+            VAULT_ID,
+            bot2,
+            liquidatorCut + auctioneerCut + premium,
+            maxArtIn
+        );
 
         vm.prank(bot2);
         (uint256 _liquidatorCut, uint256 _auctioneerCut, uint256 baseIn) = witch
@@ -3039,7 +3049,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         _auctionWasDeleted(VAULT_ID);
     }
 
-    function testPayBaseAllAndTakesAllWithInsurance_UseFYTokenBalanceFirst()
+    function testPayBaseAllAndTakesAllWithInsuranceUseFYTokenBalanceFirst()
         public
     {
         vm.warp(
@@ -3157,7 +3167,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         _auctionWasDeleted(VAULT_ID);
     }
 
-    function testPayFYTokenAllAndTakesAllWithInsurance_UseFYTokenBalanceFirst()
+    function testPayFYTokenAllAndTakesAllWithInsuranceUseFYTokenBalanceFirst()
         public
     {
         uint128 maxArtIn = uint128(auction.art);
@@ -3268,6 +3278,4 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
 
     // testChargeInsurancePremiumOnNonInsuredPairs
     // testUseGlobalInsurancePremium
-
-    // fix Bought event quantities
 }
