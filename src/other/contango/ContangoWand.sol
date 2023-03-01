@@ -7,6 +7,7 @@ import "../../interfaces/ICauldron.sol";
 import "../../interfaces/ILadleGov.sol";
 import "../../interfaces/ILadle.sol";
 import "../../interfaces/IJoin.sol";
+import "../../interfaces/IWitch.sol";
 import "../../oracles/yieldspace/YieldSpaceMultiOracle.sol";
 import "../../oracles/composite/CompositeMultiOracle.sol";
 import "@yield-protocol/yieldspace-tv/src/interfaces/IPool.sol";
@@ -20,7 +21,8 @@ contract ContangoWand is AccessControl {
     ILadle public immutable yieldLadle;
     YieldSpaceMultiOracle public immutable yieldSpaceOracle;
     CompositeMultiOracle public immutable compositeOracle;
-    address internal immutable yieldTimelock;
+    address public immutable yieldTimelock;
+    IWitch public immutable contangoWitch;
 
     mapping(bytes6 => mapping(bytes6 => uint32)) public ratio;
     mapping(bytes6 => mapping(bytes6 => DataTypes.Debt)) public debt;
@@ -35,7 +37,8 @@ contract ContangoWand is AccessControl {
         ILadle yieldLadle_,
         YieldSpaceMultiOracle yieldSpaceOracle_,
         CompositeMultiOracle compositeOracle_,
-        address yieldTimelock_
+        address yieldTimelock_,
+        IWitch contangoWitch_
     ) {
         contangoCauldron = contangoCauldron_;
         yieldCauldron = yieldCauldron_;
@@ -44,6 +47,7 @@ contract ContangoWand is AccessControl {
         yieldSpaceOracle = yieldSpaceOracle_;
         compositeOracle = compositeOracle_;
         yieldTimelock = yieldTimelock_;
+        contangoWitch = contangoWitch_;
     }
 
     /// ----------------- Cauldron Governance -----------------
@@ -93,7 +97,14 @@ contract ContangoWand is AccessControl {
         if (contangoCauldron.assets(series_.baseId) == address(0)) {
             _addAsset(series_.baseId);
             _copyLendingOracle(series_.baseId);
+            _copyJoin(series_.baseId);
         }
+
+        AccessControl(address(series_.fyToken)).grantRole(IFYToken.mint.selector, address(contangoLadle));
+        AccessControl(address(series_.fyToken)).grantRole(IFYToken.burn.selector, address(contangoLadle));
+        
+        AccessControl(address(series_.fyToken)).grantRole(IFYToken.burn.selector, address(contangoWitch));
+
         contangoCauldron.addSeries(seriesId, series_.baseId, series_.fyToken);
     }
 
@@ -222,25 +233,56 @@ contract ContangoWand is AccessControl {
         contangoLadle.addToken(token, yieldLadle.tokens(token));
     }
 
+    function copyJoin(bytes6 assetId) external auth {
+        _copyJoin(assetId);
+    }
+
+    function _copyJoin(bytes6 assetId) internal {
+        // TODO add checks
+        _addJoin(assetId, yieldLadle.joins(assetId));
+    }
+
     /// @notice Add join to the Ladle.
     /// @dev These will often be used to hold fyToken, so it doesn't seem possible to put boundaries. However, it seems low risk. Famous last words.
     function addJoin(bytes6 assetId, IJoin join) external auth {
+        _addJoin(assetId, join);
+    }
+
+    function _addJoin(bytes6 assetId, IJoin join) internal {
         contangoLadle.addJoin(assetId, join);
+
+        AccessControl(address(join)).grantRole(IJoin.join.selector, address(contangoLadle));
+        AccessControl(address(join)).grantRole(IJoin.exit.selector, address(contangoLadle));
+
+        AccessControl(address(join)).grantRole(IJoin.join.selector, address(contangoWitch));
+        AccessControl(address(join)).grantRole(IJoin.exit.selector, address(contangoWitch));
     }
 
     function deployJoin(bytes6 assetId) external auth returns (IJoin join) {
         address asset = contangoCauldron.assets(assetId);
         require(asset != address(0), "Asset not known to the Cauldron");
-        Join join_ = new Join(asset);
-        
-        join_.grantRole(IJoin.join.selector, address(contangoLadle));
-        join_.grantRole(IJoin.exit.selector, address(contangoLadle));
 
-        bytes4 root = join_.ROOT();
-        join_.grantRole(root, yieldTimelock);
-        join_.revokeRole(root, address(this));
+        Join join_ = new Join(asset);
+        join_.grantRole(join_.ROOT(), yieldTimelock);
 
         join = IJoin(address(join_));
-        contangoLadle.addJoin(assetId, join);
+        _addJoin(assetId, join);
+    }
+
+    /// ----------------- Witch Governance -----------------
+
+    function setLineAndLimit(
+        bytes6 ilkId,
+        bytes6 baseId,
+        uint32 duration,
+        uint64 vaultProportion,
+        uint64 collateralProportion,
+        uint128 max
+    ) external auth {
+        contangoWitch.setLineAndLimit(ilkId, baseId, duration, vaultProportion, collateralProportion, max);
+    }
+
+    function setAuctioneerReward(uint256 auctioneerReward) external auth {
+        contangoWitch.setAuctioneerReward(auctioneerReward);
     }
 }
