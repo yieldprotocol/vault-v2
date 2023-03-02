@@ -66,7 +66,6 @@ contract ContangoWandTest is Test, TestConstants {
         wand.grantRole(wand.setRatio.selector, address(this));
         wand.grantRole(wand.boundRatio.selector, address(this));
         wand.grantRole(wand.setDebtLimits.selector, address(this));
-        wand.grantRole(wand.setDefaultDebtLimits.selector, address(this));
         wand.grantRole(wand.boundDebtLimits.selector, address(this));
         AccessControl(address(yieldSpaceOracle)).grantRole(YieldSpaceMultiOracle.setSource.selector, address(wand));
         wand.grantRole(wand.setYieldSpaceOracleSource.selector, address(this));
@@ -260,52 +259,104 @@ contract ContangoWandTest is Test, TestConstants {
     function testSetDebtLimits_Auth() public {
         vm.prank(bob);
         vm.expectRevert("Access denied");
-        wand.setDebtLimits(USDT, FYETH2306, 500_000, 40);
+        wand.setDebtLimits(USDT, FYETH2306, 500_000, 40, 6);
     }
 
-    function testSetDebtLimits_NoDefaultDebtLimits() public {
-        vm.expectRevert("Default debt limits not set");
-        wand.setDebtLimits(USDT, FYETH2306, 500_000, 40);
-    }
-
-    function testSetDebtLimits() public {
+    function testSetDebtLimits_BoundsSetForSeriesId() public {
         wand.addAsset(USDT);
-        wand.setDefaultDebtLimits(500_000, 40);
-
-        wand.setDebtLimits(USDT, FYETH2306, 500_000, 40);
-
-        DataTypes.Debt memory contangoDebtLimits = contangoCauldron.debt(USDT, FYETH2306);
-
-        assertEq(contangoDebtLimits.max, 500_000, "max");
-        assertEq(contangoDebtLimits.min, 40, "min");
-        assertEq(contangoDebtLimits.dec, 6, "dec");
-    }
-
-    function testSetDebtLimits_OutsideDefaultLimits() public {
-        wand.addAsset(USDT);
-
-        wand.setDefaultDebtLimits(500_000, 40);
+        uint96 max = 500_000;
+        uint24 min = 40;
+        uint8 dec = 6;
+        wand.boundDebtLimits(USDT, FYETH2306, max, min, dec);
 
         vm.expectRevert("Max debt out of bounds");
-        wand.setDebtLimits(USDT, FYETH2306, 500_000 + 1, 40);
+        wand.setDebtLimits(USDT, FYETH2306, max + 1, min, dec);
 
         vm.expectRevert("Min debt out of bounds");
-        wand.setDebtLimits(USDT, FYETH2306, 500_000, 40 - 1);
+        wand.setDebtLimits(USDT, FYETH2306, max, min - 1, dec);
+
+        wand.setDebtLimits(USDT, FYETH2306, max, min, dec);
+        DataTypes.Debt memory contangoDebtLimits = contangoCauldron.debt(USDT, FYETH2306);
+        assertEq(contangoDebtLimits.max, max, "max");
+        assertEq(contangoDebtLimits.min, min, "min");
+        assertEq(contangoDebtLimits.dec, dec, "dec");
     }
 
-    function testSetDebtLimits_OverrideLimitsForPair() public {
+    function testSetDebtLimits_BoundsSetForSeriesIdBaseId() public {
         wand.addAsset(USDT);
-        wand.setDefaultDebtLimits(500_000, 40);
+        uint96 max = 500_000;
+        uint24 min = 40;
+        uint8 dec = 6;
+        wand.boundDebtLimits(USDT, ETH, max, min, dec);
 
-        wand.boundDebtLimits(USDT, FYETH2306, 1_000_000, 20);
+        vm.expectRevert("Max debt out of bounds");
+        wand.setDebtLimits(USDT, FYETH2306, max + 1, min, dec);
 
-        wand.setDebtLimits(USDT, FYETH2306, 1_000_000, 20);
+        vm.expectRevert("Min debt out of bounds");
+        wand.setDebtLimits(USDT, FYETH2306, max, min - 1, dec);
 
+        wand.setDebtLimits(USDT, FYETH2306, max, min, dec);
         DataTypes.Debt memory contangoDebtLimits = contangoCauldron.debt(USDT, FYETH2306);
+        assertEq(contangoDebtLimits.max, max, "max");
+        assertEq(contangoDebtLimits.min, min, "min");
+        assertEq(contangoDebtLimits.dec, dec, "dec");
+    }
 
-        assertEq(contangoDebtLimits.max, 1_000_000, "max");
-        assertEq(contangoDebtLimits.min, 20, "min");
-        assertEq(contangoDebtLimits.dec, 6, "dec");
+    function testSetDebtLimits_YieldCauldronAsBounds_BoundsSetForAssetId() public {
+        wand.addAsset(USDT);
+        uint96 max = 100_000;
+        uint24 min = 100;
+        uint8 dec = 6;
+
+        vm.expectRevert("Max debt out of bounds");
+        wand.setDebtLimits(USDT, ETH, max + 1, min, dec);
+
+        vm.expectRevert("Min debt out of bounds");
+        wand.setDebtLimits(USDT, ETH, max, min - 1, dec);
+
+        wand.setDebtLimits(USDT, ETH, max, min, dec);
+        DataTypes.Debt memory contangoDebtLimits = contangoCauldron.debt(USDT, ETH);
+        assertEq(contangoDebtLimits.max, max, "max");
+        assertEq(contangoDebtLimits.min, min, "min");
+        assertEq(contangoDebtLimits.dec, dec, "dec");
+    }
+
+    function testSetDebtLimits_YieldCauldronAsBounds_BoundsSetForSeriesIdBaseId() public {
+        wand.addAsset(USDT);
+        uint96 max = 100_000;
+        uint24 min = 100;
+        uint8 dec = 6;
+
+        vm.expectRevert("Max debt out of bounds");
+        wand.setDebtLimits(USDT, FYETH2306, max + 1, min, dec);
+
+        vm.expectRevert("Min debt out of bounds");
+        wand.setDebtLimits(USDT, FYETH2306, max, min - 1, dec);
+
+        wand.setDebtLimits(USDT, FYETH2306, max, min, dec);
+        DataTypes.Debt memory contangoDebtLimits = contangoCauldron.debt(USDT, FYETH2306);
+        assertEq(contangoDebtLimits.max, max, "max");
+        assertEq(contangoDebtLimits.min, min, "min");
+        assertEq(contangoDebtLimits.dec, dec, "dec");
+    }
+
+    function testSetDebtLimits_OverrideDecPrecision() public {
+        wand.addAsset(USDT);
+        uint96 max = 100_000_0;
+        uint24 min = 100_0;
+        uint8 dec = 5;
+
+        vm.expectRevert("Max debt out of bounds");
+        wand.setDebtLimits(USDT, ETH, max + 1, min, dec);
+
+        vm.expectRevert("Min debt out of bounds");
+        wand.setDebtLimits(USDT, ETH, max, min - 1, dec);
+
+        wand.setDebtLimits(USDT, ETH, max, min, dec);
+        DataTypes.Debt memory contangoDebtLimits = contangoCauldron.debt(USDT, ETH);
+        assertEq(contangoDebtLimits.max, max, "max");
+        assertEq(contangoDebtLimits.min, min, "min");
+        assertEq(contangoDebtLimits.dec, dec, "dec");
     }
 
     function testSetYieldSpaceOracleSource_Auth() public {

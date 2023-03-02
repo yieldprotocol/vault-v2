@@ -27,8 +27,6 @@ contract ContangoWand is AccessControl {
     mapping(bytes6 => mapping(bytes6 => uint32)) public ratio;
     mapping(bytes6 => mapping(bytes6 => DataTypes.Debt)) public debt;
 
-    DataTypes.Debt public defaultDebtLimits;
-
     constructor(
         ICauldron contangoCauldron_,
         ICauldron yieldCauldron_,
@@ -137,48 +135,35 @@ contract ContangoWand is AccessControl {
         contangoCauldron.addIlks(seriesId, ilkIds);
     }
 
-    // TODO kill
-
-    function _getDebtDecimals(bytes6 baseId, bytes6 ilkId) internal view returns (uint8 dec) {
-        // If the debt is already set in the cauldron, we use the decimals from there
-        // Otherwise, we use the decimals of the base
-        DataTypes.Debt memory cauldronDebt_ = ICauldron(address(contangoCauldron)).debt(baseId, ilkId);
-        if (cauldronDebt_.sum != 0) {
-            dec = cauldronDebt_.dec;
-        } else {
-            dec = IERC20Metadata(contangoCauldron.assets(baseId)).decimals();
-        }
-    }
-
     /// @notice Bound debt limits for a given asset pair
-    function boundDebtLimits(bytes6 baseId, bytes6 ilkId, uint96 max, uint24 min) external auth {
-        debt[baseId][ilkId] = DataTypes.Debt({max: max, min: min, dec: _getDebtDecimals(baseId, ilkId), sum: 0});
-    }
-
-    // TODO kill
-
-    /// @notice Set the default debt limits
-    function setDefaultDebtLimits(uint96 max, uint24 min) external auth {
-        defaultDebtLimits = DataTypes.Debt({max: max, min: min, dec: 0, sum: 0});
+    function boundDebtLimits(bytes6 baseId, bytes6 ilkId, uint96 max, uint24 min, uint8 dec) external auth {
+        debt[baseId][ilkId] = DataTypes.Debt({max: max, min: min, dec: dec, sum: 0});
     }
 
     // TODO index bounds by baseId on the ilk side
+    // TODO add dec as parameter and check bounds on full amount
 
     /// @notice Set the debt limits for a given asset pair in the Cauldron, within bounds
-    function setDebtLimits(bytes6 baseId, bytes6 ilkId, uint96 max, uint24 min) external auth {
+    function setDebtLimits(bytes6 baseId, bytes6 ilkId, uint96 max, uint24 min, uint8 dec) external auth {
         // If the ilkId is a series and boundaries are not set, set them to default values
         DataTypes.Debt memory bounds_ = debt[baseId][ilkId];
-
-        if (bounds_.max == 0 && bounds_.min == 0) {
-            bounds_ = defaultDebtLimits;
-            require(bounds_.max > 0, "Default debt limits not set");
-            bounds_.dec = _getDebtDecimals(baseId, ilkId);
+        if (bounds_.max == 0) {
+            bounds_ = debt[baseId][yieldCauldron.series(ilkId).baseId];
+        }
+        if (bounds_.max == 0) {
+            bounds_ = yieldCauldron.debt(baseId, ilkId);
+        }
+        if (bounds_.max == 0) {
+            bounds_ = yieldCauldron.debt(baseId, yieldCauldron.series(ilkId).baseId);
         }
 
-        require(max <= bounds_.max, "Max debt out of bounds");
-        require(min >= bounds_.min, "Min debt out of bounds");
+        uint256 paramMultiplier = 10 ** dec;
+        uint256 boundsMultiplier = 10 ** bounds_.dec;
 
-        contangoCauldron.setDebtLimits(baseId, ilkId, max, min, bounds_.dec);
+        require(max * paramMultiplier <= bounds_.max * boundsMultiplier, "Max debt out of bounds");
+        require(min * paramMultiplier >= bounds_.min * boundsMultiplier, "Min debt out of bounds");
+
+        contangoCauldron.setDebtLimits(baseId, ilkId, max, min, dec);
     }
 
     /// ----------------- Oracle Governance -----------------
