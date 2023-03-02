@@ -31,3 +31,7 @@ crytic-export/
 
 # Foundry
 out/
+
+# coverage
+report/
+lcov.info
