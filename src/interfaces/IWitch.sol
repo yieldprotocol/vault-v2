@@ -2,10 +2,11 @@
 pragma solidity ^0.8.0;
 
 import "./ILadle.sol";
+import "./IWitchGov.sol";
 import "./ICauldron.sol";
 import "./DataTypes.sol";
 
-interface IWitch {
+interface IWitch is IWitchGov {
     /// @return The Cauldron the witch is using under-the-bonnet
     function cauldron() external view returns (ICauldron);
 

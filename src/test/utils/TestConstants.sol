@@ -23,6 +23,7 @@ contract TestConstants {
     bytes6 public constant RETH = 0xE03016000000;
     bytes6 public constant CRAB = 0x333800000000;
     bytes6 public constant OSQTH = 0x333900000000;
+    bytes6 public constant USDT = 0x30A000000000;
 
     bytes6 public constant FYETH2206 = bytes6("0006");
     bytes6 public constant FYDAI2206 = bytes6("0106");
@@ -30,6 +31,9 @@ contract TestConstants {
     bytes6 public constant FYUSDC2209 = bytes6("0207");
     bytes6 public constant FYUSDC2212 = bytes6("0208");
     bytes6 public constant FYDAI2212 = bytes6("0108");
+    bytes6 public constant FYETH2306 = 0x0_030_FF_000_28B;
+    bytes6 public constant FYUSDC2306 = 0x0_032_FF_000_28B;
+    bytes6 public constant FYUSDT2306 = 0x0_0A0_FF_000_28B;
 
     uint32 public constant EOJUN22 = 1656039600;
 
@@ -46,6 +50,7 @@ contract TestConstants {
     string public constant TIMELOCK = "TIMELOCK";
     string public constant CAULDRON = "CAULDRON";
     string public constant LADLE = "LADLE";
+    string public constant WETH = "WETH";
 
     mapping (string => mapping (string => address)) public addresses;
 
@@ -56,5 +61,6 @@ contract TestConstants {
         addresses[ARBITRUM][TIMELOCK] = 0xd0a22827Aed2eF5198EbEc0093EA33A4CD641b6c;
         addresses[ARBITRUM][CAULDRON] = 0x23cc87FBEBDD67ccE167Fa9Ec6Ad3b7fE3892E30;
         addresses[ARBITRUM][LADLE] = 0x16E25cf364CeCC305590128335B8f327975d0560;
+        addresses[ARBITRUM][WETH] = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
     }
 }

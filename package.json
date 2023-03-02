@@ -1,6 +1,6 @@
 {
   "name": "@yield-protocol/vault-v2",
-  "version": "0.18.10",
+  "version": "0.18.12",
   "description": "Yield Collateralized Debt Engine v2",
   "author": "Yield Inc.",
   "files": [
@@ -15,7 +15,8 @@
   "scripts": {
     "forge:build": "forge build",
     "forge:test": "forge test -vvv",
-    "forge:snapshot": "forge snapshot"
+    "forge:snapshot": "forge snapshot",
+    "forge:coverage": "forge coverage --report lcov && genhtml lcov.info -o report --branch-coverage --legend --dark-mode && open report/index.html"
   },
   "repository": {
     "url": "git+https://github.com/yieldprotocol/vault-v2.git",
