@@ -3200,7 +3200,7 @@
       }
     },
     "src/interfaces/ILadle.sol": {
-      "lastModificationDate": 1677585086205,
+      "lastModificationDate": 1677603945704,
       "contentHash": "993fb6448ab02c216c47d7cdf496b36e",
       "sourceName": "src/interfaces/ILadle.sol",
       "solcConfig": {
@@ -3258,7 +3258,7 @@
       }
     },
     "src/interfaces/ILadleGov.sol": {
-      "lastModificationDate": 1677585086223,
+      "lastModificationDate": 1677603936769,
       "contentHash": "02488b6ad21a07aa8d889a60faed4166",
       "sourceName": "src/interfaces/ILadleGov.sol",
       "solcConfig": {
@@ -6667,8 +6667,8 @@
       }
     },
     "src/other/contango/ContangoWand.sol": {
-      "lastModificationDate": 1677770673333,
-      "contentHash": "a8e4f89f716e36cccc8e10685031ba79",
+      "lastModificationDate": 1677771063970,
+      "contentHash": "fe6cb26d3422534dfea3136238a61ba9",
       "sourceName": "src/other/contango/ContangoWand.sol",
       "solcConfig": {
         "settings": {
@@ -9865,8 +9865,8 @@
       }
     },
     "src/test/other/contango/ContangoWand.t.sol": {
-      "lastModificationDate": 1677770847806,
-      "contentHash": "63240febc8e859d47e847c238794200a",
+      "lastModificationDate": 1677771402904,
+      "contentHash": "af1bb22be74da0807669cbf8b4ff7951",
       "sourceName": "src/test/other/contango/ContangoWand.t.sol",
       "solcConfig": {
         "settings": {

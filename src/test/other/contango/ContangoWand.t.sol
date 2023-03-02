@@ -81,6 +81,7 @@ contract ContangoWandTest is Test, TestConstants {
         wand.grantRole(wand.addToken.selector, address(this));
         AccessControl(address(contangoLadle)).grantRole(ILadle.addJoin.selector, address(wand));
         wand.grantRole(wand.copyJoin.selector, address(this));
+        wand.grantRole(wand.deployJoin.selector, address(this));
         vm.stopPrank();
     }
 
@@ -508,6 +509,36 @@ contract ContangoWandTest is Test, TestConstants {
         AccessControl join = AccessControl(address(yieldLadle.joins(USDT)));
 
         wand.copyJoin(USDT);
+
+        assertEq(address(contangoLadle.joins(USDT)), address(join), "join");
+
+        assertTrue(join.hasRole(IJoin.join.selector, address(contangoLadle)), "contango ladle can join");
+        assertTrue(join.hasRole(IJoin.exit.selector, address(contangoLadle)), "contango ladle can exit");
+
+        assertTrue(join.hasRole(IJoin.join.selector, address(contangoWitch)), "contango witch can join");
+        assertTrue(join.hasRole(IJoin.exit.selector, address(contangoWitch)), "contango witch can exit");
+    }
+
+    function testDeployJoin_Auth() public {
+        vm.prank(bob);
+        vm.expectRevert("Access denied");
+        wand.deployJoin(FYUSDT2306);
+    }
+
+    function testDeployJoin_InvalidAsset() public {
+        vm.expectRevert("Asset not known to the Contango Cauldron");
+        wand.deployJoin("meh");
+    }
+
+    function testDeployJoin_JoinExists() public {
+        vm.expectRevert("Join already known to the Contango Ladle");
+        wand.deployJoin(ETH);
+    }
+
+    function testDeployJoin() public {
+        wand.addAsset(USDT);
+
+        AccessControl join = AccessControl(address(wand.deployJoin(USDT)));
 
         assertEq(address(contangoLadle.joins(USDT)), address(join), "join");
 

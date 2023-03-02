@@ -251,7 +251,8 @@ contract ContangoWand is AccessControl {
 
     function deployJoin(bytes6 assetId) external auth returns (IJoin join) {
         address asset = contangoCauldron.assets(assetId);
-        require(asset != address(0), "Asset not known to the Cauldron");
+        require(asset != address(0), "Asset not known to the Contango Cauldron");
+        require(contangoLadle.joins(assetId) == IJoin(address(0)), "Join already known to the Contango Ladle");
 
         Join join_ = new Join(asset);
         join_.grantRole(join_.ROOT(), yieldTimelock);
