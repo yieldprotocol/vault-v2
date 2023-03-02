@@ -63,6 +63,20 @@ contract ContangoWitch is Witch, IContangoWitch {
         uint64 maxInsuredProportion,
         uint64 insurancePremium
     ) external override auth {
+        require(
+            maxInsuredProportion <= ONE_HUNDRED_PERCENT,
+            "Max Insured Proportion above 100%"
+        );
+        require(
+            insurancePremium <= ONE_HUNDRED_PERCENT,
+            "Insurance Premium above 100%"
+        );
+        require(
+            maxInsuredProportion >= ONE_PERCENT,
+            "Max Insured Proportion below 1%"
+        );
+        require(insurancePremium >= ONE_PERCENT, "Insurance Premium below 1%");
+
         insuranceLines[ilkId][baseId] = InsuranceLine(
             duration,
             maxInsuredProportion,
@@ -93,13 +107,10 @@ contract ContangoWitch is Witch, IContangoWitch {
         InsuranceLine memory line = insuranceLines[ilkId][baseId];
         uint256 topUp = line.duration == 0
             ? 0
-            : artIn.wmul(
-                // TODO remove this and return only the discount
-                ONE_HUNDRED_PERCENT -
-                    _debtProportionNow(line, auctionStart, auctionDuration)
-            );
+            : artIn.wmul(_debtDiscountNow(line, auctionStart, auctionDuration));
 
         if (topUp > 0) {
+            // TODO possible overflow is very unlikely, maybe to it simpler and just don't have type(uint256).max as balances on the tests?
             // two step verification to avoid possible overflow when summing up both balances
             uint256 insuranceFYTokenBalance = cauldron
                 .series(seriesId)
@@ -109,8 +120,8 @@ contract ContangoWitch is Witch, IContangoWitch {
                 uint256 insuranceBaseBalance = IERC20(
                     ladle.joins(baseId).asset()
                 ).balanceOf(insuranceFund);
+                // TODO assumes 1:1 base:fyToken
                 if (insuranceBaseBalance < topUp - insuranceFYTokenBalance) {
-                    // TODO assumes 1:1 fyToken:base
                     topUp = insuranceFYTokenBalance + insuranceBaseBalance;
                 }
             }
@@ -119,16 +130,15 @@ contract ContangoWitch is Witch, IContangoWitch {
         requiredArtIn = artIn - topUp;
     }
 
-    function _debtProportionNow(
+    function _debtDiscountNow(
         InsuranceLine memory line,
         uint256 auctionStart,
         uint256 auctionDuration
-    ) internal view returns (uint256 debtProportionNow) {
+    ) internal view returns (uint256 debtDiscountNow) {
         uint256 elapsed = block.timestamp - (auctionStart + auctionDuration);
-        uint256 discount = elapsed < line.duration
+        debtDiscountNow = elapsed < line.duration
             ? (line.maxInsuredProportion * elapsed) / line.duration
             : line.maxInsuredProportion;
-        debtProportionNow = ONE_HUNDRED_PERCENT - discount;
     }
 
     function _topUpDebt(
@@ -149,7 +159,8 @@ contract ContangoWitch is Witch, IContangoWitch {
             requiredArtIn = artIn;
         } else {
             requiredArtIn = artIn.wdivup(
-                _debtProportionNow(insuranceLine, auction.start, duration)
+                ONE_HUNDRED_PERCENT -
+                    _debtDiscountNow(insuranceLine, auction.start, duration)
             );
 
             uint256 topUpAmount = requiredArtIn - artIn;
