@@ -12,6 +12,7 @@ contract ContangoWitch is Witch, IContangoWitch {
     using Cast for uint256;
 
     struct InsuranceLine {
+        bool disabled;
         uint32 duration; // Time that the insurance auction take to cover the maximum debt insured
         uint64 maxInsuredProportion; // Maximum proportion of debt that is covered by the insurance fund at the insurance auction end (1e18 = 100%)
         uint64 insurancePremium; // Proportion of the collateral that is sent to the insurance fund for healthy liquidations (1e18 = 100%)
@@ -21,6 +22,7 @@ contract ContangoWitch is Witch, IContangoWitch {
 
     mapping(bytes6 => mapping(bytes6 => InsuranceLine)) public insuranceLines;
     address public insuranceFund;
+    uint64 defaultInsurancePremium; // 1e18 = 100%
 
     constructor(
         IContangoWitchListener contango_,
@@ -56,6 +58,26 @@ contract ContangoWitch is Witch, IContangoWitch {
         contango.auctionEnded(vaultId, owner);
     }
 
+    function setDefaultInsurancePremium(
+        uint64 defaultInsurancePremium_
+    ) external override auth {
+        require(
+            defaultInsurancePremium_ <= ONE_HUNDRED_PERCENT,
+            "Default Insurance Premium above 100%"
+        );
+        defaultInsurancePremium = defaultInsurancePremium_;
+        emit DefaultInsurancePremiumSet(defaultInsurancePremium);
+    }
+
+    function setInsuranceLineStatus(
+        bytes6 ilkId,
+        bytes6 baseId,
+        bool disabled
+    ) external override auth {
+        insuranceLines[ilkId][baseId].disabled = disabled;
+        emit InsuranceLineStatusSet(ilkId, baseId, disabled);
+    }
+
     function setInsuranceLine(
         bytes6 ilkId,
         bytes6 baseId,
@@ -71,17 +93,13 @@ contract ContangoWitch is Witch, IContangoWitch {
             insurancePremium <= ONE_HUNDRED_PERCENT,
             "Insurance Premium above 100%"
         );
-        require(
-            maxInsuredProportion >= ONE_PERCENT,
-            "Max Insured Proportion below 1%"
-        );
-        require(insurancePremium >= ONE_PERCENT, "Insurance Premium below 1%");
 
-        insuranceLines[ilkId][baseId] = InsuranceLine(
-            duration,
-            maxInsuredProportion,
-            insurancePremium
-        );
+        insuranceLines[ilkId][baseId] = InsuranceLine({
+            disabled: false,
+            duration: duration,
+            maxInsuredProportion: maxInsuredProportion,
+            insurancePremium: insurancePremium
+        });
         emit InsuranceLineSet(
             ilkId,
             baseId,
@@ -207,11 +225,15 @@ contract ContangoWitch is Witch, IContangoWitch {
         DataTypes.Auction memory auction_,
         uint256 liquidatorCut
     ) internal view override returns (uint256 premium) {
-        uint256 insurancePremium = insuranceLines[auction_.ilkId][
+        InsuranceLine memory insuranceLine = insuranceLines[auction_.ilkId][
             auction_.baseId
-        ].insurancePremium;
+        ];
 
-        if (_shouldItPayInsurancePremium(insurancePremium, auction_)) {
+        (
+            bool shouldPayInsurancePremium,
+            uint256 insurancePremium
+        ) = _shouldPayInsurancePremium(insuranceLine, auction_);
+        if (shouldPayInsurancePremium) {
             premium = liquidatorCut.wmul(insurancePremium);
         }
     }
@@ -237,13 +259,20 @@ contract ContangoWitch is Witch, IContangoWitch {
             );
     }
 
-    function _shouldItPayInsurancePremium(
-        uint256 insurancePremium,
+    function _shouldPayInsurancePremium(
+        InsuranceLine memory insuranceLine,
         DataTypes.Auction memory auction
-    ) internal view returns (bool) {
+    ) internal view returns (bool should, uint256 insurancePremium) {
+        if (insuranceLine.disabled) return (false, 0);
+
         uint256 duration = lines[auction.ilkId][auction.baseId].duration;
+        insurancePremium = insuranceLine.insurancePremium > 0
+            ? insuranceLine.insurancePremium
+            : defaultInsurancePremium;
+
         // Only charge premium for non-insured liquidations
-        return
-            insurancePremium > 0 && block.timestamp <= auction.start + duration;
+        should =
+            insurancePremium > 0 &&
+            block.timestamp <= auction.start + duration;
     }
 }

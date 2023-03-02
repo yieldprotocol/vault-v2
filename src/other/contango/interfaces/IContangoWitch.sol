@@ -9,6 +9,12 @@ interface IContangoWitchEvents {
         uint64 maxInsuredProportion,
         uint64 insurancePremium
     );
+    event InsuranceLineStatusSet(
+        bytes6 indexed ilkId,
+        bytes6 indexed baseId,
+        bool disabled
+    );
+    event DefaultInsurancePremiumSet(uint64 defaultInsurancePremium);
     event InsuranceFundSet(address indexed insuranceFund);
     event LiquidationInsured(
         bytes12 indexed vaultId,
@@ -24,6 +30,16 @@ interface IContangoWitch is IContangoWitchEvents {
         uint32 duration,
         uint64 maxInsuredProportion,
         uint64 insurancePremium
+    ) external;
+
+    function setInsuranceLineStatus(
+        bytes6 ilkId,
+        bytes6 baseId,
+        bool enabled
+    ) external;
+
+    function setDefaultInsurancePremium(
+        uint64 defaultInsurancePremium_
     ) external;
 
     function setInsuranceFund(address insuranceFund_) external;
