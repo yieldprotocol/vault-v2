@@ -86,6 +86,8 @@ contract ContangoWandTest is Test, TestConstants {
         wand.grantRole(wand.setLineAndLimit.selector, address(this));
         wand.grantRole(wand.setWitchDefaults.selector, address(this));
         wand.grantRole(wand.configureWitch.selector, address(this));
+        AccessControl(address(contangoWitch)).grantRole(IWitchGov.setAuctioneerReward.selector, address(wand));
+        wand.grantRole(wand.setAuctioneerReward.selector, address(this));
         vm.stopPrank();
     }
 
@@ -598,5 +600,17 @@ contract ContangoWandTest is Test, TestConstants {
         assertEq(line.collateralProportion, 0.75e18, "collateralProportion");
         DataTypes.Limits memory limits = contangoWitch.limits(FYUSDC2306, ETH);
         assertEq(limits.max, 500_000e6, "max");
+    }
+
+    function testSetAuctioneerReward_Auth() public {
+        vm.prank(bob);
+        vm.expectRevert("Access denied");
+        wand.setAuctioneerReward(0.02e18);
+    }
+
+    function testSetAuctioneerReward() public {
+        wand.setAuctioneerReward(0.02e18);
+
+        assertEq(contangoWitch.auctioneerReward(), 0.02e18, "auctioneerReward");
     }
 }

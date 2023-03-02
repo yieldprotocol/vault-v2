@@ -19,4 +19,6 @@ interface IWitchGov {
     function setProtected(address owner, bool _protected) external;
 
     function setAuctioneerReward(uint256 auctioneerReward_) external;
+    
+    function auctioneerReward() external returns (uint256);
 }

@@ -3481,8 +3481,8 @@
       }
     },
     "src/interfaces/IWitchGov.sol": {
-      "lastModificationDate": 1677692998745,
-      "contentHash": "8ac63c848c2a23972234964a105b17e1",
+      "lastModificationDate": 1677782466516,
+      "contentHash": "c35f2c5fc1c83ec970e1a382ea9c6fa1",
       "sourceName": "src/interfaces/IWitchGov.sol",
       "solcConfig": {
         "settings": {
@@ -9868,8 +9868,8 @@
       }
     },
     "src/test/other/contango/ContangoWand.t.sol": {
-      "lastModificationDate": 1677782327313,
-      "contentHash": "1a1d208bdf91f97b16bf7ec57b506e59",
+      "lastModificationDate": 1677782488111,
+      "contentHash": "26cb81eafdb8cf40d59dde31fcc397be",
       "sourceName": "src/test/other/contango/ContangoWand.t.sol",
       "solcConfig": {
         "settings": {
