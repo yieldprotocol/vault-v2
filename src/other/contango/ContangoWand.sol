@@ -152,9 +152,6 @@ contract ContangoWand is AccessControl {
         debt[baseId][ilkId] = DataTypes.Debt({max: max, min: min, dec: dec, sum: 0});
     }
 
-    // TODO index bounds by baseId on the ilk side
-    // TODO add dec as parameter and check bounds on full amount
-
     /// @notice Set the debt limits for a given asset pair in the Cauldron, within bounds
     function setDebtLimits(bytes6 baseId, bytes6 ilkId, uint96 max, uint24 min, uint8 dec) external auth {
         // If the ilkId is a series and boundaries are not set, set them to default values
@@ -207,13 +204,14 @@ contract ContangoWand is AccessControl {
         }
     }
 
-    // TODO re-instate check with try-catching or something
-
     /// @notice Set a path in the Composite oracle, as long as the path is not overwriting anything
     function setCompositeOraclePath(bytes6 baseId, bytes6 quoteId, bytes6[] calldata path) external auth {
-        // This doesn't work because of the way Solidity handles arrays
-        // require(compositeOracle.paths(baseId, quoteId, 0) == bytes6(0), "Path already set"); // We check that the first element in the path is empty
-        compositeOracle.setPath(baseId, quoteId, path);
+        // This is hideous, but's the only way to check if a path is already set
+        try compositeOracle.paths(baseId, quoteId, 0) {
+            revert("Path already set");
+        } catch {
+            compositeOracle.setPath(baseId, quoteId, path);
+        }
     }
 
     /// ----------------- Ladle Governance -----------------

@@ -429,10 +429,10 @@ contract ContangoWandTest is Test, TestConstants {
         wand.setCompositeOraclePath(USDT, FYETH2306, new bytes6[](0));
     }
 
-    // function testCompositeOraclePath_InvalidPair() public {
-    //     vm.expectRevert("Path already set");
-    //     wand.setCompositeOraclePath(USDC, FYETH2306, new bytes6[](0));
-    // }
+    function testCompositeOraclePath_InvalidPair() public {
+        vm.expectRevert("Path already set");
+        wand.setCompositeOraclePath(USDC, FYETH2306, new bytes6[](0));
+    }
 
     function testCompositeOraclePath() public {
         wand.setYieldSpaceOracleSource(FYUSDT2306);
