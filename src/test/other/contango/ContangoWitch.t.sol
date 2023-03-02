@@ -227,13 +227,17 @@ contract ContangoWitchStateZeroTest is ContangoWitchStateZero {
         witch.setInsuranceLine("", "", 0, 0.01e18 - 1, 0);
     }
 
-    function testSetInsuranceLineRequiresInsurancePremiumProportionTooHigh() public {
+    function testSetInsuranceLineRequiresInsurancePremiumProportionTooHigh()
+        public
+    {
         vm.prank(ada);
         vm.expectRevert("Insurance Premium above 100%");
         witch.setInsuranceLine("", "", 0, 0, 1e18 + 1);
     }
 
-    function testSetInsuranceLineRequiresInsurancePremiumProportionTooLow() public {
+    function testSetInsuranceLineRequiresInsurancePremiumProportionTooLow()
+        public
+    {
         vm.prank(ada);
         vm.expectRevert("Insurance Premium below 1%");
         witch.setInsuranceLine("", "", 0, 1e18, 0.01e18 - 1);
@@ -1830,10 +1834,10 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         uint256 auctionStart = auction.start;
 
         // ensure full top up is considered
-        series.fyToken.balanceOf.mockAndVerify(
-            insuranceFund,
-            type(uint256).max
-        );
+        (, , IERC20 base) = ladle.mockJoinSetUp(series, vault);
+        series.fyToken.balanceOf.mockAndVerify(insuranceFund, auction.art);
+        base.balanceOf.mockAndVerify(insuranceFund, 0);
+        cauldron.debtFromBase.mockAndVerify(vault.seriesId, 0, 0);
 
         // 100000 * 0.5 = 50000
         // maxArtIn = (vaultDebt * proportion)
@@ -1958,10 +1962,10 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         uint256 auctionStart = auction.start;
 
         // ensure full top up is considered
-        series.fyToken.balanceOf.mockAndVerify(
-            insuranceFund,
-            type(uint256).max
-        );
+        (, , IERC20 base) = ladle.mockJoinSetUp(series, vault);
+        series.fyToken.balanceOf.mockAndVerify(insuranceFund, auction.art);
+        base.balanceOf.mockAndVerify(insuranceFund, 0);
+        cauldron.debtFromBase.mockAndVerify(vault.seriesId, 0, 0);
 
         // 100000 * 0.5 = 50000
         // maxArtIn = (vaultDebt * proportion)
@@ -2101,6 +2105,8 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         (, , IERC20 base) = ladle.mockJoinSetUp(series, vault);
         series.fyToken.balanceOf.mockAndVerify(insuranceFund, 0);
         base.balanceOf.mockAndVerify(insuranceFund, 6000e6);
+        // make fyToken 1:1 with base to make things simpler
+        cauldron.debtFromBase.mockAndVerify(vault.seriesId, 6000e6, 6000e6);
 
         // 100000 * 0.5 = 50000
         // maxArtIn = (vaultDebt * proportion)
@@ -2108,11 +2114,14 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         // After the insurance auction starts, the liquidatorCut will remain fixed
         // 100 * 0.5 = 50
 
+        // 0 + 6000 = 6000
+        // insuranceFYTokenBalance + insuranceBaseBalance (valued 1:1) = insuranceArtBalance
+
         vm.warp(auctionStart + AUCTION_DURATION + 30 minutes);
         // 50000 * ((1800/7200) * 0.2) = 2500
         // maxArtIn * (timeElapsed * maxInsuredProportion) = topUpAmount
         // min(2500, 6000) = 2500
-        // min(topUpAmount, insuranceFundBaseBalance) = realTopUpAmount
+        // min(topUpAmount, insuranceArtBalance) = realTopUpAmount
         // 50000 - 2500 = 47500
         // maxArtIn - realTopUpAmount = artIn
         (uint256 liquidatorCut, uint256 auctioneerCut, uint256 artIn) = witch
@@ -2125,7 +2134,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         // 50000 * ((3600/7200) * 0.2) = 5000
         // maxArtIn * (timeElapsed * maxInsuredProportion) = topUpAmount
         // min(5000, 6000) = 5000
-        // min(topUpAmount, insuranceFundBaseBalance) = realTopUpAmount
+        // min(topUpAmount, insuranceArtBalance) = realTopUpAmount
         // 50000 - 5000 = 45000
         // maxArtIn - realTopUpAmount = artIn
         (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(
@@ -2141,7 +2150,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         // 50000 * ((5400/7200) * 0.2) = 7500
         // maxArtIn * (timeElapsed * maxInsuredProportion) = topUpAmount
         // min(7500, 6000) = 6000
-        // min(topUpAmount, insuranceFundBaseBalance) = realTopUpAmount
+        // min(topUpAmount, insuranceArtBalance) = realTopUpAmount
         // 50000 - 6000 = 44000
         // maxArtIn - realTopUpAmount = artIn
         (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(
@@ -2158,7 +2167,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         // 50000 * 0.2 = 10000
         // maxArtIn * maxInsuredProportion = topUpAmount
         // min(10000, 6000) = 6000
-        // min(topUpAmount, insuranceFundBaseBalance) = realTopUpAmount
+        // min(topUpAmount, insuranceArtBalance) = realTopUpAmount
         // 50000 - 6000 = 44000
         // maxArtIn - realTopUpAmount = artIn
         (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(
@@ -2196,6 +2205,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         (, , IERC20 base) = ladle.mockJoinSetUp(series, vault);
         series.fyToken.balanceOf.mockAndVerify(insuranceFund, 7000e6);
         base.balanceOf.mockAndVerify(insuranceFund, 0);
+        cauldron.debtFromBase.mockAndVerify(vault.seriesId, 0, 0);
 
         // 100000 * 0.5 = 50000
         // maxArtIn = (vaultDebt * proportion)
@@ -2203,11 +2213,14 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         // After the insurance auction starts, the liquidatorCut will remain fixed
         // 100 * 0.5 = 50
 
+        // 7000 + 0 = 7000
+        // insuranceFYTokenBalance + insuranceBaseBalance = insuranceArtBalance
+
         vm.warp(auctionStart + AUCTION_DURATION + 30 minutes);
         // 50000 * ((1800/7200) * 0.2) = 2500
         // maxArtIn * (timeElapsed * maxInsuredProportion) = topUpAmount
         // min(2500, 7000) = 2500
-        // min(topUpAmount, insuranceFundBaseBalance) = realTopUpAmount
+        // min(topUpAmount, insuranceArtBalance) = realTopUpAmount
         // 50000 - 2500 = 47500
         // maxArtIn - realTopUpAmount = artIn
         (uint256 liquidatorCut, uint256 auctioneerCut, uint256 artIn) = witch
@@ -2220,7 +2233,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         // 50000 * ((3600/7200) * 0.2) = 5000
         // maxArtIn * (timeElapsed * maxInsuredProportion) = topUpAmount
         // min(5000, 7000) = 5000
-        // min(topUpAmount, insuranceFundBaseBalance) = realTopUpAmount
+        // min(topUpAmount, insuranceArtBalance) = realTopUpAmount
         // 50000 - 5000 = 45000
         // maxArtIn - realTopUpAmount = artIn
         (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(
@@ -2236,7 +2249,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         // 50000 * ((5400/7200) * 0.2) = 7500
         // maxArtIn * (timeElapsed * maxInsuredProportion) = topUpAmount
         // min(7500, 7000) = 7000
-        // min(topUpAmount, insuranceFundBaseBalance) = realTopUpAmount
+        // min(topUpAmount, insuranceArtBalance) = realTopUpAmount
         // 50000 - 7000 = 43000
         // maxArtIn - realTopUpAmount = artIn
         (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(
@@ -2253,7 +2266,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         // 50000 * 0.2 = 10000
         // maxArtIn * maxInsuredProportion = topUpAmount
         // min(10000, 7000) = 7000
-        // min(topUpAmount, insuranceFundBaseBalance) = realTopUpAmount
+        // min(topUpAmount, insuranceArtBalance) = realTopUpAmount
         // 50000 - 7000 = 43000
         // maxArtIn - realTopUpAmount = artIn
         (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(
@@ -2288,7 +2301,9 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
 
         (, , IERC20 base) = ladle.mockJoinSetUp(series, vault);
         series.fyToken.balanceOf.mockAndVerify(insuranceFund, 2000e6);
-        base.balanceOf.mockAndVerify(insuranceFund, 6000e6);
+        base.balanceOf.mockAndVerify(insuranceFund, 12000e6);
+        // 2:1
+        cauldron.debtFromBase.mockAndVerify(vault.seriesId, 12000e6, 6000e6);
 
         // 100000 * 0.5 = 50000
         // maxArtIn = (vaultDebt * proportion)
@@ -2296,11 +2311,14 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         // After the insurance auction starts, the liquidatorCut will remain fixed
         // 100 * 0.5 = 50
 
+        // 2000 + 6000 = 8000
+        // insuranceFYTokenBalance + insuranceBaseBalance (valued 2:1) = insuranceArtBalance
+
         vm.warp(auctionStart + AUCTION_DURATION + 30 minutes);
         // 50000 * ((1800/7200) * 0.2) = 2500
         // maxArtIn * (timeElapsed * maxInsuredProportion) = topUpAmount
         // min(2500, 8000) = 2500
-        // min(topUpAmount, insuranceFundBaseBalance) = realTopUpAmount
+        // min(topUpAmount, insuranceArtBalance) = realTopUpAmount
         // 50000 - 2500 = 47500
         // maxArtIn - realTopUpAmount = artIn
         (uint256 liquidatorCut, uint256 auctioneerCut, uint256 artIn) = witch
@@ -2313,7 +2331,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         // 50000 * ((3600/7200) * 0.2) = 5000
         // maxArtIn * (timeElapsed * maxInsuredProportion) = topUpAmount
         // min(5000, 8000) = 5000
-        // min(topUpAmount, insuranceFundBaseBalance) = realTopUpAmount
+        // min(topUpAmount, insuranceArtBalance) = realTopUpAmount
         // 50000 - 5000 = 45000
         // maxArtIn - realTopUpAmount = artIn
         (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(
@@ -2329,7 +2347,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         // 50000 * ((5400/7200) * 0.2) = 7500
         // maxArtIn * (timeElapsed * maxInsuredProportion) = topUpAmount
         // min(7500, 8000) = 7500
-        // min(topUpAmount, insuranceFundBaseBalance) = realTopUpAmount
+        // min(topUpAmount, insuranceArtBalance) = realTopUpAmount
         // 50000 - 7500 = 42500
         // maxArtIn - realTopUpAmount = artIn
         (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(
@@ -2346,7 +2364,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         // 50000 * 0.2 = 10000
         // maxArtIn * maxInsuredProportion = topUpAmount
         // min(10000, 8000) = 8000
-        // min(topUpAmount, insuranceFundBaseBalance) = realTopUpAmount
+        // min(topUpAmount, insuranceArtBalance) = realTopUpAmount
         // 50000 - 8000 = 42000
         // maxArtIn - realTopUpAmount = artIn
         (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(
@@ -2817,9 +2835,17 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         );
 
         // ensure full top up is considered
-        series.fyToken.balanceOf.mockAndVerify(
-            insuranceFund,
-            type(uint256).max
+        (IJoin ilkJoin, IJoin baseJoin, IERC20 base) = ladle.mockJoinSetUp(
+            series,
+            vault
+        );
+        series.fyToken.balanceOf.mockAndVerify(insuranceFund, 0);
+        base.balanceOf.mockAndVerify(insuranceFund, auction.art);
+        // make fyToken 1:1 with base to make things simpler
+        cauldron.debtFromBase.mockAndVerify(
+            vault.seriesId,
+            auction.art,
+            auction.art
         );
 
         vm.prank(bot);
@@ -2855,6 +2881,11 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
                 maxBaseIn,
                 maxBaseIn
             );
+            cauldron.debtFromBase.mockAndVerify(
+                vault.seriesId,
+                expectedArtTopUp,
+                expectedArtTopUp
+            );
             cauldron.debtToBase.mockAndVerify(
                 vault.seriesId,
                 expectedArtRepaid,
@@ -2866,13 +2897,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
                 expectedArtTopUp
             );
 
-            (IJoin ilkJoin, IJoin baseJoin, IERC20 base) = ladle.mockJoinSetUp(
-                series,
-                vault
-            );
             ilkJoin.exit.mockAndVerify(bot, minInkOut, minInkOut);
-
-            series.fyToken.balanceOf.mockAndVerify(insuranceFund, 0);
 
             baseJoin.join.mockAndVerify(
                 bot,
@@ -3100,9 +3125,17 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         );
 
         // ensure full top up is considered
-        series.fyToken.balanceOf.mockAndVerify(
-            insuranceFund,
-            type(uint256).max
+        (IJoin ilkJoin, IJoin baseJoin, IERC20 base) = ladle.mockJoinSetUp(
+            series,
+            vault
+        );
+        series.fyToken.balanceOf.mockAndVerify(insuranceFund, 0);
+        base.balanceOf.mockAndVerify(insuranceFund, auction.art);
+        // make fyToken 1:1 with base to make things simpler
+        cauldron.debtFromBase.mockAndVerify(
+            vault.seriesId,
+            auction.art,
+            auction.art
         );
 
         vm.prank(bot);
@@ -3118,9 +3151,8 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         _verifyAuctionEnded(VAULT_ID, bob);
 
         uint128 expectedArtTopUp = auction.art - maxArtIn;
-        uint128 expectedArtRepaid = auction.art - expectedArtTopUp;
-
         {
+            uint128 expectedArtRepaid = auction.art - expectedArtTopUp;
             // Reduce balances on the vault
             cauldron.slurp.mockAndVerify(
                 VAULT_ID,
@@ -3131,14 +3163,15 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             // Vault returns to it's owner after all the liquidation is done
             cauldron.give.mockAndVerify(VAULT_ID, bob, vault);
 
-            (IJoin ilkJoin, IJoin baseJoin, IERC20 base) = ladle.mockJoinSetUp(
-                series,
-                vault
+            // make fyToken 1:1 with base to make things simpler
+            cauldron.debtFromBase.mockAndVerify(
+                vault.seriesId,
+                expectedArtTopUp,
+                expectedArtTopUp
             );
 
             ilkJoin.exit.mockAndVerify(bot, minInkOut, minInkOut);
 
-            series.fyToken.balanceOf.mockAndVerify(insuranceFund, 0);
             series.fyToken.burn.mockAndVerify(bot, expectedArtRepaid);
 
             baseJoin.join.mockAndVerify(
@@ -3310,10 +3343,23 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
                 INSURANCE_AUCTION_DURATION
         );
 
+        uint128 expectedFyTokenTopUp = 150e6;
+
         // ensure full top up is considered
+        (IJoin ilkJoin, IJoin baseJoin, IERC20 base) = ladle.mockJoinSetUp(
+            series,
+            vault
+        );
         series.fyToken.balanceOf.mockAndVerify(
             insuranceFund,
-            type(uint256).max
+            expectedFyTokenTopUp
+        );
+        base.balanceOf.mockAndVerify(insuranceFund, type(uint128).max);
+        // make fyToken 1:1 with base to make things simpler
+        cauldron.debtFromBase.mockAndVerify(
+            vault.seriesId,
+            type(uint128).max,
+            type(uint128).max
         );
 
         vm.prank(bot);
@@ -3330,7 +3376,6 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         _verifyAuctionEnded(VAULT_ID, bob);
 
         uint128 expectedArtTopUp = auction.art - maxBaseIn;
-        uint128 expectedFyTokenTopUp = 150e6;
         uint128 expectedBaseTopUp = expectedArtTopUp - expectedFyTokenTopUp;
         uint128 expectedArtRepaid = auction.art - expectedArtTopUp;
 
@@ -3351,6 +3396,11 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
                 maxBaseIn,
                 maxBaseIn
             );
+            cauldron.debtFromBase.mockAndVerify(
+                vault.seriesId,
+                expectedBaseTopUp,
+                expectedBaseTopUp
+            );
             cauldron.debtToBase.mockAndVerify(
                 vault.seriesId,
                 expectedArtRepaid,
@@ -3360,11 +3410,6 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
                 vault.seriesId,
                 expectedArtTopUp,
                 expectedArtTopUp
-            );
-
-            (IJoin ilkJoin, IJoin baseJoin, IERC20 base) = ladle.mockJoinSetUp(
-                series,
-                vault
             );
 
             ilkJoin.exit.mockAndVerify(bot, minInkOut, minInkOut);
@@ -3437,30 +3482,45 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
                 INSURANCE_AUCTION_DURATION
         );
 
+        uint128 expectedFyTokenTopUp = 150e6;
+
         // ensure full top up is considered
+        (IJoin ilkJoin, IJoin baseJoin, IERC20 base) = ladle.mockJoinSetUp(
+            series,
+            vault
+        );
         series.fyToken.balanceOf.mockAndVerify(
             insuranceFund,
-            type(uint256).max
+            expectedFyTokenTopUp
+        );
+        // make fyToken 1:1 with base to make things simpler
+        base.balanceOf.mockAndVerify(insuranceFund, type(uint128).max);
+        cauldron.debtFromBase.mockAndVerify(
+            vault.seriesId,
+            type(uint128).max,
+            type(uint128).max
         );
 
-        vm.prank(bot);
-        (uint256 minInkOut_, , uint256 maxArtIn_) = witch.calcPayout(
-            VAULT_ID,
-            bot,
-            maxArtIn
-        );
-        uint128 minInkOut = uint128(minInkOut_);
-        maxArtIn = uint128(maxArtIn_);
+        uint128 minInkOut;
+        {
+            vm.prank(bot);
+            (uint256 minInkOut_, , uint256 maxArtIn_) = witch.calcPayout(
+                VAULT_ID,
+                bot,
+                maxArtIn
+            );
+            minInkOut = uint128(minInkOut_);
+            maxArtIn = uint128(maxArtIn_);
+        }
 
         _verifyCollateralBought(VAULT_ID, bot, minInkOut, auction.art);
         _verifyAuctionEnded(VAULT_ID, bob);
 
         uint128 expectedArtTopUp = auction.art - maxArtIn;
-        uint128 expectedFyTokenTopUp = 150e6;
-        uint128 expectedBaseTopUp = expectedArtTopUp - expectedFyTokenTopUp;
-        uint128 expectedArtRepaid = auction.art - expectedArtTopUp;
-
         {
+            uint128 expectedBaseTopUp = expectedArtTopUp - expectedFyTokenTopUp;
+            uint128 expectedArtRepaid = auction.art - expectedArtTopUp;
+
             // Reduce balances on the vault
             cauldron.slurp.mockAndVerify(
                 VAULT_ID,
@@ -3471,9 +3531,11 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             // Vault returns to it's owner after all the liquidation is done
             cauldron.give.mockAndVerify(VAULT_ID, bob, vault);
 
-            (IJoin ilkJoin, IJoin baseJoin, IERC20 base) = ladle.mockJoinSetUp(
-                series,
-                vault
+            // make fyToken 1:1 with base to make things simpler
+            cauldron.debtFromBase.mockAndVerify(
+                vault.seriesId,
+                expectedBaseTopUp,
+                expectedBaseTopUp
             );
 
             ilkJoin.exit.mockAndVerify(bot, minInkOut, minInkOut);
@@ -3531,7 +3593,6 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         _auctionWasDeleted(VAULT_ID);
     }
 
-    // testCapTopUpToInsuranceFundBalance
     // testDonNotPayMoreThanAuctionArt
 
     // testChargeInsurancePremiumOnNonInsuredPairs

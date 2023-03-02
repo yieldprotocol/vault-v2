@@ -103,28 +103,23 @@ contract ContangoWitch is Witch, IContangoWitch {
         uint256 auctionStart,
         uint256 auctionDuration,
         uint256 artIn
-    ) internal view virtual override returns (uint256 requiredArtIn) {
+    ) internal virtual override returns (uint256 requiredArtIn) {
         InsuranceLine memory line = insuranceLines[ilkId][baseId];
         uint256 topUp = line.duration == 0
             ? 0
             : artIn.wmul(_debtDiscountNow(line, auctionStart, auctionDuration));
 
         if (topUp > 0) {
-            // TODO possible overflow is very unlikely, maybe to it simpler and just don't have type(uint256).max as balances on the tests?
-            // two step verification to avoid possible overflow when summing up both balances
             uint256 insuranceFYTokenBalance = cauldron
                 .series(seriesId)
                 .fyToken
                 .balanceOf(insuranceFund);
-            if (insuranceFYTokenBalance < topUp) {
-                uint256 insuranceBaseBalance = IERC20(
-                    ladle.joins(baseId).asset()
-                ).balanceOf(insuranceFund);
-                // TODO assumes 1:1 base:fyToken
-                if (insuranceBaseBalance < topUp - insuranceFYTokenBalance) {
-                    topUp = insuranceFYTokenBalance + insuranceBaseBalance;
-                }
-            }
+            uint256 insuranceBaseBalance = IERC20(ladle.joins(baseId).asset())
+                .balanceOf(insuranceFund);
+
+            uint256 topUpAvailable = insuranceFYTokenBalance +
+                cauldron.debtFromBase(seriesId, insuranceBaseBalance.u128());
+            if (topUp > topUpAvailable) topUp = topUpAvailable;
         }
 
         requiredArtIn = artIn - topUp;
@@ -163,6 +158,9 @@ contract ContangoWitch is Witch, IContangoWitch {
                     _debtDiscountNow(insuranceLine, auction.start, duration)
             );
 
+            // TODO cap requiredArtIn to auction.art
+            // 1 - liquidator sends more art than needed -> cap insurance top up
+            // 2 - partial liquidation should use as much insurance as possible -> should be the case already
             uint256 topUpAmount = requiredArtIn - artIn;
 
             if (topUpAmount != 0) {
