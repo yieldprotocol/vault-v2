@@ -88,6 +88,8 @@ abstract contract ContangoWitchStateZero is
         witch.grantRole(Witch.setAuctioneerReward.selector, ada);
         witch.grantRole(ContangoWitch.setInsuranceFund.selector, ada);
         witch.grantRole(ContangoWitch.setInsuranceLine.selector, ada);
+        witch.grantRole(ContangoWitch.setInsuranceLineStatus.selector, ada);
+        witch.grantRole(ContangoWitch.setDefaultInsurancePremium.selector, ada);
         vm.stopPrank();
 
         vm.label(ada, "Ada");
@@ -209,6 +211,28 @@ contract ContangoWitchStateZeroTest is ContangoWitchStateZero {
         witch.setInsuranceFund(insuranceFund);
     }
 
+    function testSetDefaultInsurancePremiumRequiresAuth() public {
+        vm.prank(bob);
+        vm.expectRevert("Access denied");
+        witch.setDefaultInsurancePremium(0);
+    }
+
+    function testSetDefaultInsurancePremiumRequiresTooHigh() public {
+        vm.prank(ada);
+        vm.expectRevert("Default Insurance Premium above 100%");
+        witch.setDefaultInsurancePremium(1e18 + 1);
+    }
+
+    function testSetDefaultInsurancePremium() public {
+        uint64 defaultInsurancePremium = 0.01e18;
+
+        vm.expectEmit(true, true, true, true);
+        emit DefaultInsurancePremiumSet(defaultInsurancePremium);
+
+        vm.prank(ada);
+        witch.setDefaultInsurancePremium(defaultInsurancePremium);
+    }
+
     function testSetInsuranceLineRequiresAuth() public {
         vm.prank(bob);
         vm.expectRevert("Access denied");
@@ -221,26 +245,12 @@ contract ContangoWitchStateZeroTest is ContangoWitchStateZero {
         witch.setInsuranceLine("", "", 0, 1e18 + 1, 0);
     }
 
-    function testSetInsuranceLineRequiresMaxInsuredProportionTooLow() public {
-        vm.prank(ada);
-        vm.expectRevert("Max Insured Proportion below 1%");
-        witch.setInsuranceLine("", "", 0, 0.01e18 - 1, 0);
-    }
-
     function testSetInsuranceLineRequiresInsurancePremiumProportionTooHigh()
         public
     {
         vm.prank(ada);
         vm.expectRevert("Insurance Premium above 100%");
         witch.setInsuranceLine("", "", 0, 0, 1e18 + 1);
-    }
-
-    function testSetInsuranceLineRequiresInsurancePremiumProportionTooLow()
-        public
-    {
-        vm.prank(ada);
-        vm.expectRevert("Insurance Premium below 1%");
-        witch.setInsuranceLine("", "", 0, 1e18, 0.01e18 - 1);
     }
 
     function testSetInsuranceLine() public {
@@ -264,6 +274,20 @@ contract ContangoWitchStateZeroTest is ContangoWitchStateZero {
             maxInsuredProportion,
             insurancePremium
         );
+    }
+
+    function testSetInsuranceLineStatusRequiresAuth() public {
+        vm.prank(bob);
+        vm.expectRevert("Access denied");
+        witch.setInsuranceLineStatus("", "", true);
+    }
+
+    function testSetInsuranceLineStatus() public {
+        vm.expectEmit(true, true, true, true);
+        emit InsuranceLineStatusSet(ILK_ID, BASE_ID, true);
+
+        vm.prank(ada);
+        witch.setInsuranceLineStatus(ILK_ID, BASE_ID, true);
     }
 
     function testSetProtectedRequiresAuth() public {
@@ -3716,6 +3740,185 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         _auctionWasDeleted(VAULT_ID);
     }
 
-    // testChargeInsurancePremiumOnNonInsuredPairs
-    // testUseGlobalInsurancePremium
+    function testPayBaseAllWithInsuranceUsingDefaultPremium() public {
+        uint64 defaultInsurancePremium = 0.05e18;
+
+        vm.startPrank(ada);
+        witch.setDefaultInsurancePremium(defaultInsurancePremium);
+        witch.setInsuranceLine({
+            ilkId: ILK_ID,
+            baseId: BASE_ID,
+            duration: INSURANCE_AUCTION_DURATION,
+            maxInsuredProportion: maxInsuredProportion,
+            insurancePremium: 0
+        });
+        vm.stopPrank();
+
+        uint128 maxBaseIn = uint128(auction.art);
+        vm.prank(bot);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, bot, maxBaseIn);
+        uint128 minInkOut = uint128(minInkOut_);
+        uint128 premium = uint128(
+            minInkOut.wdiv(1e18 - defaultInsurancePremium) - minInkOut
+        );
+
+        _verifyCollateralBought(VAULT_ID, bot, minInkOut + premium, maxBaseIn);
+        _verifyAuctionEnded(VAULT_ID, bob);
+
+        // Reduce balances on the vault
+        cauldron.slurp.mockAndVerify(
+            VAULT_ID,
+            minInkOut + premium,
+            maxBaseIn,
+            balances
+        );
+        // Vault returns to it's owner after all the liquidation is done
+        cauldron.give.mockAndVerify(VAULT_ID, bob, vault);
+
+        // make fyToken 1:1 with base to make things simpler
+        cauldron.debtFromBase.mockAndVerify(
+            vault.seriesId,
+            maxBaseIn,
+            maxBaseIn
+        );
+        cauldron.debtToBase.mockAndVerify(vault.seriesId, maxBaseIn, maxBaseIn);
+
+        (IJoin ilkJoin, IJoin baseJoin, ) = ladle.mockJoinSetUp(series, vault);
+        ilkJoin.exit.mockAndVerify(bot, minInkOut, minInkOut);
+        ilkJoin.exit.mockAndVerify(insuranceFund, premium, premium);
+        baseJoin.join.mockAndVerify(bot, maxBaseIn, maxBaseIn);
+
+        vm.expectEmit(true, true, true, true);
+        emit Ended(VAULT_ID);
+        vm.expectEmit(true, true, true, true);
+        emit Bought(VAULT_ID, bot, minInkOut + premium, maxBaseIn);
+
+        vm.prank(bot);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) = witch
+            .payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
+        assertEq(liquidatorCut, minInkOut);
+        assertEq(auctioneerCut, 0);
+        assertEq(baseIn, maxBaseIn);
+
+        // sum is reduced by auction.ink
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, 0, "sum");
+
+        _auctionWasDeleted(VAULT_ID);
+    }
+
+    function testPayBaseAllWithoutInsuranceButChargingPremium() public {
+        vm.startPrank(ada);
+        witch.setInsuranceLine({
+            ilkId: ILK_ID,
+            baseId: BASE_ID,
+            duration: 0,
+            maxInsuredProportion: 0,
+            insurancePremium: insurancePremium
+        });
+        vm.stopPrank();
+
+        uint128 maxBaseIn = uint128(auction.art);
+        vm.prank(bot);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, bot, maxBaseIn);
+        uint128 minInkOut = uint128(minInkOut_);
+        uint128 premium = uint128(
+            minInkOut.wdiv(1e18 - insurancePremium) - minInkOut
+        );
+
+        _verifyCollateralBought(VAULT_ID, bot, minInkOut + premium, maxBaseIn);
+        _verifyAuctionEnded(VAULT_ID, bob);
+
+        // Reduce balances on the vault
+        cauldron.slurp.mockAndVerify(
+            VAULT_ID,
+            minInkOut + premium,
+            maxBaseIn,
+            balances
+        );
+        // Vault returns to it's owner after all the liquidation is done
+        cauldron.give.mockAndVerify(VAULT_ID, bob, vault);
+
+        // make fyToken 1:1 with base to make things simpler
+        cauldron.debtFromBase.mockAndVerify(
+            vault.seriesId,
+            maxBaseIn,
+            maxBaseIn
+        );
+        cauldron.debtToBase.mockAndVerify(vault.seriesId, maxBaseIn, maxBaseIn);
+
+        (IJoin ilkJoin, IJoin baseJoin, ) = ladle.mockJoinSetUp(series, vault);
+        ilkJoin.exit.mockAndVerify(bot, minInkOut, minInkOut);
+        ilkJoin.exit.mockAndVerify(insuranceFund, premium, premium);
+        baseJoin.join.mockAndVerify(bot, maxBaseIn, maxBaseIn);
+
+        vm.expectEmit(true, true, true, true);
+        emit Ended(VAULT_ID);
+        vm.expectEmit(true, true, true, true);
+        emit Bought(VAULT_ID, bot, minInkOut + premium, maxBaseIn);
+
+        vm.prank(bot);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) = witch
+            .payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
+        assertEq(liquidatorCut, minInkOut);
+        assertEq(auctioneerCut, 0);
+        assertEq(baseIn, maxBaseIn);
+
+        // sum is reduced by auction.ink
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, 0, "sum");
+
+        _auctionWasDeleted(VAULT_ID);
+    }
+
+    function testPayBaseAllWithoutInsuranceEnabledAndNotChargingPremium()
+        public
+    {
+        vm.startPrank(ada);
+        witch.setInsuranceLineStatus(ILK_ID, BASE_ID, true);
+        vm.stopPrank();
+
+        uint128 maxBaseIn = uint128(auction.art);
+        vm.prank(bot);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, bot, maxBaseIn);
+        uint128 minInkOut = uint128(minInkOut_);
+
+        _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxBaseIn);
+        _verifyAuctionEnded(VAULT_ID, bob);
+
+        // Reduce balances on the vault
+        cauldron.slurp.mockAndVerify(VAULT_ID, minInkOut, maxBaseIn, balances);
+        // Vault returns to it's owner after all the liquidation is done
+        cauldron.give.mockAndVerify(VAULT_ID, bob, vault);
+
+        // make fyToken 1:1 with base to make things simpler
+        cauldron.debtFromBase.mockAndVerify(
+            vault.seriesId,
+            maxBaseIn,
+            maxBaseIn
+        );
+        cauldron.debtToBase.mockAndVerify(vault.seriesId, maxBaseIn, maxBaseIn);
+
+        (IJoin ilkJoin, IJoin baseJoin, ) = ladle.mockJoinSetUp(series, vault);
+        ilkJoin.exit.mockAndVerify(bot, minInkOut, minInkOut);
+        baseJoin.join.mockAndVerify(bot, maxBaseIn, maxBaseIn);
+
+        vm.expectEmit(true, true, true, true);
+        emit Ended(VAULT_ID);
+        vm.expectEmit(true, true, true, true);
+        emit Bought(VAULT_ID, bot, minInkOut, maxBaseIn);
+
+        vm.prank(bot);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) = witch
+            .payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
+        assertEq(liquidatorCut, minInkOut);
+        assertEq(auctioneerCut, 0);
+        assertEq(baseIn, maxBaseIn);
+
+        // sum is reduced by auction.ink
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, 0, "sum");
+
+        _auctionWasDeleted(VAULT_ID);
+    }
 }
