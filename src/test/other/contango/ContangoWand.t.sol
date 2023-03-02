@@ -82,6 +82,10 @@ contract ContangoWandTest is Test, TestConstants {
         AccessControl(address(contangoLadle)).grantRole(ILadle.addJoin.selector, address(wand));
         wand.grantRole(wand.copyJoin.selector, address(this));
         wand.grantRole(wand.deployJoin.selector, address(this));
+        AccessControl(address(contangoWitch)).grantRole(IWitchGov.setLineAndLimit.selector, address(wand));
+        wand.grantRole(wand.setLineAndLimit.selector, address(this));
+        wand.grantRole(wand.setWitchDefaults.selector, address(this));
+        wand.grantRole(wand.configureWitch.selector, address(this));
         vm.stopPrank();
     }
 
@@ -547,5 +551,52 @@ contract ContangoWandTest is Test, TestConstants {
 
         assertTrue(join.hasRole(IJoin.join.selector, address(contangoWitch)), "contango witch can join");
         assertTrue(join.hasRole(IJoin.exit.selector, address(contangoWitch)), "contango witch can exit");
+    }
+
+    function testSetLineAndLimit_Auth() public {
+        vm.prank(bob);
+        vm.expectRevert("Access denied");
+        wand.setLineAndLimit(FYUSDT2306, ETH, 10 minutes, 0.5e18, 0.75e18, 500_000e6);
+    }
+
+    function testSetLineAndLimit() public {
+        wand.setLineAndLimit(FYUSDT2306, ETH, 10 minutes, 0.5e18, 0.75e18, 500_000e6);
+
+        DataTypes.Line memory line = contangoWitch.lines(FYUSDT2306, ETH);
+        assertEq(line.duration, 10 minutes, "duration");
+        assertEq(line.vaultProportion, 0.5e18, "vaultProportion");
+        assertEq(line.collateralProportion, 0.75e18, "collateralProportion");
+        DataTypes.Limits memory limits = contangoWitch.limits(FYUSDT2306, ETH);
+        assertEq(limits.max, 500_000e6, "max");
+    }
+
+    function testSetWitchDefaults_Auth() public {
+        vm.prank(bob);
+        vm.expectRevert("Access denied");
+        wand.setWitchDefaults(10 minutes, 0.5e18, 0.05e18);
+    }
+
+    function testSetWitchDefaults() public {
+        wand.setWitchDefaults(10 minutes, 0.5e18, 0.05e18);
+
+        (uint32 duration, uint64 vaultProportion, uint64 intialDiscount) = wand.witchDefaults();
+        assertEq(duration, 10 minutes, "duration");
+        assertEq(vaultProportion, 0.5e18, "vaultProportion");
+        assertEq(intialDiscount, 0.05e18, "intialDiscount");
+    }
+
+    function testConfigureWitch() public {
+        wand.setLineAndLimit(FYUSDC2306, ETH, 60 minutes, 1e18, 1e18, 1_000_000e6);
+
+        wand.setWitchDefaults(10 minutes, 0.5e18, 0.05e18);
+
+        wand.configureWitch(FYUSDC2306, ETH, 500_000e6);
+
+        DataTypes.Line memory line = contangoWitch.lines(FYUSDC2306, ETH);
+        assertEq(line.duration, 10 minutes, "duration");
+        assertEq(line.vaultProportion, 0.5e18, "vaultProportion");
+        assertEq(line.collateralProportion, 0.75e18, "collateralProportion");
+        DataTypes.Limits memory limits = contangoWitch.limits(FYUSDC2306, ETH);
+        assertEq(limits.max, 500_000e6, "max");
     }
 }

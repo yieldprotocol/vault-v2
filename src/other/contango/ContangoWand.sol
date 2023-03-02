@@ -15,6 +15,11 @@ import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
 
 /// @title A contract that allows configuring the cauldron and ladle within bounds
 contract ContangoWand is AccessControl {
+    using CauldronUtils for ICauldron;
+    using Math for *;
+
+    uint256 public constant WAD = 1e18;
+
     ICauldron public immutable contangoCauldron;
     ICauldron public immutable yieldCauldron;
     ILadle public immutable contangoLadle;
@@ -24,6 +29,13 @@ contract ContangoWand is AccessControl {
     address public immutable yieldTimelock;
     IWitch public immutable contangoWitch;
 
+    struct WitchDefaults {
+        uint32 duration;
+        uint64 vaultProportion;
+        uint64 intialDiscount;
+    }
+
+    WitchDefaults public witchDefaults;
     mapping(bytes6 => mapping(bytes6 => uint32)) public ratio;
     mapping(bytes6 => mapping(bytes6 => DataTypes.Debt)) public debt;
 
@@ -190,11 +202,7 @@ contract ContangoWand is AccessControl {
             require(address(pool_) != address(0), "YieldSpace oracle not set");
             compositeOracle.setSource(baseId, ilkId, yieldSpaceOracle);
         } else if (yieldCauldron.assets(ilkId) != address(0)) {
-            DataTypes.SpotOracle memory spotOracle_ = yieldCauldron.spotOracles(baseId, ilkId);
-            if (address(spotOracle_.oracle) == address(0)) {
-                spotOracle_ = yieldCauldron.spotOracles(ilkId, baseId);
-            }
-            require(address(spotOracle_.oracle) != address(0), "Spot oracle not known to the Yield Cauldron");
+            DataTypes.SpotOracle memory spotOracle_ = yieldCauldron.lookupSpotOracle(baseId, ilkId);
             compositeOracle.setSource(baseId, ilkId, spotOracle_.oracle);
         }
     }
@@ -263,6 +271,10 @@ contract ContangoWand is AccessControl {
 
     /// ----------------- Witch Governance -----------------
 
+    function setWitchDefaults(uint32 duration, uint64 vaultProportion, uint64 intialDiscount) external auth {
+        witchDefaults = WitchDefaults(duration, vaultProportion, intialDiscount);
+    }
+
     function setLineAndLimit(
         bytes6 ilkId,
         bytes6 baseId,
@@ -274,7 +286,34 @@ contract ContangoWand is AccessControl {
         contangoWitch.setLineAndLimit(ilkId, baseId, duration, vaultProportion, collateralProportion, max);
     }
 
+    function configureWitch(bytes6 ilkId, bytes6 baseId, uint128 max) external auth {
+        DataTypes.SpotOracle memory spotOracle_ = contangoCauldron.lookupSpotOracle(baseId, ilkId);
+
+        contangoWitch.setLineAndLimit({
+            ilkId: ilkId,
+            baseId: baseId,
+            duration: witchDefaults.duration,
+            vaultProportion: witchDefaults.vaultProportion,
+            collateralProportion: uint64((WAD + witchDefaults.intialDiscount).wdivup(uint256(spotOracle_.ratio) * 10 ** 12)),
+            max: max
+        });
+    }
+
     function setAuctioneerReward(uint256 auctioneerReward) external auth {
         contangoWitch.setAuctioneerReward(auctioneerReward);
+    }
+}
+
+library CauldronUtils {
+    function lookupSpotOracle(ICauldron cauldron, bytes6 baseId, bytes6 ilkId)
+        internal
+        view
+        returns (DataTypes.SpotOracle memory spotOracle_)
+    {
+        spotOracle_ = cauldron.spotOracles(baseId, ilkId);
+        if (address(spotOracle_.oracle) == address(0)) {
+            spotOracle_ = cauldron.spotOracles(ilkId, baseId);
+        }
+        require(address(spotOracle_.oracle) != address(0), "Spot oracle not known to the Cauldron");
     }
 }

@@ -6667,8 +6667,8 @@
       }
     },
     "src/other/contango/ContangoWand.sol": {
-      "lastModificationDate": 1677771063970,
-      "contentHash": "fe6cb26d3422534dfea3136238a61ba9",
+      "lastModificationDate": 1677782297611,
+      "contentHash": "67c87b27a8136cc13fd0c1d67172395f",
       "sourceName": "src/other/contango/ContangoWand.sol",
       "solcConfig": {
         "settings": {
@@ -6734,6 +6734,9 @@
       ],
       "versionRequirement": ">=0.8.13",
       "artifacts": {
+        "CauldronUtils": {
+          "0.8.15+commit.e14f2714.Darwin.appleclang": "ContangoWand.sol/CauldronUtils.json"
+        },
         "ContangoWand": {
           "0.8.15+commit.e14f2714.Darwin.appleclang": "ContangoWand.sol/ContangoWand.json"
         }
@@ -9865,8 +9868,8 @@
       }
     },
     "src/test/other/contango/ContangoWand.t.sol": {
-      "lastModificationDate": 1677771402904,
-      "contentHash": "af1bb22be74da0807669cbf8b4ff7951",
+      "lastModificationDate": 1677782327313,
+      "contentHash": "1a1d208bdf91f97b16bf7ec57b506e59",
       "sourceName": "src/test/other/contango/ContangoWand.t.sol",
       "solcConfig": {
         "settings": {
