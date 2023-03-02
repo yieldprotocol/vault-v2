@@ -65,7 +65,6 @@ contract ContangoWandTest is Test, TestConstants {
         AccessControl(address(contangoCauldron)).grantRole(Cauldron.addIlks.selector, address(wand));
         wand.grantRole(wand.setRatio.selector, address(this));
         wand.grantRole(wand.boundRatio.selector, address(this));
-        wand.grantRole(wand.setDefaultRatio.selector, address(this));
         wand.grantRole(wand.setDebtLimits.selector, address(this));
         wand.grantRole(wand.setDefaultDebtLimits.selector, address(this));
         wand.grantRole(wand.boundDebtLimits.selector, address(this));
@@ -184,44 +183,58 @@ contract ContangoWandTest is Test, TestConstants {
         wand.setRatio(USDT, FYETH2306, 1.4e6);
     }
 
-    function testSetRatio_NoDefaultRatio() public {
-        vm.expectRevert("Default ratio not set");
-        wand.setRatio(USDT, FYETH2306, 1.4e6);
-    }
-
-    function testSetRatio() public {
+    function testSetRatio_BoundsSetForSeriesId() public {
         wand.addAsset(USDT);
-        wand.setDefaultRatio(1.05e6);
-
-        wand.setRatio(USDT, FYETH2306, 1.4e6);
-
-        DataTypes.SpotOracle memory contangoOracle = contangoCauldron.spotOracles(USDT, FYETH2306);
-
-        assertEq(address(contangoOracle.oracle), address(compositeOracle), "oracle");
-        assertEq(contangoOracle.ratio, 1.4e6, "ratio");
-    }
-
-    function testSetRatio_LessThanDefaultBounds() public {
-        wand.addAsset(USDT);
-
-        uint32 defaultRatio = 1.5e6;
-        wand.setDefaultRatio(defaultRatio);
+        uint32 bound = 1.3e6;
+        wand.boundRatio(USDT, FYETH2306, bound);
 
         vm.expectRevert("Ratio out of bounds");
-        wand.setRatio(USDT, FYETH2306, defaultRatio - 1);
+        wand.setRatio(USDT, FYETH2306, bound - 1);
+
+        wand.setRatio(USDT, FYETH2306, bound);
+        DataTypes.SpotOracle memory contangoOracle = contangoCauldron.spotOracles(USDT, FYETH2306);
+        assertEq(address(contangoOracle.oracle), address(compositeOracle), "oracle");
+        assertEq(contangoOracle.ratio, bound, "ratio");
     }
 
-    function testSetRatio_OverrideBoundsForPair() public {
+    function testSetRatio_BoundsSetForSeriesIdBaseId() public {
         wand.addAsset(USDT);
-        wand.setDefaultRatio(1.4e6);
+        uint32 bound = 1.3e6;
+        wand.boundRatio(USDT, ETH, bound);
 
-        wand.boundRatio(USDT, FYETH2306, 1.05e6);
-        wand.setRatio(USDT, FYETH2306, 1.05e6);
+        vm.expectRevert("Ratio out of bounds");
+        wand.setRatio(USDT, FYETH2306, bound - 1);
 
+        wand.setRatio(USDT, FYETH2306, bound);
         DataTypes.SpotOracle memory contangoOracle = contangoCauldron.spotOracles(USDT, FYETH2306);
-
         assertEq(address(contangoOracle.oracle), address(compositeOracle), "oracle");
-        assertEq(contangoOracle.ratio, 1.05e6, "ratio");
+        assertEq(contangoOracle.ratio, bound, "ratio");
+    }
+
+    function testSetRatio_YieldCauldronAsBounds_BoundsSetForAssetId() public {
+        wand.addAsset(USDT);
+        uint32 bound = 1.4e6;
+
+        vm.expectRevert("Ratio out of bounds");
+        wand.setRatio(USDT, ETH, bound - 1);
+
+        wand.setRatio(USDT, ETH, bound);
+        DataTypes.SpotOracle memory contangoOracle = contangoCauldron.spotOracles(USDT, ETH);
+        assertEq(address(contangoOracle.oracle), address(compositeOracle), "oracle");
+        assertEq(contangoOracle.ratio, bound, "ratio");
+    }
+
+    function testSetRatio_YieldCauldronAsBounds_BoundsSetForSeriesIdBaseId() public {
+        wand.addAsset(USDT);
+        uint32 bound = 1.4e6;
+
+        vm.expectRevert("Ratio out of bounds");
+        wand.setRatio(USDT, FYETH2306, bound - 1);
+
+        wand.setRatio(USDT, FYETH2306, bound);
+        DataTypes.SpotOracle memory contangoOracle = contangoCauldron.spotOracles(USDT, FYETH2306);
+        assertEq(address(contangoOracle.oracle), address(compositeOracle), "oracle");
+        assertEq(contangoOracle.ratio, bound, "ratio");
     }
 
     function testAddIlks_Auth() public {
@@ -234,7 +247,6 @@ contract ContangoWandTest is Test, TestConstants {
         wand.addAsset(USDT);
         wand.copyLendingOracle(USDT);
         wand.addSeries(FYUSDT2306);
-        wand.setDefaultRatio(1.05e6);
         wand.setRatio(USDT, FYETH2306, 1.4e6);
 
         bytes6[] memory ilkIds = new bytes6[](1);

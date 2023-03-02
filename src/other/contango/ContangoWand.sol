@@ -28,7 +28,6 @@ contract ContangoWand is AccessControl {
     mapping(bytes6 => mapping(bytes6 => DataTypes.Debt)) public debt;
 
     DataTypes.Debt public defaultDebtLimits;
-    uint32 public defaultRatio;
 
     constructor(
         ICauldron contangoCauldron_,
@@ -102,7 +101,7 @@ contract ContangoWand is AccessControl {
 
         AccessControl(address(series_.fyToken)).grantRole(IFYToken.mint.selector, address(contangoLadle));
         AccessControl(address(series_.fyToken)).grantRole(IFYToken.burn.selector, address(contangoLadle));
-        
+
         AccessControl(address(series_.fyToken)).grantRole(IFYToken.burn.selector, address(contangoWitch));
 
         contangoCauldron.addSeries(seriesId, series_.baseId, series_.fyToken);
@@ -112,18 +111,20 @@ contract ContangoWand is AccessControl {
     function setRatio(bytes6 baseId, bytes6 ilkId, uint32 ratio_) external auth {
         // If the ilkId is a series and boundaries are not set, set ratio to the default
         uint32 bound_ = ratio[baseId][ilkId];
-        if (bound_ == 0 && yieldCauldron.series(ilkId).fyToken != IFYToken(address(0))) {
-            ratio[baseId][ilkId] = bound_ = defaultRatio;
+        if (bound_ == 0) {
+            bound_ = ratio[baseId][yieldCauldron.series(ilkId).baseId];
         }
+        if (bound_ == 0) {
+            bound_ = yieldCauldron.spotOracles(baseId, ilkId).ratio;
+        }
+        if (bound_ == 0) {
+            bound_ = yieldCauldron.spotOracles(baseId, yieldCauldron.series(ilkId).baseId).ratio;
+        }
+
         require(bound_ > 0, "Default ratio not set");
         require(ratio_ >= bound_, "Ratio out of bounds");
 
         contangoCauldron.setSpotOracle(baseId, ilkId, compositeOracle, ratio_);
-    }
-
-    /// @notice Set the default ratio
-    function setDefaultRatio(uint32 ratio_) external auth {
-        defaultRatio = ratio_;
     }
 
     /// @notice Bound ratio for a given asset pair
@@ -135,6 +136,8 @@ contract ContangoWand is AccessControl {
     function addIlks(bytes6 seriesId, bytes6[] calldata ilkIds) external auth {
         contangoCauldron.addIlks(seriesId, ilkIds);
     }
+
+    // TODO kill
 
     function _getDebtDecimals(bytes6 baseId, bytes6 ilkId) internal view returns (uint8 dec) {
         // If the debt is already set in the cauldron, we use the decimals from there
@@ -152,10 +155,14 @@ contract ContangoWand is AccessControl {
         debt[baseId][ilkId] = DataTypes.Debt({max: max, min: min, dec: _getDebtDecimals(baseId, ilkId), sum: 0});
     }
 
+    // TODO kill
+
     /// @notice Set the default debt limits
     function setDefaultDebtLimits(uint96 max, uint24 min) external auth {
         defaultDebtLimits = DataTypes.Debt({max: max, min: min, dec: 0, sum: 0});
     }
+
+    // TODO index bounds by baseId on the ilk side
 
     /// @notice Set the debt limits for a given asset pair in the Cauldron, within bounds
     function setDebtLimits(bytes6 baseId, bytes6 ilkId, uint96 max, uint24 min) external auth {
@@ -207,6 +214,8 @@ contract ContangoWand is AccessControl {
         }
     }
 
+    // TODO re-instate check with try-catching or something
+
     /// @notice Set a path in the Composite oracle, as long as the path is not overwriting anything
     function setCompositeOraclePath(bytes6 baseId, bytes6 quoteId, bytes6[] calldata path) external auth {
         // This doesn't work because of the way Solidity handles arrays
@@ -242,6 +251,8 @@ contract ContangoWand is AccessControl {
         _addJoin(assetId, yieldLadle.joins(assetId));
     }
 
+    // Maybe kill this
+
     /// @notice Add join to the Ladle.
     /// @dev These will often be used to hold fyToken, so it doesn't seem possible to put boundaries. However, it seems low risk. Famous last words.
     function addJoin(bytes6 assetId, IJoin join) external auth {
@@ -257,6 +268,8 @@ contract ContangoWand is AccessControl {
         AccessControl(address(join)).grantRole(IJoin.join.selector, address(contangoWitch));
         AccessControl(address(join)).grantRole(IJoin.exit.selector, address(contangoWitch));
     }
+
+    // TODO Maybe check if the join exists before deploying?
 
     function deployJoin(bytes6 assetId) external auth returns (IJoin join) {
         address asset = contangoCauldron.assets(assetId);
