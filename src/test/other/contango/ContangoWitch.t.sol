@@ -215,6 +215,30 @@ contract ContangoWitchStateZeroTest is ContangoWitchStateZero {
         witch.setInsuranceLine("", "", 0, 0, 0);
     }
 
+    function testSetInsuranceLineRequiresMaxInsuredProportionTooHigh() public {
+        vm.prank(ada);
+        vm.expectRevert("Max Insured Proportion above 100%");
+        witch.setInsuranceLine("", "", 0, 1e18 + 1, 0);
+    }
+
+    function testSetInsuranceLineRequiresMaxInsuredProportionTooLow() public {
+        vm.prank(ada);
+        vm.expectRevert("Max Insured Proportion below 1%");
+        witch.setInsuranceLine("", "", 0, 0.01e18 - 1, 0);
+    }
+
+    function testSetInsuranceLineRequiresInsurancePremiumProportionTooHigh() public {
+        vm.prank(ada);
+        vm.expectRevert("Insurance Premium above 100%");
+        witch.setInsuranceLine("", "", 0, 0, 1e18 + 1);
+    }
+
+    function testSetInsuranceLineRequiresInsurancePremiumProportionTooLow() public {
+        vm.prank(ada);
+        vm.expectRevert("Insurance Premium below 1%");
+        witch.setInsuranceLine("", "", 0, 1e18, 0.01e18 - 1);
+    }
+
     function testSetInsuranceLine() public {
         uint64 maxInsuredProportion = 0.1e18;
         uint64 insurancePremium = 0.01e18;
