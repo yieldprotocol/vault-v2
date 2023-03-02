@@ -3593,7 +3593,128 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         _auctionWasDeleted(VAULT_ID);
     }
 
-    // testDonNotPayMoreThanAuctionArt
+    function testPayBaseAllAndTakesAllWithInsuranceUpToAuctionArt() public {
+        // ensure full top up is considered
+        (IJoin ilkJoin, IJoin baseJoin, IERC20 base) = ladle.mockJoinSetUp(
+            series,
+            vault
+        );
+        series.fyToken.balanceOf.mockAndVerify(insuranceFund, 0);
+        base.balanceOf.mockAndVerify(insuranceFund, auction.art);
+        // make fyToken 1:1 with base to make things simpler
+        cauldron.debtFromBase.mockAndVerify(
+            vault.seriesId,
+            auction.art,
+            auction.art
+        );
+
+        // halfway through the auction
+        vm.warp(
+            uint256(auction.start) +
+                AUCTION_DURATION +
+                (INSURANCE_AUCTION_DURATION / 2)
+        );
+
+        vm.prank(bot);
+        (uint256 minInkOut_, , uint256 maxArtIn) = witch.calcPayout(
+            VAULT_ID,
+            bot,
+            auction.art
+        );
+        assertEq(maxArtIn, auction.art.wmul(1e18 - maxInsuredProportion / 2));
+        uint128 minInkOut = uint128(minInkOut_);
+        uint128 maxBaseIn = uint128(maxArtIn);
+
+        // advance to end of auction, previous quote will be outdated and liquidator will overpay
+        vm.warp(
+            uint256(auction.start) +
+                AUCTION_DURATION +
+                INSURANCE_AUCTION_DURATION
+        );
+
+        _verifyCollateralBought(VAULT_ID, bot, minInkOut, auction.art);
+        _verifyAuctionEnded(VAULT_ID, bob);
+
+        uint128 expectedArtTopUp = auction.art - maxBaseIn;
+        uint128 expectedArtRepaid = auction.art - expectedArtTopUp;
+
+        {
+            // Reduce balances on the vault
+            cauldron.slurp.mockAndVerify(
+                VAULT_ID,
+                minInkOut,
+                auction.art,
+                balances
+            );
+            // Vault returns to it's owner after all the liquidation is done
+            cauldron.give.mockAndVerify(VAULT_ID, bob, vault);
+
+            // make fyToken 1:1 with base to make things simpler
+            cauldron.debtFromBase.mockAndVerify(
+                vault.seriesId,
+                maxBaseIn,
+                maxBaseIn
+            );
+            cauldron.debtFromBase.mockAndVerify(
+                vault.seriesId,
+                expectedArtTopUp,
+                expectedArtTopUp
+            );
+            cauldron.debtToBase.mockAndVerify(
+                vault.seriesId,
+                expectedArtRepaid,
+                expectedArtRepaid
+            );
+            cauldron.debtToBase.mockAndVerify(
+                vault.seriesId,
+                expectedArtTopUp,
+                expectedArtTopUp
+            );
+
+            ilkJoin.exit.mockAndVerify(bot, minInkOut, minInkOut);
+
+            baseJoin.join.mockAndVerify(
+                bot,
+                expectedArtRepaid,
+                expectedArtRepaid
+            );
+
+            base.balanceOf.mockAndVerify(insuranceFund, expectedArtTopUp);
+            base.transferFrom.mockAndVerify(
+                insuranceFund,
+                address(baseJoin),
+                expectedArtTopUp,
+                true
+            );
+
+            baseJoin.join.mockAndVerify(
+                address(witch),
+                expectedArtTopUp,
+                expectedArtTopUp
+            );
+        }
+
+        vm.expectEmit(true, true, true, true);
+        emit LiquidationInsured(VAULT_ID, expectedArtTopUp, expectedArtTopUp);
+        vm.expectEmit(true, true, true, true);
+        emit Ended(VAULT_ID);
+        vm.expectEmit(true, true, true, true);
+        emit Bought(VAULT_ID, bot, minInkOut, auction.art);
+
+        vm.prank(bot);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) = witch
+            .payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
+        assertEq(liquidatorCut, minInkOut, "liquidatorCut");
+        assertEq(liquidatorCut, balances.ink.wmul(proportion), "liquidatorCut");
+        assertEq(auctioneerCut, 0, "auctioneerCut");
+        assertEq(baseIn, maxBaseIn, "baseIn");
+
+        // sum is reduced by auction.ink
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, 0, "sum");
+
+        _auctionWasDeleted(VAULT_ID);
+    }
 
     // testChargeInsurancePremiumOnNonInsuredPairs
     // testUseGlobalInsurancePremium
