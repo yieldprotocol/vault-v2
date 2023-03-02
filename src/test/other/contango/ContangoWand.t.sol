@@ -80,7 +80,7 @@ contract ContangoWandTest is Test, TestConstants {
         AccessControl(address(contangoLadle)).grantRole(ILadle.addToken.selector, address(wand));
         wand.grantRole(wand.addToken.selector, address(this));
         AccessControl(address(contangoLadle)).grantRole(ILadle.addJoin.selector, address(wand));
-        wand.grantRole(wand.addJoin.selector, address(this));
+        wand.grantRole(wand.copyJoin.selector, address(this));
         vm.stopPrank();
     }
 
@@ -171,9 +171,16 @@ contract ContangoWandTest is Test, TestConstants {
         DataTypes.Series memory yieldSeries = yieldCauldron.series(FYUSDT2306);
         DataTypes.Series memory contangoSeries = contangoCauldron.series(FYUSDT2306);
 
-        assertEq(address(yieldSeries.fyToken), address(contangoSeries.fyToken), "fyToken");
+        AccessControl fyToken = AccessControl(address(yieldSeries.fyToken));
+
+        assertEq(address(contangoSeries.fyToken), address(fyToken), "fyToken");
         assertEq(yieldSeries.baseId, contangoSeries.baseId, "baseId");
         assertEq(yieldSeries.maturity, contangoSeries.maturity, "maturity");
+
+        assertTrue(fyToken.hasRole(IFYToken.mint.selector, address(contangoLadle)), "contango ladle can mint");
+        assertTrue(fyToken.hasRole(IFYToken.burn.selector, address(contangoLadle)), "contango ladle can burn");
+
+        assertTrue(fyToken.hasRole(IFYToken.burn.selector, address(contangoWitch)), "contango witch can burn");
     }
 
     function testSetRatio_Auth() public {
@@ -484,19 +491,30 @@ contract ContangoWandTest is Test, TestConstants {
         assertTrue(contangoLadle.tokens(0xad1983745D6c739537fEaB5bed45795f47A940b3), "yield integration");
     }
 
-    function testAddJoin_Auth() public {
+    function testCopyJoin_Auth() public {
         vm.prank(bob);
         vm.expectRevert("Access denied");
-        wand.addJoin(FYUSDT2306, IJoin(address(0)));
+        wand.copyJoin(FYUSDT2306);
     }
 
-    function testAddJoin() public {
+    function testCopyJoin_Invalid() public {
+        vm.expectRevert("Join not known to the Yield Ladle");
+        wand.copyJoin("meh");
+    }
+
+    function testCopyJoin() public {
         wand.addAsset(USDT);
 
-        IJoin join = yieldLadle.joins(USDT);
+        AccessControl join = AccessControl(address(yieldLadle.joins(USDT)));
 
-        wand.addJoin(USDT, join);
+        wand.copyJoin(USDT);
 
-        assertEq(address(contangoLadle.joins(USDT)), address(join), "pool");
+        assertEq(address(contangoLadle.joins(USDT)), address(join), "join");
+
+        assertTrue(join.hasRole(IJoin.join.selector, address(contangoLadle)), "contango ladle can join");
+        assertTrue(join.hasRole(IJoin.exit.selector, address(contangoLadle)), "contango ladle can exit");
+
+        assertTrue(join.hasRole(IJoin.join.selector, address(contangoWitch)), "contango witch can join");
+        assertTrue(join.hasRole(IJoin.exit.selector, address(contangoWitch)), "contango witch can exit");
     }
 }
