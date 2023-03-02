@@ -157,10 +157,8 @@ contract ContangoWitch is Witch, IContangoWitch {
                 ONE_HUNDRED_PERCENT -
                     _debtDiscountNow(insuranceLine, auction.start, duration)
             );
+            if (requiredArtIn > auction.art) requiredArtIn = auction.art;
 
-            // TODO cap requiredArtIn to auction.art
-            // 1 - liquidator sends more art than needed -> cap insurance top up
-            // 2 - partial liquidation should use as much insurance as possible -> should be the case already
             uint256 topUpAmount = requiredArtIn - artIn;
 
             if (topUpAmount != 0) {
