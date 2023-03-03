@@ -18,19 +18,15 @@ contract ContangoWitch is Witch, IContangoWitch {
         uint64 insurancePremium; // Proportion of the collateral that is sent to the insurance fund for healthy liquidations (1e18 = 100%)
     }
 
-    IContangoWitchListener public immutable contango;
-
     mapping(bytes6 => mapping(bytes6 => InsuranceLine)) public insuranceLines;
     address public insuranceFund;
     uint64 defaultInsurancePremium; // 1e18 = 100%
 
     constructor(
-        IContangoWitchListener contango_,
         ICauldron cauldron_,
         ILadle ladle_,
         address insuranceFund_
     ) Witch(cauldron_, ladle_) {
-        contango = contango_;
         insuranceFund = insuranceFund_;
     }
 
@@ -40,22 +36,40 @@ contract ContangoWitch is Witch, IContangoWitch {
         DataTypes.Line memory line
     ) internal override returns (DataTypes.Vault memory vault) {
         vault = super._auctionStarted(vaultId, auction_, line);
-        contango.auctionStarted(vaultId);
+        try
+            IContangoWitchListener(auction_.owner).auctionStarted(vaultId)
+        {} catch {
+            emit AuctionStartedCallbackFailed(auction_.owner, vaultId);
+        }
     }
 
     function _collateralBought(
         bytes12 vaultId,
+        address owner,
         address buyer,
         uint256 ink,
         uint256 art
     ) internal override {
-        super._collateralBought(vaultId, buyer, ink, art);
-        contango.collateralBought(vaultId, buyer, ink, art);
+        super._collateralBought(vaultId, owner, buyer, ink, art);
+        try
+            IContangoWitchListener(owner).collateralBought(
+                vaultId,
+                buyer,
+                ink,
+                art
+            )
+        {} catch {
+            emit CollateralBoughtCallbackFailed(owner, vaultId, ink, art);
+        }
     }
 
     function _auctionEnded(bytes12 vaultId, address owner) internal override {
         super._auctionEnded(vaultId, owner);
-        contango.auctionEnded(vaultId, owner);
+        try
+            IContangoWitchListener(owner).auctionEnded(vaultId, owner)
+        {} catch {
+            emit AuctionEndedCallbackFailed(owner, vaultId);
+        }
     }
 
     function setDefaultInsurancePremium(

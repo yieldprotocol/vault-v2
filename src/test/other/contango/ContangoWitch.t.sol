@@ -62,13 +62,13 @@ abstract contract ContangoWitchStateZero is
     // address internal admin;
     address internal deployer = 0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84;
     address internal ada = address(0xada);
-    address internal bob = address(0xb0b);
     address internal bot = address(0xb07);
     address internal bad = address(0xbad);
     address internal cool = address(0xc001);
     address internal insuranceFund = address(0x5afe);
 
     IContangoWitchListener public contango;
+    address internal contangoAddress;
     ICauldron internal cauldron;
     ILadle internal ladle;
 
@@ -79,9 +79,10 @@ abstract contract ContangoWitchStateZero is
         cauldron = ICauldron(Mocks.mock("Cauldron"));
         ladle = ILadle(Mocks.mock("Ladle"));
         contango = IContangoWitchListener(Mocks.mock("ContangoWitchListener"));
+        contangoAddress = address(contango);
 
         vm.startPrank(ada);
-        witch = new ContangoWitch(contango, cauldron, ladle, insuranceFund);
+        witch = new ContangoWitch(cauldron, ladle, insuranceFund);
         witch.grantRole(Witch.point.selector, ada);
         witch.grantRole(Witch.setLineAndLimit.selector, ada);
         witch.grantRole(Witch.setProtected.selector, ada);
@@ -101,7 +102,7 @@ abstract contract ContangoWitchStateZero is
 
 contract ContangoWitchStateZeroTest is ContangoWitchStateZero {
     function testPointRequiresAuth() public {
-        vm.prank(bob);
+        vm.prank(bad);
         vm.expectRevert("Access denied");
         witch.point("ladle", bad);
     }
@@ -128,7 +129,7 @@ contract ContangoWitchStateZeroTest is ContangoWitchStateZero {
     }
 
     function testSetLineAndLimitRequiresAuth() public {
-        vm.prank(bob);
+        vm.prank(bad);
         vm.expectRevert("Access denied");
         witch.setLineAndLimit("", "", 0, 0, 0, 0);
     }
@@ -198,7 +199,7 @@ contract ContangoWitchStateZeroTest is ContangoWitchStateZero {
     }
 
     function testSetInsuranceFundRequiresAuth() public {
-        vm.prank(bob);
+        vm.prank(bad);
         vm.expectRevert("Access denied");
         witch.setInsuranceFund(address(0));
     }
@@ -212,7 +213,7 @@ contract ContangoWitchStateZeroTest is ContangoWitchStateZero {
     }
 
     function testSetDefaultInsurancePremiumRequiresAuth() public {
-        vm.prank(bob);
+        vm.prank(bad);
         vm.expectRevert("Access denied");
         witch.setDefaultInsurancePremium(0);
     }
@@ -234,7 +235,7 @@ contract ContangoWitchStateZeroTest is ContangoWitchStateZero {
     }
 
     function testSetInsuranceLineRequiresAuth() public {
-        vm.prank(bob);
+        vm.prank(bad);
         vm.expectRevert("Access denied");
         witch.setInsuranceLine("", "", 0, 0, 0);
     }
@@ -277,7 +278,7 @@ contract ContangoWitchStateZeroTest is ContangoWitchStateZero {
     }
 
     function testSetInsuranceLineStatusRequiresAuth() public {
-        vm.prank(bob);
+        vm.prank(bad);
         vm.expectRevert("Access denied");
         witch.setInsuranceLineStatus("", "", true);
     }
@@ -291,7 +292,7 @@ contract ContangoWitchStateZeroTest is ContangoWitchStateZero {
     }
 
     function testSetProtectedRequiresAuth() public {
-        vm.prank(bob);
+        vm.prank(bad);
         vm.expectRevert("Access denied");
         witch.setProtected(address(0), true);
     }
@@ -309,7 +310,7 @@ contract ContangoWitchStateZeroTest is ContangoWitchStateZero {
     }
 
     function testSetAuctioneerRewardRequiresAuth() public {
-        vm.prank(bob);
+        vm.prank(bad);
         vm.expectRevert("Access denied");
         witch.setAuctioneerReward(0);
     }
@@ -356,7 +357,7 @@ abstract contract ContangoWitchWithMetadata is ContangoWitchStateZero {
         super.setUp();
 
         vault = DataTypes.Vault({
-            owner: bob,
+            owner: contangoAddress,
             seriesId: SERIES_ID,
             ilkId: ILK_ID
         });
@@ -534,7 +535,7 @@ contract ContangoWitchWithMetadataTest is ContangoWitchWithMetadata {
 
     function testAuctionAVaultWithoutLimitsSet() public {
         // Given
-        witch = new ContangoWitch(contango, cauldron, ladle, insuranceFund);
+        witch = new ContangoWitch(cauldron, ladle, insuranceFund);
 
         // When
         vm.expectRevert(
@@ -557,7 +558,7 @@ contract ContangoWitchWithMetadataTest is ContangoWitchWithMetadata {
         emit Auctioned(
             VAULT_ID,
             DataTypes.Auction({
-                owner: bob,
+                owner: contangoAddress,
                 start: uint32(block.timestamp),
                 seriesId: SERIES_ID,
                 baseId: BASE_ID,
@@ -655,7 +656,7 @@ abstract contract ContangoWitchWithAuction is ContangoWitchWithMetadata {
         int256 level
     ) internal {
         DataTypes.Vault memory v = DataTypes.Vault({
-            owner: bob,
+            owner: contangoAddress,
             seriesId: SERIES_ID,
             ilkId: ILK_ID
         });
@@ -910,7 +911,7 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
             bot
         );
 
-        assertEq(auction2.owner, address(0xb0b));
+        assertEq(auction2.owner, contangoAddress);
         assertEq(auction2.start, uint32(block.timestamp));
         assertEq(auction2.baseId, series.baseId);
         // Min amount is put for liquidation
@@ -945,7 +946,7 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
             bot
         );
 
-        assertEq(auction2.owner, address(0xb0b));
+        assertEq(auction2.owner, contangoAddress);
         assertEq(auction2.start, uint32(block.timestamp));
         assertEq(auction2.baseId, series.baseId);
         // 100% of the vault was put for liquidation
@@ -972,7 +973,7 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
             bot
         );
 
-        assertEq(auction2.owner, address(0xb0b));
+        assertEq(auction2.owner, contangoAddress);
         assertEq(auction2.start, uint32(block.timestamp));
         assertEq(auction2.baseId, series.baseId);
         // 100% of the vault was put for liquidation
@@ -991,7 +992,7 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
             bot
         );
 
-        assertEq(auction2.owner, address(0xb0b));
+        assertEq(auction2.owner, contangoAddress);
         assertEq(auction2.start, uint32(block.timestamp));
         assertEq(auction2.baseId, series.baseId);
         // 100% of the vault was put for liquidation
@@ -1032,14 +1033,14 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         assertEq(sum, 50 ether);
 
         cauldron.level.mockAndVerify(VAULT_ID, 0);
-        cauldron.give.mockAndVerify(VAULT_ID, bob, vault);
+        cauldron.give.mockAndVerify(VAULT_ID, contangoAddress, vault);
 
         vm.expectEmit(true, true, true, true);
         emit Ended(VAULT_ID);
         vm.expectEmit(true, true, true, true);
         emit Cancelled(VAULT_ID);
 
-        _verifyAuctionEnded(VAULT_ID, bob);
+        _verifyAuctionEnded(VAULT_ID, contangoAddress);
 
         witch.cancel(VAULT_ID);
 
@@ -1208,12 +1209,12 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         uint128 minInkOut = uint128(minInkOut_);
 
         _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxBaseIn);
-        _verifyAuctionEnded(VAULT_ID, bob);
+        _verifyAuctionEnded(VAULT_ID, contangoAddress);
 
         // Reduce balances on the vault
         cauldron.slurp.mockAndVerify(VAULT_ID, minInkOut, maxBaseIn, balances);
         // Vault returns to it's owner after all the liquidation is done
-        cauldron.give.mockAndVerify(VAULT_ID, bob, vault);
+        cauldron.give.mockAndVerify(VAULT_ID, contangoAddress, vault);
 
         // make fyToken 1:1 with base to make things simpler
         cauldron.debtFromBase.mockAndVerify(
@@ -1255,12 +1256,12 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         uint128 minInkOut = uint128(minInkOut_);
 
         _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxBaseIn);
-        _verifyAuctionEnded(VAULT_ID, bob);
+        _verifyAuctionEnded(VAULT_ID, contangoAddress);
 
         // Reduce balances on the vault
         cauldron.slurp.mockAndVerify(VAULT_ID, minInkOut, maxBaseIn, balances);
         // Vault returns to it's owner after all the liquidation is done
-        cauldron.give.mockAndVerify(VAULT_ID, bob, vault);
+        cauldron.give.mockAndVerify(VAULT_ID, contangoAddress, vault);
 
         // make fyToken 1:1 with base to make things simpler
         cauldron.debtFromBase.mockAndVerify(
@@ -1306,12 +1307,12 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         uint128 minInkOut = uint128(minInkOut_);
 
         _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxBaseIn);
-        _verifyAuctionEnded(VAULT_ID, bob);
+        _verifyAuctionEnded(VAULT_ID, contangoAddress);
 
         // Reduce balances on the vault
         cauldron.slurp.mockAndVerify(VAULT_ID, minInkOut, maxBaseIn, balances);
         // Vault returns to it's owner after all the liquidation is done
-        cauldron.give.mockAndVerify(VAULT_ID, bob, vault);
+        cauldron.give.mockAndVerify(VAULT_ID, contangoAddress, vault);
 
         // make fyToken 1:1 with base to make things simpler
         cauldron.debtFromBase.mockAndVerify(
@@ -1363,7 +1364,7 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
             liquidatorCut + auctioneerCut,
             maxBaseIn
         );
-        _verifyAuctionEnded(VAULT_ID, bob);
+        _verifyAuctionEnded(VAULT_ID, contangoAddress);
 
         // Reduce balances on the vault
         cauldron.slurp.mockAndVerify(
@@ -1373,7 +1374,7 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
             balances
         );
         // Vault returns to it's owner after all the liquidation is done
-        cauldron.give.mockAndVerify(VAULT_ID, bob, vault);
+        cauldron.give.mockAndVerify(VAULT_ID, contangoAddress, vault);
 
         // make fyToken 1:1 with base to make things simpler
         cauldron.debtFromBase.mockAndVerify(
@@ -1439,12 +1440,12 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         uint128 totalCut = liquidatorCut + auctioneerCut;
 
         _verifyCollateralBought(VAULT_ID_2, bot, totalCut, maxBaseIn);
-        _verifyAuctionEnded(VAULT_ID_2, bob);
+        _verifyAuctionEnded(VAULT_ID_2, contangoAddress);
 
         // Reduce balances on the vault
         cauldron.slurp.mockAndVerify(VAULT_ID_2, totalCut, maxBaseIn, balances);
         // Vault returns to it's owner after all the liquidation is done
-        cauldron.give.mockAndVerify(VAULT_ID_2, bob, vault);
+        cauldron.give.mockAndVerify(VAULT_ID_2, contangoAddress, vault);
 
         // make fyToken 1:1 with base to make things simpler
         cauldron.debtFromBase.mockAndVerify(
@@ -1604,7 +1605,7 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
             liquidatorCut + auctioneerCut,
             maxArtIn
         );
-        _verifyAuctionEnded(VAULT_ID, bob);
+        _verifyAuctionEnded(VAULT_ID, contangoAddress);
 
         // Reduce balances on the vault
         cauldron.slurp.mockAndVerify(
@@ -1614,7 +1615,7 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
             balances
         );
         // Vault returns to it's owner after all the liquidation is done
-        cauldron.give.mockAndVerify(VAULT_ID, bob, vault);
+        cauldron.give.mockAndVerify(VAULT_ID, contangoAddress, vault);
 
         IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
         ladle.joins.mock(vault.ilkId, ilkJoin);
@@ -1673,12 +1674,12 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         uint128 totalCut = liquidatorCut + auctioneerCut;
 
         _verifyCollateralBought(VAULT_ID_2, bot, totalCut, maxArtIn);
-        _verifyAuctionEnded(VAULT_ID_2, bob);
+        _verifyAuctionEnded(VAULT_ID_2, contangoAddress);
 
         // Reduce balances on the vault
         cauldron.slurp.mockAndVerify(VAULT_ID_2, totalCut, maxArtIn, balances);
         // Vault returns to it's owner after all the liquidation is done
-        cauldron.give.mockAndVerify(VAULT_ID_2, bob, vault);
+        cauldron.give.mockAndVerify(VAULT_ID_2, contangoAddress, vault);
 
         IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
         ladle.joins.mock(vault.ilkId, ilkJoin);
@@ -1717,12 +1718,12 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         uint128 minInkOut = uint128(minInkOut_);
 
         _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxArtIn);
-        _verifyAuctionEnded(VAULT_ID, bob);
+        _verifyAuctionEnded(VAULT_ID, contangoAddress);
 
         // Reduce balances on the vault
         cauldron.slurp.mock(VAULT_ID, minInkOut, maxArtIn, balances);
         // Vault returns to it's owner after all the liquidation is done
-        cauldron.give.mockAndVerify(VAULT_ID, bob, vault);
+        cauldron.give.mockAndVerify(VAULT_ID, contangoAddress, vault);
 
         IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
         ladle.joins.mock(vault.ilkId, ilkJoin);
@@ -1758,12 +1759,12 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         uint128 minInkOut = uint128(minInkOut_);
 
         _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxArtIn);
-        _verifyAuctionEnded(VAULT_ID, bob);
+        _verifyAuctionEnded(VAULT_ID, contangoAddress);
 
         // Reduce balances on the vault
         cauldron.slurp.mock(VAULT_ID, minInkOut, maxArtIn, balances);
         // Vault returns to it's owner after all the liquidation is done
-        cauldron.give.mockAndVerify(VAULT_ID, bob, vault);
+        cauldron.give.mockAndVerify(VAULT_ID, contangoAddress, vault);
 
         IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
         ladle.joins.mock(vault.ilkId, ilkJoin);
@@ -1801,12 +1802,12 @@ contract ContangoWitchWithAuctionTest is ContangoWitchWithAuction {
         uint128 minInkOut = uint128(minInkOut_);
 
         _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxArtIn);
-        _verifyAuctionEnded(VAULT_ID, bob);
+        _verifyAuctionEnded(VAULT_ID, contangoAddress);
 
         // Reduce balances on the vault
         cauldron.slurp.mock(VAULT_ID, minInkOut, maxArtIn, balances);
         // Vault returns to it's owner after all the liquidation is done
-        cauldron.give.mockAndVerify(VAULT_ID, bob, vault);
+        cauldron.give.mockAndVerify(VAULT_ID, contangoAddress, vault);
 
         IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
         ladle.joins.mock(vault.ilkId, ilkJoin);
@@ -2444,7 +2445,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             bot
         );
 
-        assertEq(auction2.owner, address(0xb0b));
+        assertEq(auction2.owner, contangoAddress);
         assertEq(auction2.start, uint32(block.timestamp));
         assertEq(auction2.baseId, series.baseId);
         // Min amount is put for liquidation
@@ -2479,7 +2480,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             bot
         );
 
-        assertEq(auction2.owner, address(0xb0b));
+        assertEq(auction2.owner, contangoAddress);
         assertEq(auction2.start, uint32(block.timestamp));
         assertEq(auction2.baseId, series.baseId);
         // 100% of the vault was put for liquidation
@@ -2506,7 +2507,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             bot
         );
 
-        assertEq(auction2.owner, address(0xb0b));
+        assertEq(auction2.owner, contangoAddress);
         assertEq(auction2.start, uint32(block.timestamp));
         assertEq(auction2.baseId, series.baseId);
         // 100% of the vault was put for liquidation
@@ -2653,7 +2654,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         );
 
         _verifyCollateralBought(VAULT_ID, bot, minInkOut + premium, maxBaseIn);
-        _verifyAuctionEnded(VAULT_ID, bob);
+        _verifyAuctionEnded(VAULT_ID, contangoAddress);
 
         // Reduce balances on the vault
         cauldron.slurp.mockAndVerify(
@@ -2663,7 +2664,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             balances
         );
         // Vault returns to it's owner after all the liquidation is done
-        cauldron.give.mockAndVerify(VAULT_ID, bob, vault);
+        cauldron.give.mockAndVerify(VAULT_ID, contangoAddress, vault);
 
         // make fyToken 1:1 with base to make things simpler
         cauldron.debtFromBase.mockAndVerify(
@@ -2719,7 +2720,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             liquidatorCut + auctioneerCut + premium,
             maxBaseIn
         );
-        _verifyAuctionEnded(VAULT_ID, bob);
+        _verifyAuctionEnded(VAULT_ID, contangoAddress);
 
         // Reduce balances on the vault
         cauldron.slurp.mockAndVerify(
@@ -2729,7 +2730,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             balances
         );
         // Vault returns to it's owner after all the liquidation is done
-        cauldron.give.mockAndVerify(VAULT_ID, bob, vault);
+        cauldron.give.mockAndVerify(VAULT_ID, contangoAddress, vault);
 
         // make fyToken 1:1 with base to make things simpler
         cauldron.debtFromBase.mockAndVerify(
@@ -2784,7 +2785,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         );
 
         _verifyCollateralBought(VAULT_ID, bot, minInkOut + premium, maxBaseIn);
-        _verifyAuctionEnded(VAULT_ID, bob);
+        _verifyAuctionEnded(VAULT_ID, contangoAddress);
 
         // Reduce balances on the vault
         cauldron.slurp.mockAndVerify(
@@ -2794,7 +2795,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             balances
         );
         // Vault returns to it's owner after all the liquidation is done
-        cauldron.give.mockAndVerify(VAULT_ID, bob, vault);
+        cauldron.give.mockAndVerify(VAULT_ID, contangoAddress, vault);
 
         // make fyToken 1:1 with base to make things simpler
         cauldron.debtFromBase.mockAndVerify(
@@ -2883,7 +2884,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         uint128 maxBaseIn = uint128(maxArtIn);
 
         _verifyCollateralBought(VAULT_ID, bot, minInkOut, auction.art);
-        _verifyAuctionEnded(VAULT_ID, bob);
+        _verifyAuctionEnded(VAULT_ID, contangoAddress);
 
         uint128 expectedArtTopUp = auction.art - maxBaseIn;
         uint128 expectedArtRepaid = auction.art - expectedArtTopUp;
@@ -2897,7 +2898,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
                 balances
             );
             // Vault returns to it's owner after all the liquidation is done
-            cauldron.give.mockAndVerify(VAULT_ID, bob, vault);
+            cauldron.give.mockAndVerify(VAULT_ID, contangoAddress, vault);
 
             // make fyToken 1:1 with base to make things simpler
             cauldron.debtFromBase.mockAndVerify(
@@ -3085,7 +3086,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         );
 
         _verifyCollateralBought(VAULT_ID, bot, minInkOut + premium, maxArtIn);
-        _verifyAuctionEnded(VAULT_ID, bob);
+        _verifyAuctionEnded(VAULT_ID, contangoAddress);
 
         // Reduce balances on the vault
         cauldron.slurp.mockAndVerify(
@@ -3095,7 +3096,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             balances
         );
         // Vault returns to it's owner after all the liquidation is done
-        cauldron.give.mockAndVerify(VAULT_ID, bob, vault);
+        cauldron.give.mockAndVerify(VAULT_ID, contangoAddress, vault);
 
         IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
         ladle.joins.mock(vault.ilkId, ilkJoin);
@@ -3172,7 +3173,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         maxArtIn = uint128(maxArtIn_);
 
         _verifyCollateralBought(VAULT_ID, bot, minInkOut, auction.art);
-        _verifyAuctionEnded(VAULT_ID, bob);
+        _verifyAuctionEnded(VAULT_ID, contangoAddress);
 
         uint128 expectedArtTopUp = auction.art - maxArtIn;
         {
@@ -3185,7 +3186,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
                 balances
             );
             // Vault returns to it's owner after all the liquidation is done
-            cauldron.give.mockAndVerify(VAULT_ID, bob, vault);
+            cauldron.give.mockAndVerify(VAULT_ID, contangoAddress, vault);
 
             // make fyToken 1:1 with base to make things simpler
             cauldron.debtFromBase.mockAndVerify(
@@ -3249,7 +3250,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         );
 
         _verifyCollateralBought(VAULT_ID, bot, minInkOut + premium, maxArtIn);
-        _verifyAuctionEnded(VAULT_ID, bob);
+        _verifyAuctionEnded(VAULT_ID, contangoAddress);
 
         // Reduce balances on the vault
         cauldron.slurp.mockAndVerify(
@@ -3259,7 +3260,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             balances
         );
         // Vault returns to it's owner after all the liquidation is done
-        cauldron.give.mockAndVerify(VAULT_ID, bob, vault);
+        cauldron.give.mockAndVerify(VAULT_ID, contangoAddress, vault);
 
         IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
         ladle.joins.mock(vault.ilkId, ilkJoin);
@@ -3310,7 +3311,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             liquidatorCut + auctioneerCut + premium,
             maxArtIn
         );
-        _verifyAuctionEnded(VAULT_ID, bob);
+        _verifyAuctionEnded(VAULT_ID, contangoAddress);
 
         // Reduce balances on the vault
         cauldron.slurp.mockAndVerify(
@@ -3320,7 +3321,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             balances
         );
         // Vault returns to it's owner after all the liquidation is done
-        cauldron.give.mockAndVerify(VAULT_ID, bob, vault);
+        cauldron.give.mockAndVerify(VAULT_ID, contangoAddress, vault);
 
         IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
         ladle.joins.mock(vault.ilkId, ilkJoin);
@@ -3397,7 +3398,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         uint128 maxBaseIn = uint128(maxArtIn);
 
         _verifyCollateralBought(VAULT_ID, bot, minInkOut, auction.art);
-        _verifyAuctionEnded(VAULT_ID, bob);
+        _verifyAuctionEnded(VAULT_ID, contangoAddress);
 
         uint128 expectedArtTopUp = auction.art - maxBaseIn;
         uint128 expectedBaseTopUp = expectedArtTopUp - expectedFyTokenTopUp;
@@ -3412,7 +3413,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
                 balances
             );
             // Vault returns to it's owner after all the liquidation is done
-            cauldron.give.mockAndVerify(VAULT_ID, bob, vault);
+            cauldron.give.mockAndVerify(VAULT_ID, contangoAddress, vault);
 
             // make fyToken 1:1 with base to make things simpler
             cauldron.debtFromBase.mockAndVerify(
@@ -3538,7 +3539,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         }
 
         _verifyCollateralBought(VAULT_ID, bot, minInkOut, auction.art);
-        _verifyAuctionEnded(VAULT_ID, bob);
+        _verifyAuctionEnded(VAULT_ID, contangoAddress);
 
         uint128 expectedArtTopUp = auction.art - maxArtIn;
         {
@@ -3553,7 +3554,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
                 balances
             );
             // Vault returns to it's owner after all the liquidation is done
-            cauldron.give.mockAndVerify(VAULT_ID, bob, vault);
+            cauldron.give.mockAndVerify(VAULT_ID, contangoAddress, vault);
 
             // make fyToken 1:1 with base to make things simpler
             cauldron.debtFromBase.mockAndVerify(
@@ -3657,7 +3658,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         );
 
         _verifyCollateralBought(VAULT_ID, bot, minInkOut, auction.art);
-        _verifyAuctionEnded(VAULT_ID, bob);
+        _verifyAuctionEnded(VAULT_ID, contangoAddress);
 
         uint128 expectedArtTopUp = auction.art - maxBaseIn;
         uint128 expectedArtRepaid = auction.art - expectedArtTopUp;
@@ -3671,7 +3672,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
                 balances
             );
             // Vault returns to it's owner after all the liquidation is done
-            cauldron.give.mockAndVerify(VAULT_ID, bob, vault);
+            cauldron.give.mockAndVerify(VAULT_ID, contangoAddress, vault);
 
             // make fyToken 1:1 with base to make things simpler
             cauldron.debtFromBase.mockAndVerify(
@@ -3763,7 +3764,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         );
 
         _verifyCollateralBought(VAULT_ID, bot, minInkOut + premium, maxBaseIn);
-        _verifyAuctionEnded(VAULT_ID, bob);
+        _verifyAuctionEnded(VAULT_ID, contangoAddress);
 
         // Reduce balances on the vault
         cauldron.slurp.mockAndVerify(
@@ -3773,7 +3774,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             balances
         );
         // Vault returns to it's owner after all the liquidation is done
-        cauldron.give.mockAndVerify(VAULT_ID, bob, vault);
+        cauldron.give.mockAndVerify(VAULT_ID, contangoAddress, vault);
 
         // make fyToken 1:1 with base to make things simpler
         cauldron.debtFromBase.mockAndVerify(
@@ -3827,7 +3828,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         );
 
         _verifyCollateralBought(VAULT_ID, bot, minInkOut + premium, maxBaseIn);
-        _verifyAuctionEnded(VAULT_ID, bob);
+        _verifyAuctionEnded(VAULT_ID, contangoAddress);
 
         // Reduce balances on the vault
         cauldron.slurp.mockAndVerify(
@@ -3837,7 +3838,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             balances
         );
         // Vault returns to it's owner after all the liquidation is done
-        cauldron.give.mockAndVerify(VAULT_ID, bob, vault);
+        cauldron.give.mockAndVerify(VAULT_ID, contangoAddress, vault);
 
         // make fyToken 1:1 with base to make things simpler
         cauldron.debtFromBase.mockAndVerify(
@@ -3884,12 +3885,12 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         uint128 minInkOut = uint128(minInkOut_);
 
         _verifyCollateralBought(VAULT_ID, bot, minInkOut, maxBaseIn);
-        _verifyAuctionEnded(VAULT_ID, bob);
+        _verifyAuctionEnded(VAULT_ID, contangoAddress);
 
         // Reduce balances on the vault
         cauldron.slurp.mockAndVerify(VAULT_ID, minInkOut, maxBaseIn, balances);
         // Vault returns to it's owner after all the liquidation is done
-        cauldron.give.mockAndVerify(VAULT_ID, bob, vault);
+        cauldron.give.mockAndVerify(VAULT_ID, contangoAddress, vault);
 
         // make fyToken 1:1 with base to make things simpler
         cauldron.debtFromBase.mockAndVerify(
