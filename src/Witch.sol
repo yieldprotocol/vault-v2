@@ -698,6 +698,7 @@ contract Witch is AccessControl {
         uint256 maxArtIn
     )
         external
+        view
         returns (uint256 liquidatorCut, uint256 auctioneerCut, uint256 artIn)
     {
         DataTypes.Auction memory auction_ = auctions[vaultId];
@@ -740,6 +741,7 @@ contract Witch is AccessControl {
         uint256 artIn
     )
         internal
+        view
         virtual
         returns (
             uint256 liquidatorCut,
@@ -763,6 +765,7 @@ contract Witch is AccessControl {
             requiredArtIn = _discountDebt(
                 auction_.ilkId,
                 auction_.baseId,
+                auction_.seriesId,
                 auction_.start,
                 duration,
                 requiredArtIn
@@ -808,10 +811,11 @@ contract Witch is AccessControl {
     function _discountDebt(
         bytes6 ilkId,
         bytes6 baseId,
+        bytes6 seriesId,
         uint256 auctionStart,
         uint256 auctionDuration,
         uint256 artIn
-    ) internal virtual returns (uint256 requiredArtIn) {
+    ) internal view virtual returns (uint256 requiredArtIn) {
         requiredArtIn = artIn;
     }
 

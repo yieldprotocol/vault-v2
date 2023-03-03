@@ -1876,7 +1876,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         uint256 auctionStart = auction.start;
 
         // ensure full top up is considered
-        insuranceFund.insuranceAvailable.mockAndVerify(ILK_ID, auction.art);
+        insuranceFund.insuranceAvailable.mockAndVerify(SERIES_ID, auction.art);
 
         // 100000 * 0.5 = 50000
         // maxArtIn = (vaultDebt * proportion)
@@ -2001,7 +2001,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         uint256 auctionStart = auction.start;
 
         // ensure full top up is considered
-        insuranceFund.insuranceAvailable.mockAndVerify(ILK_ID, auction.art);
+        insuranceFund.insuranceAvailable.mockAndVerify(SERIES_ID, auction.art);
 
         // 100000 * 0.5 = 50000
         // maxArtIn = (vaultDebt * proportion)
@@ -2140,7 +2140,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         uint256 vaultDebt = balances.art;
         uint256 auctionStart = auction.start;
 
-        insuranceFund.insuranceAvailable.mockAndVerify(ILK_ID, 6000e6);
+        insuranceFund.insuranceAvailable.mockAndVerify(SERIES_ID, 6000e6);
 
         // 100000 * 0.5 = 50000
         // maxArtIn = (vaultDebt * proportion)
@@ -2670,7 +2670,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
 
         // ensure full top up is considered
         (IJoin ilkJoin, IJoin baseJoin) = ladle.mockJoinSetUp(series, vault);
-        insuranceFund.insuranceAvailable.mockAndVerify(ILK_ID, auction.art);
+        insuranceFund.insuranceAvailable.mockAndVerify(SERIES_ID, auction.art);
 
         vm.prank(bot);
         (uint256 minInkOut_, , uint256 maxArtIn) = witch.calcPayout(
@@ -2705,7 +2705,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
                 maxBaseIn,
                 maxBaseIn
             );
-            cauldron.debtFromBase.mockAndVerify(
+            cauldron.debtToBase.mockAndVerify(
                 vault.seriesId,
                 expectedArtTopUp,
                 expectedArtTopUp
@@ -2725,7 +2725,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             );
 
             insuranceFund.insure.mockAndVerify(
-                ILK_ID,
+                SERIES_ID,
                 expectedArtTopUp,
                 0,
                 expectedArtTopUp
@@ -2739,7 +2739,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         }
 
         vm.expectEmit(true, true, true, true);
-        emit LiquidationInsured(VAULT_ID, expectedArtTopUp, expectedArtTopUp);
+        emit LiquidationInsured(VAULT_ID, expectedArtTopUp, 0);
         vm.expectEmit(true, true, true, true);
         emit Ended(VAULT_ID);
         vm.expectEmit(true, true, true, true);
@@ -2944,7 +2944,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
 
         // ensure full top up is considered
         (IJoin ilkJoin, IJoin baseJoin) = ladle.mockJoinSetUp(series, vault);
-        insuranceFund.insuranceAvailable.mockAndVerify(ILK_ID, auction.art);
+        insuranceFund.insuranceAvailable.mockAndVerify(SERIES_ID, auction.art);
 
         vm.prank(bot);
         (uint256 minInkOut_, , uint256 maxArtIn_) = witch.calcPayout(
@@ -2972,7 +2972,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             cauldron.give.mockAndVerify(VAULT_ID, address(contango), vault);
 
             // make fyToken 1:1 with base to make things simpler
-            cauldron.debtFromBase.mockAndVerify(
+            cauldron.debtToBase.mockAndVerify(
                 vault.seriesId,
                 expectedArtTopUp,
                 expectedArtTopUp
@@ -2981,7 +2981,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             ilkJoin.exit.mockAndVerify(bot, minInkOut, minInkOut);
 
             insuranceFund.insure.mockAndVerify(
-                ILK_ID,
+                SERIES_ID,
                 expectedArtTopUp,
                 0,
                 expectedArtTopUp
@@ -2997,7 +2997,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         }
 
         vm.expectEmit(true, true, true, true);
-        emit LiquidationInsured(VAULT_ID, expectedArtTopUp, expectedArtTopUp);
+        emit LiquidationInsured(VAULT_ID, expectedArtTopUp, 0);
         vm.expectEmit(true, true, true, true);
         emit Ended(VAULT_ID);
         vm.expectEmit(true, true, true, true);
@@ -3154,7 +3154,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
 
         // ensure full top up is considered
         (IJoin ilkJoin, IJoin baseJoin) = ladle.mockJoinSetUp(series, vault);
-        insuranceFund.insuranceAvailable.mockAndVerify(ILK_ID, auction.art);
+        insuranceFund.insuranceAvailable.mockAndVerify(SERIES_ID, auction.art);
 
         vm.prank(bot);
         (uint256 minInkOut_, , uint256 maxArtIn) = witch.calcPayout(
@@ -3190,10 +3190,10 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
                 maxBaseIn,
                 maxBaseIn
             );
-            cauldron.debtFromBase.mockAndVerify(
+            cauldron.debtToBase.mockAndVerify(
                 vault.seriesId,
-                expectedBaseTopUp,
-                expectedBaseTopUp
+                expectedArtTopUp,
+                expectedArtTopUp
             );
             cauldron.debtToBase.mockAndVerify(
                 vault.seriesId,
@@ -3204,7 +3204,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             ilkJoin.exit.mockAndVerify(bot, minInkOut, minInkOut);
 
             insuranceFund.insure.mockAndVerify(
-                ILK_ID,
+                SERIES_ID,
                 expectedArtTopUp,
                 expectedFyTokenTopUp,
                 expectedBaseTopUp
@@ -3229,7 +3229,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         }
 
         vm.expectEmit(true, true, true, true);
-        emit LiquidationInsured(VAULT_ID, expectedArtTopUp, expectedArtTopUp);
+        emit LiquidationInsured(VAULT_ID, expectedArtTopUp, 0);
         vm.expectEmit(true, true, true, true);
         emit Ended(VAULT_ID);
         vm.expectEmit(true, true, true, true);
@@ -3264,7 +3264,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
 
         // ensure full top up is considered
         (IJoin ilkJoin, IJoin baseJoin) = ladle.mockJoinSetUp(series, vault);
-        insuranceFund.insuranceAvailable.mockAndVerify(ILK_ID, auction.art);
+        insuranceFund.insuranceAvailable.mockAndVerify(SERIES_ID, auction.art);
 
         uint128 minInkOut;
         {
@@ -3297,16 +3297,16 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             cauldron.give.mockAndVerify(VAULT_ID, address(contango), vault);
 
             // make fyToken 1:1 with base to make things simpler
-            cauldron.debtFromBase.mockAndVerify(
+            cauldron.debtToBase.mockAndVerify(
                 vault.seriesId,
-                expectedBaseTopUp,
-                expectedBaseTopUp
+                expectedArtTopUp,
+                expectedArtTopUp
             );
 
             ilkJoin.exit.mockAndVerify(bot, minInkOut, minInkOut);
 
             insuranceFund.insure.mockAndVerify(
-                ILK_ID,
+                SERIES_ID,
                 expectedArtTopUp,
                 expectedFyTokenTopUp,
                 expectedBaseTopUp
@@ -3327,7 +3327,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         }
 
         vm.expectEmit(true, true, true, true);
-        emit LiquidationInsured(VAULT_ID, expectedArtTopUp, expectedArtTopUp);
+        emit LiquidationInsured(VAULT_ID, expectedArtTopUp, 0);
         vm.expectEmit(true, true, true, true);
         emit Ended(VAULT_ID);
         vm.expectEmit(true, true, true, true);
@@ -3351,7 +3351,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
     function testPayBaseAllAndTakesAllWithInsuranceUpToAuctionArt() public {
         // ensure full top up is considered
         (IJoin ilkJoin, IJoin baseJoin) = ladle.mockJoinSetUp(series, vault);
-        insuranceFund.insuranceAvailable.mockAndVerify(ILK_ID, auction.art);
+        insuranceFund.insuranceAvailable.mockAndVerify(SERIES_ID, auction.art);
 
         // halfway through the auction
         vm.warp(
@@ -3400,7 +3400,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
                 maxBaseIn,
                 maxBaseIn
             );
-            cauldron.debtFromBase.mockAndVerify(
+            cauldron.debtToBase.mockAndVerify(
                 vault.seriesId,
                 expectedArtTopUp,
                 expectedArtTopUp
@@ -3420,7 +3420,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             );
 
             insuranceFund.insure.mockAndVerify(
-                ILK_ID,
+                SERIES_ID,
                 expectedArtTopUp,
                 0,
                 expectedArtTopUp
@@ -3434,7 +3434,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         }
 
         vm.expectEmit(true, true, true, true);
-        emit LiquidationInsured(VAULT_ID, expectedArtTopUp, expectedArtTopUp);
+        emit LiquidationInsured(VAULT_ID, expectedArtTopUp, 0);
         vm.expectEmit(true, true, true, true);
         emit Ended(VAULT_ID);
         vm.expectEmit(true, true, true, true);
@@ -3633,6 +3633,173 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         assertEq(liquidatorCut, minInkOut);
         assertEq(auctioneerCut, 0);
         assertEq(baseIn, maxBaseIn);
+
+        // sum is reduced by auction.ink
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, 0, "sum");
+
+        _auctionWasDeleted(VAULT_ID);
+    }
+
+    function testPayBaseAllAndTakesAllWithInsuranceInsufficientInsuranceAvailable()
+        public
+    {
+        vm.warp(
+            uint256(auction.start) +
+                AUCTION_DURATION +
+                INSURANCE_AUCTION_DURATION
+        );
+
+        // ensure full top up is considered
+        insuranceFund.insuranceAvailable.mockAndVerify(SERIES_ID, auction.art);
+
+        vm.prank(bot);
+        (uint256 minInkOut_, , uint256 maxArtIn) = witch.calcPayout(
+            VAULT_ID,
+            bot,
+            auction.art
+        );
+        assertEq(maxArtIn, auction.art.wmul(1e18 - maxInsuredProportion));
+        uint128 minInkOut = uint128(minInkOut_);
+        uint128 maxBaseIn = uint128(maxArtIn);
+
+        uint128 expectedArtTopUp = auction.art - maxBaseIn;
+
+        // make fyToken 1:1 with base to make things simpler
+        cauldron.debtFromBase.mockAndVerify(
+            vault.seriesId,
+            maxBaseIn,
+            maxBaseIn
+        );
+        cauldron.debtToBase.mockAndVerify(
+            vault.seriesId,
+            expectedArtTopUp,
+            expectedArtTopUp
+        );
+
+        insuranceFund.insure.mockAndVerify(
+            SERIES_ID,
+            expectedArtTopUp,
+            0,
+            expectedArtTopUp - 1
+        );
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IContangoWitch.InsufficientInsuranceAvailable.selector,
+                SERIES_ID,
+                expectedArtTopUp,
+                expectedArtTopUp - 1
+            )
+        );
+
+        vm.prank(bot);
+        witch.payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
+    }
+
+    function testPayBaseAllAndTakesAllWithInsuranceAndVariableRate() public {
+        vm.warp(
+            uint256(auction.start) +
+                AUCTION_DURATION +
+                INSURANCE_AUCTION_DURATION
+        );
+
+        // ensure full top up is considered
+        (IJoin ilkJoin, IJoin baseJoin) = ladle.mockJoinSetUp(series, vault);
+        insuranceFund.insuranceAvailable.mockAndVerify(SERIES_ID, auction.art);
+
+        uint256 variableRate = 0.01e18;
+
+        vm.prank(bot);
+        (uint256 minInkOut_, , uint256 maxArtIn_) = witch.calcPayout(
+            VAULT_ID,
+            bot,
+            auction.art
+        );
+        assertEq(maxArtIn_, auction.art.wmul(1e18 - maxInsuredProportion));
+        uint128 minInkOut = uint128(minInkOut_);
+        uint128 maxArtIn = uint128(maxArtIn_);
+        uint128 maxBaseIn = uint128(maxArtIn_.wmul(1e18 + variableRate));
+
+        _verifyCollateralBought(VAULT_ID, bot, minInkOut, auction.art);
+        _verifyAuctionEnded(VAULT_ID, address(contango));
+
+        uint128 expectedArtTopUp = auction.art - maxArtIn;
+        uint128 expectedArtRepaid = auction.art - expectedArtTopUp;
+        uint128 expectedTopUpVariableRate = uint128(
+            expectedArtTopUp.wmul(variableRate)
+        );
+        uint128 expectedArtRepaidVariableRate = uint128(
+            expectedArtRepaid.wmul(variableRate)
+        );
+
+        {
+            // Reduce balances on the vault
+            cauldron.slurp.mockAndVerify(
+                VAULT_ID,
+                minInkOut,
+                auction.art,
+                balances
+            );
+            // Vault returns to it's owner after all the liquidation is done
+            cauldron.give.mockAndVerify(VAULT_ID, address(contango), vault);
+
+            cauldron.debtFromBase.mockAndVerify(
+                vault.seriesId,
+                maxBaseIn,
+                maxArtIn
+            );
+            cauldron.debtToBase.mockAndVerify(
+                vault.seriesId,
+                expectedArtTopUp,
+                expectedArtTopUp + expectedTopUpVariableRate
+            );
+            cauldron.debtToBase.mockAndVerify(
+                vault.seriesId,
+                expectedArtRepaid,
+                expectedArtRepaid + expectedArtRepaidVariableRate
+            );
+
+            ilkJoin.exit.mockAndVerify(bot, minInkOut, minInkOut);
+
+            baseJoin.join.mockAndVerify(
+                bot,
+                expectedArtRepaid + expectedArtRepaidVariableRate,
+                expectedArtRepaid + expectedArtRepaidVariableRate
+            );
+
+            insuranceFund.insure.mockAndVerify(
+                SERIES_ID,
+                expectedArtTopUp + expectedTopUpVariableRate,
+                0,
+                expectedArtTopUp + expectedTopUpVariableRate
+            );
+
+            baseJoin.join.mockAndVerify(
+                address(witch),
+                expectedArtTopUp + expectedTopUpVariableRate,
+                expectedArtTopUp + expectedTopUpVariableRate
+            );
+        }
+
+        vm.expectEmit(true, true, true, true);
+        emit LiquidationInsured(
+            VAULT_ID,
+            expectedArtTopUp,
+            expectedTopUpVariableRate
+        );
+        vm.expectEmit(true, true, true, true);
+        emit Ended(VAULT_ID);
+        vm.expectEmit(true, true, true, true);
+        emit Bought(VAULT_ID, bot, minInkOut, auction.art);
+
+        vm.prank(bot);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) = witch
+            .payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
+        assertEq(liquidatorCut, minInkOut, "liquidatorCut");
+        assertEq(liquidatorCut, balances.ink.wmul(proportion), "liquidatorCut");
+        assertEq(auctioneerCut, 0, "auctioneerCut");
+        assertEq(baseIn, maxBaseIn, "baseIn");
 
         // sum is reduced by auction.ink
         (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
