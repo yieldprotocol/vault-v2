@@ -340,7 +340,7 @@ library Mocks {
     }
 
     function mock(
-        function(bytes6) external view returns (uint256) f,
+        function(bytes6) external returns (uint256) f,
         bytes6 p1,
         uint256 r1
     ) internal {
@@ -511,7 +511,7 @@ library Mocks {
     }
 
     function verify(
-        function(bytes6) external view returns (uint256) f,
+        function(bytes6) external returns (uint256) f,
         bytes6 p1
     ) internal {
         vm.expectCall(f.address, abi.encodeWithSelector(f.selector, p1));
@@ -645,7 +645,7 @@ library Mocks {
     }
 
     function mockAndVerify(
-        function(bytes6) external view returns (uint256) f,
+        function(bytes6) external returns (uint256) f,
         bytes6 p1,
         uint256 r1
     ) internal {
