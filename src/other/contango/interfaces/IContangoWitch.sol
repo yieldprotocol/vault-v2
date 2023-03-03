@@ -21,6 +21,20 @@ interface IContangoWitchEvents {
         uint256 artInsured,
         uint256 baseInsured
     );
+    event AuctionStartedCallbackFailed(
+        address indexed owner,
+        bytes12 indexed vaultId
+    );
+    event CollateralBoughtCallbackFailed(
+        address indexed owner,
+        bytes12 indexed vaultId,
+        uint256 ink,
+        uint256 art
+    );
+    event AuctionEndedCallbackFailed(
+        address indexed owner,
+        bytes12 indexed vaultId
+    );
 }
 
 interface IContangoWitch is IContangoWitchEvents {

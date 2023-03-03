@@ -442,6 +442,7 @@ contract Witch is AccessControl {
 
         _collateralBought(
             vaultId,
+            auction_.owner,
             to,
             liquidatorCut + auctioneerCut + insurancePremium,
             totalArtIn
@@ -509,6 +510,7 @@ contract Witch is AccessControl {
 
         _collateralBought(
             vaultId,
+            auction_.owner,
             to,
             liquidatorCut + auctioneerCut + insurancePremium,
             totalArtIn
@@ -628,6 +630,7 @@ contract Witch is AccessControl {
     /// @param art How much debt was repaid
     function _collateralBought(
         bytes12 vaultId,
+        address owner,
         address buyer,
         uint256 ink,
         uint256 art
