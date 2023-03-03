@@ -1,13 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "./IContangoInsuranceFund.sol";
+
 interface IContangoWitchEvents {
     event InsuranceLineSet(
         bytes6 indexed ilkId,
         bytes6 indexed baseId,
         uint32 duration,
         uint64 maxInsuredProportion,
-        uint64 insurancePremium
+        IContangoInsuranceFund insuranceFund,
+        uint64 insurancePremium,
+        address insurancePremiumReceiver
     );
     event InsuranceLineStatusSet(
         bytes6 indexed ilkId,
@@ -15,7 +19,6 @@ interface IContangoWitchEvents {
         bool disabled
     );
     event DefaultInsurancePremiumSet(uint64 defaultInsurancePremium);
-    event InsuranceFundSet(address indexed insuranceFund);
     event LiquidationInsured(
         bytes12 indexed vaultId,
         uint256 artInsured,
@@ -43,7 +46,9 @@ interface IContangoWitch is IContangoWitchEvents {
         bytes6 baseId,
         uint32 duration,
         uint64 maxInsuredProportion,
-        uint64 insurancePremium
+        IContangoInsuranceFund insuranceFund,
+        uint64 insurancePremium,
+        address insurancePremiumReceiver
     ) external;
 
     function setInsuranceLineStatus(
@@ -55,6 +60,4 @@ interface IContangoWitch is IContangoWitchEvents {
     function setDefaultInsurancePremium(
         uint64 defaultInsurancePremium_
     ) external;
-
-    function setInsuranceFund(address insuranceFund_) external;
 }

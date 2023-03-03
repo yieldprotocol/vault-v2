@@ -3,6 +3,7 @@ pragma solidity >=0.8.13;
 
 import "@yield-protocol/utils-v2/src/token/TransferHelper.sol";
 import "../../Witch.sol";
+import "./interfaces/IContangoInsuranceFund.sol";
 import "./interfaces/IContangoWitchListener.sol";
 import "./interfaces/IContangoWitch.sol";
 
@@ -12,34 +13,29 @@ contract ContangoWitch is Witch, IContangoWitch {
     using Cast for uint256;
 
     struct InsuranceLine {
-        bool disabled;
         uint32 duration; // Time that the insurance auction take to cover the maximum debt insured
         uint64 maxInsuredProportion; // Maximum proportion of debt that is covered by the insurance fund at the insurance auction end (1e18 = 100%)
+        IContangoInsuranceFund insuranceFund;
         uint64 insurancePremium; // Proportion of the collateral that is sent to the insurance fund for healthy liquidations (1e18 = 100%)
+        address insurancePremiumReceiver;
+        bool disabled;
     }
 
     mapping(bytes6 => mapping(bytes6 => InsuranceLine)) public insuranceLines;
-    address public insuranceFund;
     uint64 defaultInsurancePremium; // 1e18 = 100%
 
-    constructor(
-        ICauldron cauldron_,
-        ILadle ladle_,
-        address insuranceFund_
-    ) Witch(cauldron_, ladle_) {
-        insuranceFund = insuranceFund_;
-    }
+    constructor(ICauldron cauldron_, ILadle ladle_) Witch(cauldron_, ladle_) {}
 
     function _auctionStarted(
         bytes12 vaultId,
-        DataTypes.Auction memory auction_,
+        DataTypes.Auction memory auction,
         DataTypes.Line memory line
     ) internal override returns (DataTypes.Vault memory vault) {
-        vault = super._auctionStarted(vaultId, auction_, line);
+        vault = super._auctionStarted(vaultId, auction, line);
         try
-            IContangoWitchListener(auction_.owner).auctionStarted(vaultId)
+            IContangoWitchListener(auction.owner).auctionStarted(vaultId)
         {} catch {
-            emit AuctionStartedCallbackFailed(auction_.owner, vaultId);
+            emit AuctionStartedCallbackFailed(auction.owner, vaultId);
         }
     }
 
@@ -97,7 +93,9 @@ contract ContangoWitch is Witch, IContangoWitch {
         bytes6 baseId,
         uint32 duration,
         uint64 maxInsuredProportion,
-        uint64 insurancePremium
+        IContangoInsuranceFund insuranceFund,
+        uint64 insurancePremium,
+        address insurancePremiumReceiver
     ) external override auth {
         require(
             maxInsuredProportion <= ONE_HUNDRED_PERCENT,
@@ -112,20 +110,19 @@ contract ContangoWitch is Witch, IContangoWitch {
             disabled: false,
             duration: duration,
             maxInsuredProportion: maxInsuredProportion,
-            insurancePremium: insurancePremium
+            insuranceFund: insuranceFund,
+            insurancePremium: insurancePremium,
+            insurancePremiumReceiver: insurancePremiumReceiver
         });
         emit InsuranceLineSet(
             ilkId,
             baseId,
             duration,
             maxInsuredProportion,
-            insurancePremium
+            insuranceFund,
+            insurancePremium,
+            insurancePremiumReceiver
         );
-    }
-
-    function setInsuranceFund(address insuranceFund_) external override auth {
-        insuranceFund = insuranceFund_;
-        emit InsuranceFundSet(insuranceFund);
     }
 
     function _discountDebt(
@@ -145,9 +142,9 @@ contract ContangoWitch is Witch, IContangoWitch {
             uint256 insuranceFYTokenBalance = cauldron
                 .series(seriesId)
                 .fyToken
-                .balanceOf(insuranceFund);
+                .balanceOf(address(line.insuranceFund));
             uint256 insuranceBaseBalance = IERC20(ladle.joins(baseId).asset())
-                .balanceOf(insuranceFund);
+                .balanceOf(address(line.insuranceFund));
 
             uint256 topUpAvailable = insuranceFYTokenBalance +
                 cauldron.debtFromBase(seriesId, insuranceBaseBalance.u128());
@@ -199,7 +196,9 @@ contract ContangoWitch is Witch, IContangoWitch {
                     : topUpAmount;
 
                 IFYToken fyToken = cauldron.series(auction.seriesId).fyToken;
-                uint256 fyTokenBalance = fyToken.balanceOf(insuranceFund);
+                uint256 fyTokenBalance = fyToken.balanceOf(
+                    address(insuranceLine.insuranceFund)
+                );
 
                 uint256 payWithFYToken = fyTokenBalance > debtToppedUp
                     ? debtToppedUp
@@ -207,7 +206,7 @@ contract ContangoWitch is Witch, IContangoWitch {
                 if (payWithFYToken != 0) {
                     // Take fyTokens from insurance fund
                     fyToken.safeTransferFrom(
-                        insuranceFund,
+                        address(insuranceLine.insuranceFund),
                         address(fyToken),
                         payWithFYToken
                     );
@@ -223,7 +222,7 @@ contract ContangoWitch is Witch, IContangoWitch {
 
                     // Take underlying from insurance fund
                     IERC20(baseJoin.asset()).safeTransferFrom(
-                        insuranceFund,
+                        address(insuranceLine.insuranceFund),
                         address(baseJoin),
                         payWithBase
                     );
@@ -236,17 +235,17 @@ contract ContangoWitch is Witch, IContangoWitch {
     }
 
     function _calcInsurancePremium(
-        DataTypes.Auction memory auction_,
+        DataTypes.Auction memory auction,
         uint256 liquidatorCut
     ) internal view override returns (uint256 premium) {
-        InsuranceLine memory insuranceLine = insuranceLines[auction_.ilkId][
-            auction_.baseId
+        InsuranceLine memory insuranceLine = insuranceLines[auction.ilkId][
+            auction.baseId
         ];
 
         (
             bool shouldPayInsurancePremium,
             uint256 insurancePremium
-        ) = _shouldPayInsurancePremium(insuranceLine, auction_);
+        ) = _shouldPayInsurancePremium(insuranceLine, auction);
         if (shouldPayInsurancePremium) {
             premium = liquidatorCut.wmul(insurancePremium);
         }
@@ -260,7 +259,13 @@ contract ContangoWitch is Witch, IContangoWitch {
         uint256 insurancePremium
     ) internal override returns (uint256, uint256) {
         if (insurancePremium > 0) {
-            _join(auction.ilkId).exit(insuranceFund, insurancePremium.u128());
+            InsuranceLine memory insuranceLine = insuranceLines[auction.ilkId][
+                auction.baseId
+            ];
+            _join(auction.ilkId).exit(
+                address(insuranceLine.insurancePremiumReceiver),
+                insurancePremium.u128()
+            );
         }
 
         return
@@ -277,7 +282,12 @@ contract ContangoWitch is Witch, IContangoWitch {
         InsuranceLine memory insuranceLine,
         DataTypes.Auction memory auction
     ) internal view returns (bool should, uint256 insurancePremium) {
-        if (insuranceLine.disabled) return (false, 0);
+        if (
+            insuranceLine.disabled ||
+            insuranceLine.insurancePremiumReceiver == address(0)
+        ) {
+            return (false, 0);
+        }
 
         uint256 duration = lines[auction.ilkId][auction.baseId].duration;
         insurancePremium = insuranceLine.insurancePremium > 0

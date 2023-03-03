@@ -10,7 +10,7 @@ interface IContangoInsuranceFundEvents {
     );
 }
 
-interface IContangoInsuranceFund {
+interface IContangoInsuranceFund is IContangoInsuranceFundEvents {
     function insure(
         bytes6 ilkId,
         uint128 art

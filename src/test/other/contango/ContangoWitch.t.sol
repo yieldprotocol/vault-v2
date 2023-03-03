@@ -65,10 +65,14 @@ abstract contract ContangoWitchStateZero is
     address internal bot = address(0xb07);
     address internal bad = address(0xbad);
     address internal cool = address(0xc001);
-    address internal insuranceFund = address(0x5afe);
+    address internal insurancePremiumReceiver = address(0xfee);
 
     IContangoWitchListener public contango;
     address internal contangoAddress;
+
+    IContangoInsuranceFund insuranceFund;
+    address internal insuranceFundAddress;
+
     ICauldron internal cauldron;
     ILadle internal ladle;
 
@@ -80,14 +84,15 @@ abstract contract ContangoWitchStateZero is
         ladle = ILadle(Mocks.mock("Ladle"));
         contango = IContangoWitchListener(Mocks.mock("ContangoWitchListener"));
         contangoAddress = address(contango);
+        insuranceFund = IContangoInsuranceFund(address(0x5afe));
+        insuranceFundAddress = address(insuranceFund);
 
         vm.startPrank(ada);
-        witch = new ContangoWitch(cauldron, ladle, insuranceFund);
+        witch = new ContangoWitch(cauldron, ladle);
         witch.grantRole(Witch.point.selector, ada);
         witch.grantRole(Witch.setLineAndLimit.selector, ada);
         witch.grantRole(Witch.setProtected.selector, ada);
         witch.grantRole(Witch.setAuctioneerReward.selector, ada);
-        witch.grantRole(ContangoWitch.setInsuranceFund.selector, ada);
         witch.grantRole(ContangoWitch.setInsuranceLine.selector, ada);
         witch.grantRole(ContangoWitch.setInsuranceLineStatus.selector, ada);
         witch.grantRole(ContangoWitch.setDefaultInsurancePremium.selector, ada);
@@ -198,20 +203,6 @@ contract ContangoWitchStateZeroTest is ContangoWitchStateZero {
         assertEq(_sum, 0);
     }
 
-    function testSetInsuranceFundRequiresAuth() public {
-        vm.prank(bad);
-        vm.expectRevert("Access denied");
-        witch.setInsuranceFund(address(0));
-    }
-
-    function testSetInsuranceFund() public {
-        vm.expectEmit(true, true, true, true);
-        emit InsuranceFundSet(insuranceFund);
-
-        vm.prank(ada);
-        witch.setInsuranceFund(insuranceFund);
-    }
-
     function testSetDefaultInsurancePremiumRequiresAuth() public {
         vm.prank(bad);
         vm.expectRevert("Access denied");
@@ -237,13 +228,29 @@ contract ContangoWitchStateZeroTest is ContangoWitchStateZero {
     function testSetInsuranceLineRequiresAuth() public {
         vm.prank(bad);
         vm.expectRevert("Access denied");
-        witch.setInsuranceLine("", "", 0, 0, 0);
+        witch.setInsuranceLine({
+            ilkId: "",
+            baseId: "",
+            duration: 0,
+            maxInsuredProportion: 0,
+            insuranceFund: IContangoInsuranceFund(address(0)),
+            insurancePremium: 0,
+            insurancePremiumReceiver: address(0)
+        });
     }
 
     function testSetInsuranceLineRequiresMaxInsuredProportionTooHigh() public {
         vm.prank(ada);
         vm.expectRevert("Max Insured Proportion above 100%");
-        witch.setInsuranceLine("", "", 0, 1e18 + 1, 0);
+        witch.setInsuranceLine({
+            ilkId: "",
+            baseId: "",
+            duration: 0,
+            maxInsuredProportion: 1e18 + 1,
+            insuranceFund: IContangoInsuranceFund(address(0)),
+            insurancePremium: 0,
+            insurancePremiumReceiver: address(0)
+        });
     }
 
     function testSetInsuranceLineRequiresInsurancePremiumProportionTooHigh()
@@ -251,7 +258,15 @@ contract ContangoWitchStateZeroTest is ContangoWitchStateZero {
     {
         vm.prank(ada);
         vm.expectRevert("Insurance Premium above 100%");
-        witch.setInsuranceLine("", "", 0, 0, 1e18 + 1);
+        witch.setInsuranceLine({
+            ilkId: "",
+            baseId: "",
+            duration: 0,
+            maxInsuredProportion: 0,
+            insuranceFund: IContangoInsuranceFund(address(0)),
+            insurancePremium: 1e18 + 1,
+            insurancePremiumReceiver: address(0)
+        });
     }
 
     function testSetInsuranceLine() public {
@@ -264,7 +279,9 @@ contract ContangoWitchStateZeroTest is ContangoWitchStateZero {
             BASE_ID,
             INSURANCE_AUCTION_DURATION,
             maxInsuredProportion,
-            insurancePremium
+            insuranceFund,
+            insurancePremium,
+            insurancePremiumReceiver
         );
 
         vm.prank(ada);
@@ -273,7 +290,9 @@ contract ContangoWitchStateZeroTest is ContangoWitchStateZero {
             BASE_ID,
             INSURANCE_AUCTION_DURATION,
             maxInsuredProportion,
-            insurancePremium
+            insuranceFund,
+            insurancePremium,
+            insurancePremiumReceiver
         );
     }
 
@@ -535,7 +554,7 @@ contract ContangoWitchWithMetadataTest is ContangoWitchWithMetadata {
 
     function testAuctionAVaultWithoutLimitsSet() public {
         // Given
-        witch = new ContangoWitch(cauldron, ladle, insuranceFund);
+        witch = new ContangoWitch(cauldron, ladle);
 
         // When
         vm.expectRevert(
@@ -1850,7 +1869,9 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             BASE_ID,
             INSURANCE_AUCTION_DURATION,
             maxInsuredProportion,
-            insurancePremium
+            insuranceFund,
+            insurancePremium,
+            insurancePremiumReceiver
         );
     }
 
@@ -1860,8 +1881,11 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
 
         // ensure full top up is considered
         (, , IERC20 base) = ladle.mockJoinSetUp(series, vault);
-        series.fyToken.balanceOf.mockAndVerify(insuranceFund, auction.art);
-        base.balanceOf.mockAndVerify(insuranceFund, 0);
+        series.fyToken.balanceOf.mockAndVerify(
+            insuranceFundAddress,
+            auction.art
+        );
+        base.balanceOf.mockAndVerify(insuranceFundAddress, 0);
         cauldron.debtFromBase.mockAndVerify(vault.seriesId, 0, 0);
 
         // 100000 * 0.5 = 50000
@@ -1988,8 +2012,11 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
 
         // ensure full top up is considered
         (, , IERC20 base) = ladle.mockJoinSetUp(series, vault);
-        series.fyToken.balanceOf.mockAndVerify(insuranceFund, auction.art);
-        base.balanceOf.mockAndVerify(insuranceFund, 0);
+        series.fyToken.balanceOf.mockAndVerify(
+            insuranceFundAddress,
+            auction.art
+        );
+        base.balanceOf.mockAndVerify(insuranceFundAddress, 0);
         cauldron.debtFromBase.mockAndVerify(vault.seriesId, 0, 0);
 
         // 100000 * 0.5 = 50000
@@ -2128,8 +2155,8 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         uint256 auctionStart = auction.start;
 
         (, , IERC20 base) = ladle.mockJoinSetUp(series, vault);
-        series.fyToken.balanceOf.mockAndVerify(insuranceFund, 0);
-        base.balanceOf.mockAndVerify(insuranceFund, 6000e6);
+        series.fyToken.balanceOf.mockAndVerify(insuranceFundAddress, 0);
+        base.balanceOf.mockAndVerify(insuranceFundAddress, 6000e6);
         // make fyToken 1:1 with base to make things simpler
         cauldron.debtFromBase.mockAndVerify(vault.seriesId, 6000e6, 6000e6);
 
@@ -2228,8 +2255,8 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         uint256 auctionStart = auction.start;
 
         (, , IERC20 base) = ladle.mockJoinSetUp(series, vault);
-        series.fyToken.balanceOf.mockAndVerify(insuranceFund, 7000e6);
-        base.balanceOf.mockAndVerify(insuranceFund, 0);
+        series.fyToken.balanceOf.mockAndVerify(insuranceFundAddress, 7000e6);
+        base.balanceOf.mockAndVerify(insuranceFundAddress, 0);
         cauldron.debtFromBase.mockAndVerify(vault.seriesId, 0, 0);
 
         // 100000 * 0.5 = 50000
@@ -2325,8 +2352,8 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         uint256 auctionStart = auction.start;
 
         (, , IERC20 base) = ladle.mockJoinSetUp(series, vault);
-        series.fyToken.balanceOf.mockAndVerify(insuranceFund, 2000e6);
-        base.balanceOf.mockAndVerify(insuranceFund, 12000e6);
+        series.fyToken.balanceOf.mockAndVerify(insuranceFundAddress, 2000e6);
+        base.balanceOf.mockAndVerify(insuranceFundAddress, 12000e6);
         // 2:1
         cauldron.debtFromBase.mockAndVerify(vault.seriesId, 12000e6, 6000e6);
 
@@ -2562,7 +2589,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
 
         (IJoin ilkJoin, IJoin baseJoin, ) = ladle.mockJoinSetUp(series, vault);
         ilkJoin.exit.mockAndVerify(bot, minInkOut, minInkOut);
-        ilkJoin.exit.mockAndVerify(insuranceFund, premium, premium);
+        ilkJoin.exit.mockAndVerify(insurancePremiumReceiver, premium, premium);
         baseJoin.join.mockAndVerify(bot, maxBaseIn, maxBaseIn);
 
         vm.expectEmit(true, true, true, true);
@@ -2619,7 +2646,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
 
         (IJoin ilkJoin, IJoin baseJoin, ) = ladle.mockJoinSetUp(series, vault);
         ilkJoin.exit.mockAndVerify(bot, minInkOut, minInkOut);
-        ilkJoin.exit.mockAndVerify(insuranceFund, premium, premium);
+        ilkJoin.exit.mockAndVerify(insurancePremiumReceiver, premium, premium);
         baseJoin.join.mockAndVerify(bot, maxBaseIn, maxBaseIn);
 
         vm.expectEmit(true, true, true, true);
@@ -2676,7 +2703,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
 
         (IJoin ilkJoin, IJoin baseJoin, ) = ladle.mockJoinSetUp(series, vault);
         ilkJoin.exit.mockAndVerify(bot, minInkOut, minInkOut);
-        ilkJoin.exit.mockAndVerify(insuranceFund, premium, premium);
+        ilkJoin.exit.mockAndVerify(insurancePremiumReceiver, premium, premium);
         baseJoin.join.mockAndVerify(bot, maxBaseIn, maxBaseIn);
 
         vm.expectEmit(true, true, true, true);
@@ -2747,7 +2774,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         // Auctioneer share
         ilkJoin.exit.mockAndVerify(bot, auctioneerCut, auctioneerCut);
         // Insurance Fund share
-        ilkJoin.exit.mockAndVerify(insuranceFund, premium, premium);
+        ilkJoin.exit.mockAndVerify(insurancePremiumReceiver, premium, premium);
 
         baseJoin.join.mockAndVerify(bot2, maxBaseIn, maxBaseIn);
 
@@ -2807,7 +2834,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
 
         (IJoin ilkJoin, IJoin baseJoin, ) = ladle.mockJoinSetUp(series, vault);
         ilkJoin.exit.mockAndVerify(bot, minInkOut, minInkOut);
-        ilkJoin.exit.mockAndVerify(insuranceFund, premium, premium);
+        ilkJoin.exit.mockAndVerify(insurancePremiumReceiver, premium, premium);
         baseJoin.join.mockAndVerify(bot, maxBaseIn, maxBaseIn);
 
         vm.expectEmit(true, true, true, true);
@@ -2864,8 +2891,8 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             series,
             vault
         );
-        series.fyToken.balanceOf.mockAndVerify(insuranceFund, 0);
-        base.balanceOf.mockAndVerify(insuranceFund, auction.art);
+        series.fyToken.balanceOf.mockAndVerify(insuranceFundAddress, 0);
+        base.balanceOf.mockAndVerify(insuranceFundAddress, auction.art);
         // make fyToken 1:1 with base to make things simpler
         cauldron.debtFromBase.mockAndVerify(
             vault.seriesId,
@@ -2930,9 +2957,12 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
                 expectedArtRepaid
             );
 
-            base.balanceOf.mockAndVerify(insuranceFund, expectedArtTopUp);
+            base.balanceOf.mockAndVerify(
+                insuranceFundAddress,
+                expectedArtTopUp
+            );
             base.transferFrom.mockAndVerify(
-                insuranceFund,
+                insuranceFundAddress,
                 address(baseJoin),
                 expectedArtTopUp,
                 true
@@ -3003,7 +3033,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         ladle.joins.mock(vault.ilkId, ilkJoin);
         ilkJoin.exit.mockAndVerify(bot, minInkOut, minInkOut);
 
-        ilkJoin.exit.mockAndVerify(insuranceFund, premium, premium);
+        ilkJoin.exit.mockAndVerify(insurancePremiumReceiver, premium, premium);
 
         series.fyToken.burn.mockAndVerify(bot, maxArtIn);
 
@@ -3055,7 +3085,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         ladle.joins.mock(vault.ilkId, ilkJoin);
         ilkJoin.exit.mockAndVerify(bot, minInkOut, minInkOut);
 
-        ilkJoin.exit.mockAndVerify(insuranceFund, premium, premium);
+        ilkJoin.exit.mockAndVerify(insurancePremiumReceiver, premium, premium);
 
         series.fyToken.burn.mockAndVerify(bot, maxArtIn);
 
@@ -3102,7 +3132,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         ladle.joins.mock(vault.ilkId, ilkJoin);
         ilkJoin.exit.mockAndVerify(bot, minInkOut, minInkOut);
 
-        ilkJoin.exit.mockAndVerify(insuranceFund, premium, premium);
+        ilkJoin.exit.mockAndVerify(insurancePremiumReceiver, premium, premium);
 
         series.fyToken.burn.mockAndVerify(bot, maxArtIn);
 
@@ -3154,8 +3184,8 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             series,
             vault
         );
-        series.fyToken.balanceOf.mockAndVerify(insuranceFund, 0);
-        base.balanceOf.mockAndVerify(insuranceFund, auction.art);
+        series.fyToken.balanceOf.mockAndVerify(insuranceFundAddress, 0);
+        base.balanceOf.mockAndVerify(insuranceFundAddress, auction.art);
         // make fyToken 1:1 with base to make things simpler
         cauldron.debtFromBase.mockAndVerify(
             vault.seriesId,
@@ -3205,9 +3235,12 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
                 expectedArtTopUp
             );
 
-            base.balanceOf.mockAndVerify(insuranceFund, expectedArtTopUp);
+            base.balanceOf.mockAndVerify(
+                insuranceFundAddress,
+                expectedArtTopUp
+            );
             base.transferFrom.mockAndVerify(
-                insuranceFund,
+                insuranceFundAddress,
                 address(baseJoin),
                 expectedArtTopUp,
                 true
@@ -3266,7 +3299,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         ladle.joins.mock(vault.ilkId, ilkJoin);
         ilkJoin.exit.mockAndVerify(bot, minInkOut, minInkOut);
 
-        ilkJoin.exit.mockAndVerify(insuranceFund, premium, premium);
+        ilkJoin.exit.mockAndVerify(insurancePremiumReceiver, premium, premium);
 
         series.fyToken.burn.mockAndVerify(bot, maxArtIn);
 
@@ -3331,7 +3364,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
         // Auctioneer share
         ilkJoin.exit.mockAndVerify(bot, auctioneerCut, auctioneerCut);
         // Insurance fund share
-        ilkJoin.exit.mockAndVerify(insuranceFund, premium, premium);
+        ilkJoin.exit.mockAndVerify(insurancePremiumReceiver, premium, premium);
 
         series.fyToken.burn.mockAndVerify(bot2, maxArtIn);
 
@@ -3376,10 +3409,10 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             vault
         );
         series.fyToken.balanceOf.mockAndVerify(
-            insuranceFund,
+            insuranceFundAddress,
             expectedFyTokenTopUp
         );
-        base.balanceOf.mockAndVerify(insuranceFund, type(uint128).max);
+        base.balanceOf.mockAndVerify(insuranceFundAddress, type(uint128).max);
         // make fyToken 1:1 with base to make things simpler
         cauldron.debtFromBase.mockAndVerify(
             vault.seriesId,
@@ -3440,11 +3473,11 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             ilkJoin.exit.mockAndVerify(bot, minInkOut, minInkOut);
 
             series.fyToken.balanceOf.mockAndVerify(
-                insuranceFund,
+                insuranceFundAddress,
                 expectedFyTokenTopUp
             );
             series.fyToken.transferFrom.mockAndVerify(
-                insuranceFund,
+                insuranceFundAddress,
                 address(series.fyToken),
                 expectedFyTokenTopUp,
                 true
@@ -3460,9 +3493,12 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
                 expectedArtRepaid
             );
 
-            base.balanceOf.mockAndVerify(insuranceFund, expectedBaseTopUp);
+            base.balanceOf.mockAndVerify(
+                insuranceFundAddress,
+                expectedBaseTopUp
+            );
             base.transferFrom.mockAndVerify(
-                insuranceFund,
+                insuranceFundAddress,
                 address(baseJoin),
                 expectedBaseTopUp,
                 true
@@ -3515,11 +3551,11 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             vault
         );
         series.fyToken.balanceOf.mockAndVerify(
-            insuranceFund,
+            insuranceFundAddress,
             expectedFyTokenTopUp
         );
         // make fyToken 1:1 with base to make things simpler
-        base.balanceOf.mockAndVerify(insuranceFund, type(uint128).max);
+        base.balanceOf.mockAndVerify(insuranceFundAddress, type(uint128).max);
         cauldron.debtFromBase.mockAndVerify(
             vault.seriesId,
             type(uint128).max,
@@ -3566,11 +3602,11 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             ilkJoin.exit.mockAndVerify(bot, minInkOut, minInkOut);
 
             series.fyToken.balanceOf.mockAndVerify(
-                insuranceFund,
+                insuranceFundAddress,
                 expectedFyTokenTopUp
             );
             series.fyToken.transferFrom.mockAndVerify(
-                insuranceFund,
+                insuranceFundAddress,
                 address(series.fyToken),
                 expectedFyTokenTopUp,
                 true
@@ -3582,9 +3618,12 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
 
             series.fyToken.burn.mockAndVerify(bot, expectedArtRepaid);
 
-            base.balanceOf.mockAndVerify(insuranceFund, expectedBaseTopUp);
+            base.balanceOf.mockAndVerify(
+                insuranceFundAddress,
+                expectedBaseTopUp
+            );
             base.transferFrom.mockAndVerify(
-                insuranceFund,
+                insuranceFundAddress,
                 address(baseJoin),
                 expectedBaseTopUp,
                 true
@@ -3624,8 +3663,8 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             series,
             vault
         );
-        series.fyToken.balanceOf.mockAndVerify(insuranceFund, 0);
-        base.balanceOf.mockAndVerify(insuranceFund, auction.art);
+        series.fyToken.balanceOf.mockAndVerify(insuranceFundAddress, 0);
+        base.balanceOf.mockAndVerify(insuranceFundAddress, auction.art);
         // make fyToken 1:1 with base to make things simpler
         cauldron.debtFromBase.mockAndVerify(
             vault.seriesId,
@@ -3704,9 +3743,12 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
                 expectedArtRepaid
             );
 
-            base.balanceOf.mockAndVerify(insuranceFund, expectedArtTopUp);
+            base.balanceOf.mockAndVerify(
+                insuranceFundAddress,
+                expectedArtTopUp
+            );
             base.transferFrom.mockAndVerify(
-                insuranceFund,
+                insuranceFundAddress,
                 address(baseJoin),
                 expectedArtTopUp,
                 true
@@ -3751,7 +3793,9 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             baseId: BASE_ID,
             duration: INSURANCE_AUCTION_DURATION,
             maxInsuredProportion: maxInsuredProportion,
-            insurancePremium: 0
+            insuranceFund: insuranceFund,
+            insurancePremium: 0,
+            insurancePremiumReceiver: insurancePremiumReceiver
         });
         vm.stopPrank();
 
@@ -3786,7 +3830,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
 
         (IJoin ilkJoin, IJoin baseJoin, ) = ladle.mockJoinSetUp(series, vault);
         ilkJoin.exit.mockAndVerify(bot, minInkOut, minInkOut);
-        ilkJoin.exit.mockAndVerify(insuranceFund, premium, premium);
+        ilkJoin.exit.mockAndVerify(insurancePremiumReceiver, premium, premium);
         baseJoin.join.mockAndVerify(bot, maxBaseIn, maxBaseIn);
 
         vm.expectEmit(true, true, true, true);
@@ -3815,7 +3859,9 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
             baseId: BASE_ID,
             duration: 0,
             maxInsuredProportion: 0,
-            insurancePremium: insurancePremium
+            insuranceFund: insuranceFund,
+            insurancePremium: insurancePremium,
+            insurancePremiumReceiver: insurancePremiumReceiver
         });
         vm.stopPrank();
 
@@ -3850,7 +3896,7 @@ contract ContangoWitchWithInsuranceTest is ContangoWitchWithAuction {
 
         (IJoin ilkJoin, IJoin baseJoin, ) = ladle.mockJoinSetUp(series, vault);
         ilkJoin.exit.mockAndVerify(bot, minInkOut, minInkOut);
-        ilkJoin.exit.mockAndVerify(insuranceFund, premium, premium);
+        ilkJoin.exit.mockAndVerify(insurancePremiumReceiver, premium, premium);
         baseJoin.join.mockAndVerify(bot, maxBaseIn, maxBaseIn);
 
         vm.expectEmit(true, true, true, true);
