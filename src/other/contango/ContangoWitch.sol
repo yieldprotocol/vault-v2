@@ -132,7 +132,7 @@ contract ContangoWitch is Witch, IContangoWitch {
         uint256 auctionStart,
         uint256 auctionDuration,
         uint256 artIn
-    ) internal view virtual override returns (uint256 requiredArtIn) {
+    ) internal virtual override returns (uint256 requiredArtIn) {
         InsuranceLine memory line = insuranceLines[ilkId][baseId];
         uint256 topUp = line.duration == 0
             ? 0

@@ -698,7 +698,6 @@ contract Witch is AccessControl {
         uint256 maxArtIn
     )
         external
-        view
         returns (uint256 liquidatorCut, uint256 auctioneerCut, uint256 artIn)
     {
         DataTypes.Auction memory auction_ = auctions[vaultId];
@@ -741,7 +740,6 @@ contract Witch is AccessControl {
         uint256 artIn
     )
         internal
-        view
         virtual
         returns (
             uint256 liquidatorCut,
@@ -815,7 +813,7 @@ contract Witch is AccessControl {
         uint256 auctionStart,
         uint256 auctionDuration,
         uint256 artIn
-    ) internal view virtual returns (uint256 requiredArtIn) {
+    ) internal virtual returns (uint256 requiredArtIn) {
         requiredArtIn = artIn;
     }
 

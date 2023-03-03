@@ -16,7 +16,5 @@ interface IContangoInsuranceFund is IContangoInsuranceFundEvents {
         uint128 base
     ) external returns (uint128 fyTokenUsed, uint256 baseTokenUsed);
 
-    function insuranceAvailable(
-        bytes6 seriesId
-    ) external view returns (uint256);
+    function insuranceAvailable(bytes6 seriesId) external returns (uint256);
 }
