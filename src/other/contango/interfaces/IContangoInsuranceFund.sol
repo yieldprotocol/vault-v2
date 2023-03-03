@@ -3,8 +3,8 @@ pragma solidity ^0.8.0;
 
 interface IContangoInsuranceFundEvents {
     event Insured(
-        bytes6 indexed ilkId,
-        uint128 art,
+        bytes6 indexed seriesId,
+        uint128 base,
         uint128 fyTokenUsed,
         uint256 baseTokenUsed
     );
@@ -12,9 +12,11 @@ interface IContangoInsuranceFundEvents {
 
 interface IContangoInsuranceFund is IContangoInsuranceFundEvents {
     function insure(
-        bytes6 ilkId,
-        uint128 art
+        bytes6 seriesId,
+        uint128 base
     ) external returns (uint128 fyTokenUsed, uint256 baseTokenUsed);
 
-    function insuranceAvailable(bytes6 ilkId) external view returns (uint256);
+    function insuranceAvailable(
+        bytes6 seriesId
+    ) external view returns (uint256);
 }

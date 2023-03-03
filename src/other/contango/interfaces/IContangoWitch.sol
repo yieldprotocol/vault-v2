@@ -22,7 +22,7 @@ interface IContangoWitchEvents {
     event LiquidationInsured(
         bytes12 indexed vaultId,
         uint256 artInsured,
-        uint256 baseInsured
+        uint256 variableInterest
     );
     event AuctionStartedCallbackFailed(
         address indexed owner,
@@ -41,6 +41,12 @@ interface IContangoWitchEvents {
 }
 
 interface IContangoWitch is IContangoWitchEvents {
+    error InsufficientInsuranceAvailable(
+        bytes6 seriesId,
+        uint256 required,
+        uint256 available
+    );
+
     function setInsuranceLine(
         bytes6 ilkId,
         bytes6 baseId,
@@ -58,6 +64,6 @@ interface IContangoWitch is IContangoWitchEvents {
     ) external;
 
     function setDefaultInsurancePremium(
-        uint64 defaultInsurancePremium_
+        uint64 defaultInsurancePremium
     ) external;
 }

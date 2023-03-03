@@ -128,10 +128,11 @@ contract ContangoWitch is Witch, IContangoWitch {
     function _discountDebt(
         bytes6 ilkId,
         bytes6 baseId,
+        bytes6 seriesId,
         uint256 auctionStart,
         uint256 auctionDuration,
         uint256 artIn
-    ) internal virtual override returns (uint256 requiredArtIn) {
+    ) internal view virtual override returns (uint256 requiredArtIn) {
         InsuranceLine memory line = insuranceLines[ilkId][baseId];
         uint256 topUp = line.duration == 0
             ? 0
@@ -139,7 +140,7 @@ contract ContangoWitch is Witch, IContangoWitch {
 
         if (topUp > 0) {
             uint256 topUpAvailable = line.insuranceFund.insuranceAvailable(
-                ilkId
+                seriesId
             );
             if (topUp > topUpAvailable) topUp = topUpAvailable;
         }
@@ -183,9 +184,23 @@ contract ContangoWitch is Witch, IContangoWitch {
             uint256 topUpAmount = requiredArtIn - artIn;
 
             if (topUpAmount != 0) {
+                uint256 required = cauldron.debtToBase(
+                    auction.seriesId,
+                    topUpAmount.u128()
+                );
+
                 (uint256 fyTokenUsed, uint256 baseUsed) = insuranceLine
                     .insuranceFund
-                    .insure(auction.ilkId, topUpAmount.u128());
+                    .insure(auction.seriesId, required.u128());
+
+                uint256 used = fyTokenUsed + baseUsed;
+                if (required > used) {
+                    revert InsufficientInsuranceAvailable(
+                        auction.seriesId,
+                        required,
+                        used
+                    );
+                }
 
                 if (fyTokenUsed != 0) {
                     cauldron.series(auction.seriesId).fyToken.burn(
@@ -202,10 +217,11 @@ contract ContangoWitch is Witch, IContangoWitch {
                     baseJoin.join(address(this), baseUsed.u128());
                 }
 
-                uint256 debtToppedUp = fyTokenUsed +
-                    cauldron.debtFromBase(auction.seriesId, baseUsed.u128());
-
-                emit LiquidationInsured(vaultId, topUpAmount, debtToppedUp);
+                emit LiquidationInsured({
+                    vaultId: vaultId,
+                    artInsured: topUpAmount,
+                    variableInterest: required - topUpAmount
+                });
             }
         }
     }
