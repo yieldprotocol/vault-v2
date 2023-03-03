@@ -128,7 +128,6 @@ contract ContangoWitch is Witch, IContangoWitch {
     function _discountDebt(
         bytes6 ilkId,
         bytes6 baseId,
-        bytes6 seriesId,
         uint256 auctionStart,
         uint256 auctionDuration,
         uint256 artIn
@@ -139,15 +138,9 @@ contract ContangoWitch is Witch, IContangoWitch {
             : artIn.wmul(_debtDiscountNow(line, auctionStart, auctionDuration));
 
         if (topUp > 0) {
-            uint256 insuranceFYTokenBalance = cauldron
-                .series(seriesId)
-                .fyToken
-                .balanceOf(address(line.insuranceFund));
-            uint256 insuranceBaseBalance = IERC20(ladle.joins(baseId).asset())
-                .balanceOf(address(line.insuranceFund));
-
-            uint256 topUpAvailable = insuranceFYTokenBalance +
-                cauldron.debtFromBase(seriesId, insuranceBaseBalance.u128());
+            uint256 topUpAvailable = line.insuranceFund.insuranceAvailable(
+                ilkId
+            );
             if (topUp > topUpAvailable) topUp = topUpAvailable;
         }
 
@@ -168,8 +161,7 @@ contract ContangoWitch is Witch, IContangoWitch {
     function _topUpDebt(
         bytes12 vaultId,
         DataTypes.Auction memory auction,
-        uint256 artIn,
-        bool baseTopUp
+        uint256 artIn
     ) internal override returns (uint256 requiredArtIn) {
         InsuranceLine memory insuranceLine = insuranceLines[auction.ilkId][
             auction.baseId
@@ -191,43 +183,27 @@ contract ContangoWitch is Witch, IContangoWitch {
             uint256 topUpAmount = requiredArtIn - artIn;
 
             if (topUpAmount != 0) {
-                uint256 debtToppedUp = baseTopUp
-                    ? cauldron.debtToBase(auction.seriesId, topUpAmount.u128())
-                    : topUpAmount;
+                (uint256 fyTokenUsed, uint256 baseUsed) = insuranceLine
+                    .insuranceFund
+                    .insure(auction.ilkId, topUpAmount.u128());
 
-                IFYToken fyToken = cauldron.series(auction.seriesId).fyToken;
-                uint256 fyTokenBalance = fyToken.balanceOf(
-                    address(insuranceLine.insuranceFund)
-                );
-
-                uint256 payWithFYToken = fyTokenBalance > debtToppedUp
-                    ? debtToppedUp
-                    : fyTokenBalance;
-                if (payWithFYToken != 0) {
-                    // Take fyTokens from insurance fund
-                    fyToken.safeTransferFrom(
-                        address(insuranceLine.insuranceFund),
-                        address(fyToken),
-                        payWithFYToken
+                if (fyTokenUsed != 0) {
+                    cauldron.series(auction.seriesId).fyToken.burn(
+                        address(this),
+                        fyTokenUsed
                     );
-                    fyToken.burn(address(this), payWithFYToken);
                 }
 
-                uint256 payWithBase = debtToppedUp - payWithFYToken;
-                if (payWithBase != 0) {
+                if (baseUsed != 0) {
                     IJoin baseJoin = ladle.joins(auction.baseId);
                     if (baseJoin == IJoin(address(0))) {
                         revert JoinNotFound(auction.baseId);
                     }
-
-                    // Take underlying from insurance fund
-                    IERC20(baseJoin.asset()).safeTransferFrom(
-                        address(insuranceLine.insuranceFund),
-                        address(baseJoin),
-                        payWithBase
-                    );
-                    baseJoin.join(address(this), payWithBase.u128());
+                    baseJoin.join(address(this), baseUsed.u128());
                 }
+
+                uint256 debtToppedUp = fyTokenUsed +
+                    cauldron.debtFromBase(auction.seriesId, baseUsed.u128());
 
                 emit LiquidationInsured(vaultId, topUpAmount, debtToppedUp);
             }

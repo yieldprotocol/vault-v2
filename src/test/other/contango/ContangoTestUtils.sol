@@ -15,14 +15,11 @@ library ContangoTestUtils {
         ILadle ladle,
         DataTypes.Series memory series,
         DataTypes.Vault memory vault
-    ) internal returns (IJoin ilkJoin, IJoin baseJoin, IERC20 base) {
+    ) internal returns (IJoin ilkJoin, IJoin baseJoin) {
         ilkJoin = IJoin(Mocks.mock("IlkJoin"));
         ladle.joins.mock(vault.ilkId, ilkJoin);
 
         baseJoin = IJoin(Mocks.mock("BaseJoin"));
         ladle.joins.mock(series.baseId, baseJoin);
-
-        base = IERC20(Mocks.mock("Base"));
-        baseJoin.asset.mock(address(base));
     }
 }

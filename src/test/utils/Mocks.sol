@@ -339,6 +339,32 @@ library Mocks {
         vm.mockCall(f.address, abi.encodeWithSelector(f.selector, p1, p2), "");
     }
 
+    function mock(
+        function(bytes6) external view returns (uint256) f,
+        bytes6 p1,
+        uint256 r1
+    ) internal {
+        vm.mockCall(
+            f.address,
+            abi.encodeWithSelector(f.selector, p1),
+            abi.encode(r1)
+        );
+    }
+
+    function mock(
+        function(bytes6, uint128) external returns (uint128, uint256) f,
+        bytes6 p1,
+        uint128 p2,
+        uint128 r1,
+        uint256 r2
+    ) internal {
+        vm.mockCall(
+            f.address,
+            abi.encodeWithSelector(f.selector, p1, p2),
+            abi.encode(r1, r2)
+        );
+    }
+
     // ===================================== verify =====================================
 
     function verify(function() external view returns (address) f) internal {
@@ -484,6 +510,21 @@ library Mocks {
         );
     }
 
+    function verify(
+        function(bytes6) external view returns (uint256) f,
+        bytes6 p1
+    ) internal {
+        vm.expectCall(f.address, abi.encodeWithSelector(f.selector, p1));
+    }
+
+    function verify(
+        function(bytes6, uint128) external returns (uint128, uint256) f,
+        bytes6 p1,
+        uint128 p2
+    ) internal {
+        vm.expectCall(f.address, abi.encodeWithSelector(f.selector, p1, p2));
+    }
+
     // ===================================== mock and verify =====================================
 
     function mockAndVerify(
@@ -601,6 +642,26 @@ library Mocks {
     ) internal {
         mock(f, param1, param2);
         verify(f, param1, param2);
+    }
+
+    function mockAndVerify(
+        function(bytes6) external view returns (uint256) f,
+        bytes6 p1,
+        uint256 r1
+    ) internal {
+        mock(f, p1, r1);
+        verify(f, p1);
+    }
+
+    function mockAndVerify(
+        function(bytes6, uint128) external returns (uint128, uint256) f,
+        bytes6 p1,
+        uint128 p2,
+        uint128 r1,
+        uint256 r2
+    ) internal {
+        mock(f, p1, p2, r1, r2);
+        verify(f, p1, p2);
     }
 }
 
