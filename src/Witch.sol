@@ -403,7 +403,7 @@ contract Witch is AccessControl {
         // If offering too much base, take only the necessary.
         artIn = artIn > auction_.art ? artIn = auction_.art : artIn;
 
-        uint256 totalArtIn = _topUpDebt(vaultId, auction_, artIn, true);
+        uint256 totalArtIn = _topUpDebt(vaultId, auction_, artIn);
 
         // Calculate the collateral to be sold
         uint256 insurancePremium;
@@ -472,7 +472,7 @@ contract Witch is AccessControl {
         // If offering too much fyToken, take only the necessary.
         artIn = maxArtIn > auction_.art ? auction_.art : maxArtIn;
 
-        uint256 totalArtIn = _topUpDebt(vaultId, auction_, artIn, false);
+        uint256 totalArtIn = _topUpDebt(vaultId, auction_, artIn);
 
         // Calculate the collateral to be sold
         uint256 insurancePremium;
@@ -520,8 +520,7 @@ contract Witch is AccessControl {
     function _topUpDebt(
         bytes12 vaultId,
         DataTypes.Auction memory auction_,
-        uint256 artIn,
-        bool baseTopUp
+        uint256 artIn
     ) internal virtual returns (uint256 requiredArtIn) {
         return artIn;
     }
@@ -764,7 +763,6 @@ contract Witch is AccessControl {
             requiredArtIn = _discountDebt(
                 auction_.ilkId,
                 auction_.baseId,
-                auction_.seriesId,
                 auction_.start,
                 duration,
                 requiredArtIn
@@ -810,7 +808,6 @@ contract Witch is AccessControl {
     function _discountDebt(
         bytes6 ilkId,
         bytes6 baseId,
-        bytes6 seriesId,
         uint256 auctionStart,
         uint256 auctionDuration,
         uint256 artIn
