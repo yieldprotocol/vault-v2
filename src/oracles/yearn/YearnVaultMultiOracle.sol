@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
+// DO NOT USE - VULNERABLE TO VAULT MANIPULATION THROUGH DONATIONS DUE to USING pricePerShare() INSTEAD OF getPricePerFullShare()
 pragma solidity >=0.8.13;
 
 import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
