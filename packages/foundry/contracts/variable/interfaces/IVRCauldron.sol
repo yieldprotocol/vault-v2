@@ -12,7 +12,7 @@ interface IVRCauldron {
     function vaults(bytes12 vault)
         external
         view
-        returns (DataTypes.VRVault memory);
+        returns (VRDataTypes.Vault memory);
 
     /// @dev Bases available in Cauldron.
     function bases(bytes6 baseId)
@@ -47,7 +47,7 @@ interface IVRCauldron {
         bytes12 vaultId,
         bytes6 baseId,
         bytes6 ilkId
-    ) external returns (DataTypes.VRVault memory);
+    ) external returns (VRDataTypes.Vault memory);
 
     /// @dev Destroy an empty vault. Used to recover gas costs.
     function destroy(bytes12 vault) external;
@@ -57,12 +57,12 @@ interface IVRCauldron {
         bytes12 vaultId,
         bytes6 baseId,
         bytes6 ilkId
-    ) external returns (DataTypes.VRVault memory);
+    ) external returns (VRDataTypes.Vault memory);
 
     /// @dev Give a vault to another user.
     function give(bytes12 vaultId, address receiver)
         external
-        returns (DataTypes.VRVault memory);
+        returns (VRDataTypes.Vault memory);
 
     /// @dev Move collateral and debt between vaults.
     function stir(

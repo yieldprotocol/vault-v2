@@ -12,14 +12,8 @@ import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U32.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256I256.sol";
 import "../constants/Constants.sol";
+import { CauldronMath } from "../Cauldron.sol";
 
-library CauldronMath {
-    /// @dev Add a number (which might be negative) to a positive, and revert if the result is negative.
-    function add(uint128 x, int128 y) internal pure returns (uint128 z) {
-        require(y > 0 || x >= uint128(-y), "Result below zero");
-        z = y > 0 ? x + uint128(y) : x - uint128(-y);
-    }
-}
 
 contract VRCauldron is AccessControl, Constants {
     using CauldronMath for uint128;
@@ -91,7 +85,7 @@ contract VRCauldron is AccessControl, Constants {
     mapping(bytes6 => mapping(bytes6 => DataTypes.Debt)) public debt; // [baseId][ilkId] Max and sum of debt per underlying and collateral.
 
     // ==== User data ====
-    mapping(bytes12 => DataTypes.VRVault) public vaults; // An user can own one or more Vaults, each one with a bytes12 identifier
+    mapping(bytes12 => VRDataTypes.Vault) public vaults; // An user can own one or more Vaults, each one with a bytes12 identifier
     mapping(bytes12 => DataTypes.Balances) public balances; // Both debt and assets
 
     // ==== Administration ====
@@ -178,13 +172,13 @@ contract VRCauldron is AccessControl, Constants {
         bytes12 vaultId,
         bytes6 baseId,
         bytes6 ilkId
-    ) external auth returns (DataTypes.VRVault memory vault) {
+    ) external auth returns (VRDataTypes.Vault memory vault) {
         require(vaultId != bytes12(0), "Vault id is zero");
         require(baseId != bytes6(0), "Base id is zero");
         require(ilkId != bytes6(0), "Ilk id is zero");
         require(vaults[vaultId].baseId == bytes6(0), "Vault already exists"); // Series can't take bytes6(0) as their id
         require(ilks[baseId][ilkId] == true, "Ilk not added to base");
-        vault = DataTypes.VRVault({owner: owner, baseId: baseId, ilkId: ilkId});
+        vault = VRDataTypes.Vault({owner: owner, baseId: baseId, ilkId: ilkId});
         vaults[vaultId] = vault;
 
         emit VaultBuilt(vaultId, owner, baseId, ilkId);
@@ -205,7 +199,7 @@ contract VRCauldron is AccessControl, Constants {
         bytes12 vaultId,
         bytes6 baseId,
         bytes6 ilkId
-    ) internal returns (DataTypes.VRVault memory vault) {
+    ) internal returns (VRDataTypes.Vault memory vault) {
         require(baseId != bytes6(0), "Base id is zero");
         require(ilkId != bytes6(0), "Ilk id is zero");
         require(ilks[baseId][ilkId] == true, "Ilk not added to base");
@@ -233,14 +227,14 @@ contract VRCauldron is AccessControl, Constants {
         bytes12 vaultId,
         bytes6 baseId,
         bytes6 ilkId
-    ) external auth returns (DataTypes.VRVault memory vault) {
+    ) external auth returns (VRDataTypes.Vault memory vault) {
         vault = _tweak(vaultId, baseId, ilkId);
     }
 
     /// @dev Transfer a vault to another user.
     function _give(bytes12 vaultId, address receiver)
         internal
-        returns (DataTypes.VRVault memory vault)
+        returns (VRDataTypes.Vault memory vault)
     {
         require(vaultId != bytes12(0), "Vault id is zero");
         require(vaults[vaultId].baseId != bytes6(0), "Vault doesn't exist"); // Base can't take bytes6(0) as their id
@@ -254,7 +248,7 @@ contract VRCauldron is AccessControl, Constants {
     function give(bytes12 vaultId, address receiver)
         external
         auth
-        returns (DataTypes.VRVault memory vault)
+        returns (VRDataTypes.Vault memory vault)
     {
         vault = _give(vaultId, receiver);
     }
@@ -265,7 +259,7 @@ contract VRCauldron is AccessControl, Constants {
         internal
         view
         returns (
-            DataTypes.VRVault memory vault_,
+            VRDataTypes.Vault memory vault_,
             DataTypes.Balances memory balances_
         )
     {
@@ -323,11 +317,11 @@ contract VRCauldron is AccessControl, Constants {
     {
         require(from != to, "Identical vaults");
         (
-            DataTypes.VRVault memory vaultFrom,
+            VRDataTypes.Vault memory vaultFrom,
             DataTypes.Balances memory balancesFrom
         ) = vaultData(from);
         (
-            DataTypes.VRVault memory vaultTo,
+            VRDataTypes.Vault memory vaultTo,
             DataTypes.Balances memory balancesTo
         ) = vaultData(to);
 
@@ -364,7 +358,7 @@ contract VRCauldron is AccessControl, Constants {
     /// Or, repay to vault and remove collateral, pull rateed asset from and push assets to user
     function _pour(
         bytes12 vaultId,
-        DataTypes.VRVault memory vault_,
+        VRDataTypes.Vault memory vault_,
         DataTypes.Balances memory balances_,
         int128 ink,
         int128 art
@@ -402,7 +396,7 @@ contract VRCauldron is AccessControl, Constants {
         int128 base
     ) external virtual auth returns (DataTypes.Balances memory) {
         (
-            DataTypes.VRVault memory vault_,
+            VRDataTypes.Vault memory vault_,
             DataTypes.Balances memory balances_
         ) = vaultData(vaultId);
 
@@ -427,7 +421,7 @@ contract VRCauldron is AccessControl, Constants {
         uint128 base
     ) external auth returns (DataTypes.Balances memory) {
         (
-            DataTypes.VRVault memory vault_,
+            VRDataTypes.Vault memory vault_,
             DataTypes.Balances memory balances_
         ) = vaultData(vaultId);
 
@@ -444,7 +438,7 @@ contract VRCauldron is AccessControl, Constants {
     /// @dev Return the collateralization level of a vault. It will be negative if undercollateralized.
     function level(bytes12 vaultId) external returns (int256) {
         (
-            DataTypes.VRVault memory vault_,
+            VRDataTypes.Vault memory vault_,
             DataTypes.Balances memory balances_
         ) = vaultData(vaultId);
 
@@ -453,7 +447,7 @@ contract VRCauldron is AccessControl, Constants {
 
     /// @dev Return the collateralization level of a vault. It will be negative if undercollateralized.
     function _level(
-        DataTypes.VRVault memory vault_,
+        VRDataTypes.Vault memory vault_,
         DataTypes.Balances memory balances_
     ) internal returns (int256) {
         DataTypes.SpotOracle memory spotOracle_ = spotOracles[vault_.baseId][

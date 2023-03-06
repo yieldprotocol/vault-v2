@@ -31,13 +31,6 @@ library DataTypes {
         bytes6 ilkId; // Asset accepted as collateral
     }
 
-    struct VRVault {
-        address owner;
-        bytes6 baseId; // Each variable rate vault is related to only one base.
-        bytes6 ilkId; // Asset accepted as collateral
-    }
-
-
     struct Balances {
         uint128 art; // Debt amount
         uint128 ink; // Collateral amount
@@ -64,5 +57,13 @@ library DataTypes {
     struct Limits {
         uint128 max; // Maximum concurrent auctioned collateral
         uint128 sum; // Current concurrent auctioned collateral
+    }
+}
+
+library VRDataTypes {
+    struct Vault {
+        address owner;
+        bytes6 baseId; // Each variable rate vault is related to only one base.
+        bytes6 ilkId; // Asset accepted as collateral
     }
 }
