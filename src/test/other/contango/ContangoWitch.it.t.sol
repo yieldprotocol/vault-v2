@@ -38,6 +38,7 @@ contract ContangoWitchIntegrationTest is Test, TestConstants {
     ContangoWitch internal witch;
 
     DataTypes.Auction internal auction;
+    DataTypes.Line internal line;
     DataTypes.Vault internal vault;
     DataTypes.Series internal artSeries;
     DataTypes.Series internal inkSeries;
@@ -97,7 +98,19 @@ contract ContangoWitchIntegrationTest is Test, TestConstants {
 
     function testPayBaseAllWithInsurance() public {
         _enterVaultAtCRLimit(100e6);
+
         _startAuction();
+
+        _liquidate();
+    }
+
+    function testPayBaseAllWithInsuranceAtEndOfRegularAuction() public {
+        _enterVaultAtCRLimit(100e6);
+
+        _startAuction();
+
+        vm.warp(auction.start + line.duration);
+
         _liquidate();
     }
 
@@ -142,8 +155,12 @@ contract ContangoWitchIntegrationTest is Test, TestConstants {
     }
 
     function _startAuction() private {
+        IContangoWitchListener(CONTANGO).auctionStarted.mockAndVerify(VAULT_ID);
         cauldron.level.mockAndVerify(VAULT_ID, -1);
         (auction, , ) = witch.auction(VAULT_ID, auctioneer);
+
+        (line.duration, line.vaultProportion, line.collateralProportion) = witch
+            .lines(auction.ilkId, auction.baseId);
     }
 
     function _liquidate() private {
@@ -166,6 +183,10 @@ contract ContangoWitchIntegrationTest is Test, TestConstants {
         uint128 baseIn = cauldron.debtToBase(ART_SERIES_ID, artIn.u128());
 
         // liquidate
+        IContangoWitchListener(CONTANGO).auctionEnded.mockAndVerify(
+            VAULT_ID,
+            CONTANGO
+        );
         deal(artUnderlying, bot, baseIn);
         vm.startPrank(bot);
         IERC20(artUnderlying).transfer(
@@ -201,11 +222,7 @@ contract ContangoWitchIntegrationTest is Test, TestConstants {
     function _premium(
         uint256 liquidatorCut
     ) private view returns (uint256 premium) {
-        (uint32 auctionDuration, , ) = witch.lines(
-            auction.ilkId,
-            auction.baseId
-        );
-        if (block.timestamp <= auction.start + auctionDuration) {
+        if (block.timestamp <= auction.start + line.duration) {
             premium =
                 liquidatorCut.wdiv(1e18 - insurancePremium) -
                 liquidatorCut;
