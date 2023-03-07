@@ -185,7 +185,7 @@ contract VYTokenTest is VYTokenZeroState {
             vyToken.underlyingId(),
             CHI
         );
-
+        vm.assume(newRate > oldPerSecondRate);
         newRate = uint128(bound(newRate, oldPerSecondRate, type(uint128).max));
         chiRateOracle.updatePerSecondRate(vyToken.underlyingId(), CHI, newRate);
         vm.warp(block.timestamp + 1);
@@ -226,10 +226,8 @@ contract VYTokenTest is VYTokenZeroState {
             vyToken.underlyingId(),
             CHI
         );
-
-        newRate = uint128(
-            bound(newRate * 10, oldPerSecondRate, type(uint128).max)
-        );
+        vm.assume(newRate > oldPerSecondRate);
+        newRate = uint128(bound(newRate, oldPerSecondRate, type(uint128).max));
         chiRateOracle.updatePerSecondRate(vyToken.underlyingId(), CHI, newRate);
         vm.warp(block.timestamp + 1);
         chiRateOracle.get(vyToken.underlyingId(), CHI, 0);

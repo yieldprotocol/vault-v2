@@ -66,8 +66,6 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
     AccumulatorMultiOracle public chiRateOracle;
     ChainlinkMultiOracle public spotOracle;
     ChainlinkAggregatorV3Mock public ethAggregator;
-    ChainlinkAggregatorV3Mock public daiAggregator;
-    ChainlinkAggregatorV3Mock public usdcAggregator;
     ChainlinkAggregatorV3Mock public baseAggregator;
 
     bytes12 public vaultId = 0x000000000000000000000001;
@@ -159,12 +157,6 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
 
         ethAggregator = new ChainlinkAggregatorV3Mock();
         ethAggregator.set(1e18 / 2);
-
-        daiAggregator = new ChainlinkAggregatorV3Mock();
-        daiAggregator.set(1e18 / 2);
-
-        usdcAggregator = new ChainlinkAggregatorV3Mock();
-        usdcAggregator.set(1e18 / 2);
 
         baseAggregator = new ChainlinkAggregatorV3Mock();
         baseAggregator.set(1e18 / 2);

@@ -451,14 +451,12 @@ contract FuzzLevelTestsOnBorrowedState is BorrowedState {
     function testFuzz_levelGoesDownAsPriceGoesUp(int256 price) public {
         vm.assume(price > 0);
         (, bytes6 baseId, bytes6 ilkId) = cauldron.vaults(vaultId);
-        (, int256 currentPrice, , ,) = usdcAggregator.latestRoundData();
-        
-        // (address source,,,) = spotOracle.sources(ilkId,baseId);
-        // console.log(address(source));
+        (, int256 currentPrice, , ,) = ethAggregator.latestRoundData();
+
         // Level goes down as price goes up
         vm.assume(price > currentPrice);
         int256 startLevel = cauldron.level(vaultId);
-        usdcAggregator.set(uint256(price));
+        ethAggregator.set(uint256(price));
         assertGt(startLevel,cauldron.level(vaultId));
     }
 
@@ -466,11 +464,11 @@ contract FuzzLevelTestsOnBorrowedState is BorrowedState {
         // Level goes up as price goes down
         vm.assume(price > 0);
         (, bytes6 baseId, ) = cauldron.vaults(vaultId);
-        (, int256 currentPrice, , ,) = usdcAggregator.latestRoundData();
+        (, int256 currentPrice, , ,) = ethAggregator.latestRoundData();
         
         vm.assume(price < currentPrice);
         int256 startLevel = cauldron.level(vaultId);
-        usdcAggregator.set(uint256(price));
+        ethAggregator.set(uint256(price));
         console.logInt(startLevel);
         console.logInt(cauldron.level(vaultId));
         assertLt(startLevel,cauldron.level(vaultId));
