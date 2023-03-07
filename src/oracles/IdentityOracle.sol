@@ -51,7 +51,7 @@ contract IdentityOracle is IOracle, AccessControl {
         emit SourceSet(quoteId, baseId, address(quote), address(base));
     }
 
-    /// @dev Convert amountBase base into quote at the latest oracle price.
+    /// @dev Convert amountBase base into quote at 1:1.
     function peek(
         bytes32 baseId,
         bytes32 quoteId,
@@ -71,7 +71,7 @@ contract IdentityOracle is IOracle, AccessControl {
         );
     }
 
-    /// @dev Convert amountBase base into quote at the latest oracle price, updating state if necessary. Same as `peek` for this oracle.
+    /// @dev Convert amountBase base into quote at 1:1, updating state if necessary. Same as `peek` for this oracle.
     function get(
         bytes32 baseId,
         bytes32 quoteId,
@@ -90,7 +90,7 @@ contract IdentityOracle is IOracle, AccessControl {
         );
     }
 
-    /// @dev Convert amountBase base into quote at the latest oracle price.
+    /// @dev Convert amountBase base into quote at 1:1 taking decimals into account.
     function _peek(
         bytes6 baseId,
         bytes6 quoteId,
