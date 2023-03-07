@@ -244,8 +244,6 @@ contract CauldronTestOnBuiltVault is VaultBuiltState {
         );
 
         // Adding new base and ilks to it
-        chiRateOracle.setSource(daiId, RATE, WAD, WAD * 2);
-        chiRateOracle.setSource(daiId, CHI, WAD, WAD * 2);
         makeBase(daiId, address(dai), daiJoin, address(chiRateOracle), 12);
         cauldron.setSpotOracle(daiId, usdcId, spotOracle, 1000000);
         cauldron.setSpotOracle(daiId, wethId, spotOracle, 1000000);
@@ -452,9 +450,11 @@ contract FuzzLevelTestsOnBorrowedState is BorrowedState {
 
     function testFuzz_levelGoesDownAsPriceGoesUp(int256 price) public {
         vm.assume(price > 0);
-        (, bytes6 baseId, ) = cauldron.vaults(vaultId);
+        (, bytes6 baseId, bytes6 ilkId) = cauldron.vaults(vaultId);
         (, int256 currentPrice, , ,) = usdcAggregator.latestRoundData();
         
+        // (address source,,,) = spotOracle.sources(ilkId,baseId);
+        // console.log(address(source));
         // Level goes down as price goes up
         vm.assume(price > currentPrice);
         int256 startLevel = cauldron.level(vaultId);

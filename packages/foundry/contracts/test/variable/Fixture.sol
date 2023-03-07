@@ -126,7 +126,7 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
         baseJoin = new FlashJoin(address(base));
 
         setUpOracles();
-        vyToken = new VYToken(baseId, IOracle(address(chiRateOracle)), IJoin(baseJoin),base.name(), base.symbol());
+        vyToken = new VYToken(daiId, IOracle(address(chiRateOracle)), IJoin(daiJoin),dai.name(), dai.symbol());
         // Setting permissions
         ladleGovAuth();
         cauldronGovAuth(address(ladle));
@@ -138,7 +138,8 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
         bytes4[] memory roles = new bytes4[](2);
         roles[0] = Join.join.selector;
         roles[1] = Join.exit.selector;
-        baseJoin.grantRoles(roles, address(vyToken));
+        vm.prank(timelock);
+        daiJoin.grantRoles(roles, address(vyToken));
     }
 
     function setUpOracles() internal {
@@ -255,7 +256,7 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
             18
         );
         (bytes12 vaultId_,) = ladle.build(assetId, assetId, salt);
-        // cauldron.build(address(this), vaultId_, assetId, assetId);
+
         IERC20(assetAddress).approve(address(join),INK * 10);
         deal(assetAddress, address(this), INK * 10);
         ladle.pour(vaultId_, address(this), (INK * 10).i128(), 0);

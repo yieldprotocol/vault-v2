@@ -144,7 +144,7 @@ abstract contract ETHVaultPouredAndDebtState is ETHVaultPouredState {
     }
 }
 
-abstract contract VYTokenZeroState is ZeroState {
+abstract contract VYTokenZeroState is CompleteSetup {
     FlashBorrower public borrower;
 
     function setUp() public virtual override {
