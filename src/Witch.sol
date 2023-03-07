@@ -517,6 +517,7 @@ contract Witch is AccessControl {
         );
     }
 
+    /// @dev Top up the debt of a vault after using all available art paid by the liquidator
     function _topUpDebt(
         bytes12 vaultId,
         DataTypes.Auction memory auction_,
@@ -786,6 +787,8 @@ contract Witch is AccessControl {
         liquidatorCut -= insurancePremium;
     }
 
+    /// @dev Calculates the insurance premium for a given auction
+    /// A premium is only charged if the auction is not covered by the insurance fund
     function _calcInsurancePremium(
         DataTypes.Auction memory auction_,
         uint256 liquidatorCut
@@ -806,6 +809,8 @@ contract Witch is AccessControl {
         }
     }
 
+    /// @dev Calculates any discount on the debt that should be repaid by the liquidator and will be topped up
+    /// from elsewhere, e.g. the insurance fund.
     function _discountDebt(
         bytes6 ilkId,
         bytes6 baseId,
