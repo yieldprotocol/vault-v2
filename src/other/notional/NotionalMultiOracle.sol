@@ -32,7 +32,7 @@ contract NotionalMultiOracle is IOracle, AccessControl {
     {
         require (notionalId != underlyingId, "Wrong input");
         sources[notionalId][underlyingId] = Source({
-            baseDecimals: FCASH_DECIMALS, // I'm assuming here that fCash has 18 decimals
+            baseDecimals: FCASH_DECIMALS, // I'm assuming here that fCash has 8 decimals
             quoteDecimals: underlying.decimals(), // Ideally we would get the underlying from fCash
             set: true
         });
