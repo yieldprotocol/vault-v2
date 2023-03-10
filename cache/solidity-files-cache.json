@@ -5285,7 +5285,7 @@
       }
     },
     "src/oracles/chainlink/ChainlinkMultiOracle.sol": {
-      "lastModificationDate": 1677499641263,
+      "lastModificationDate": 1678452737622,
       "contentHash": "a22b18e9ca40e7135457b337d8c3fd38",
       "sourceName": "src/oracles/chainlink/ChainlinkMultiOracle.sol",
       "solcConfig": {
@@ -8614,7 +8614,7 @@
       }
     },
     "src/test/oracles/ChainlinkMultiOracle.t.sol": {
-      "lastModificationDate": 1677499641253,
+      "lastModificationDate": 1678444665979,
       "contentHash": "55fbea7071b38f2f3fa3ef4575a80a0c",
       "sourceName": "src/test/oracles/ChainlinkMultiOracle.t.sol",
       "solcConfig": {
@@ -8767,7 +8767,7 @@
       }
     },
     "src/test/oracles/CompositeMultiOracle.t.sol": {
-      "lastModificationDate": 1677499641252,
+      "lastModificationDate": 1678444665979,
       "contentHash": "18568dad409a49eb28f92db83eb4d627",
       "sourceName": "src/test/oracles/CompositeMultiOracle.t.sol",
       "solcConfig": {
@@ -8917,7 +8917,7 @@
       }
     },
     "src/test/oracles/ConvexOracle.t.sol": {
-      "lastModificationDate": 1677499641252,
+      "lastModificationDate": 1678444665980,
       "contentHash": "c513d51dd4cb2b35182e954712254e66",
       "sourceName": "src/test/oracles/ConvexOracle.t.sol",
       "solcConfig": {
@@ -9219,7 +9219,7 @@
       }
     },
     "src/test/oracles/LidoOracle.t.sol": {
-      "lastModificationDate": 1677499641251,
+      "lastModificationDate": 1678444665980,
       "contentHash": "c7d1f36325a705467a6f7e1db92e5881",
       "sourceName": "src/test/oracles/LidoOracle.t.sol",
       "solcConfig": {
@@ -10573,8 +10573,8 @@
       }
     },
     "src/test/variable/Fixture.sol": {
-      "lastModificationDate": 1678446385283,
-      "contentHash": "fc4956ce6e38d66239547bbb17631b0f",
+      "lastModificationDate": 1678454873938,
+      "contentHash": "5b8aed38036c584b6681df1962824cf9",
       "sourceName": "src/test/variable/Fixture.sol",
       "solcConfig": {
         "settings": {
@@ -10687,8 +10687,8 @@
       }
     },
     "src/test/variable/FixtureStates.sol": {
-      "lastModificationDate": 1678446363485,
-      "contentHash": "c7ec7e0e8c8b25aaacd6eac651325e8e",
+      "lastModificationDate": 1678454156111,
+      "contentHash": "4c64fb46fb3db86f5143cee7ea92d160",
       "sourceName": "src/test/variable/FixtureStates.sol",
       "solcConfig": {
         "settings": {
@@ -10842,8 +10842,8 @@
       }
     },
     "src/test/variable/VRCauldron.t.sol": {
-      "lastModificationDate": 1678446537965,
-      "contentHash": "575777a72a96316834adcc827cdadcdd",
+      "lastModificationDate": 1678454824036,
+      "contentHash": "ba4292ec5ce982ff5c98e6a794e866d5",
       "sourceName": "src/test/variable/VRCauldron.t.sol",
       "solcConfig": {
         "settings": {
@@ -10992,8 +10992,8 @@
       }
     },
     "src/test/variable/VRLadle.t.sol": {
-      "lastModificationDate": 1678446550925,
-      "contentHash": "b32a5c3338fdab98e570a7d63456dbee",
+      "lastModificationDate": 1678447926085,
+      "contentHash": "fc74b6ea9350274fe7c8e183e65c7645",
       "sourceName": "src/test/variable/VRLadle.t.sol",
       "solcConfig": {
         "settings": {
@@ -11240,8 +11240,8 @@
       }
     },
     "src/test/variable/VYToken.t.sol": {
-      "lastModificationDate": 1678445284186,
-      "contentHash": "e4cb4fbcb2f75c31dad3aef846d887ae",
+      "lastModificationDate": 1678447569385,
+      "contentHash": "cb00187c5c2c0c5e40c53886f9c1e6a5",
       "sourceName": "src/test/variable/VYToken.t.sol",
       "solcConfig": {
         "settings": {
@@ -11409,7 +11409,7 @@
       }
     },
     "src/variable/VRCauldron.sol": {
-      "lastModificationDate": 1678447057859,
+      "lastModificationDate": 1678452731223,
       "contentHash": "ba4c7748a2efd3576c60afc6ed4d6831",
       "sourceName": "src/variable/VRCauldron.sol",
       "solcConfig": {
@@ -11461,7 +11461,7 @@
       }
     },
     "src/variable/VRLadle.sol": {
-      "lastModificationDate": 1678446439706,
+      "lastModificationDate": 1678454862108,
       "contentHash": "5ba14c8e5bb475b7b7179227836f247a",
       "sourceName": "src/variable/VRLadle.sol",
       "solcConfig": {
