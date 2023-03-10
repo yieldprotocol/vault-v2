@@ -12,32 +12,32 @@ using CauldronMath for uint128;
 
 contract AssetAndBaseAdditionTests is ZeroState {
     function testZeroIdentifier() public {
-        console.log('cannot add asset with zero identifier');
+        console.log("cannot add asset with zero identifier");
         vm.expectRevert("Asset id is zero");
         cauldron.addAsset(0x000000000000, address(base));
     }
 
     function testAddAsset() public {
-        console.log('can add asset');
+        console.log("can add asset");
         cauldron.addAsset(usdcId, address(usdc));
         assertEq(cauldron.assets(usdcId), address(usdc));
     }
 
     function testBaseAdditionFail() public {
-        console.log('cannot add base without asset being added first');
+        console.log("cannot add base without asset being added first");
         vm.expectRevert("Base not found");
         cauldron.addBase(otherIlkId);
     }
 
     function testBaseAdditionFail2() public {
-        console.log('cannot add base without rate oracle being set');
+        console.log("cannot add base without rate oracle being set");
         cauldron.addAsset(usdcId, address(usdc));
         vm.expectRevert("Rate oracle not found");
         cauldron.addBase(usdcId);
     }
 
     function testBaseAddition() public {
-        console.log('can add base');
+        console.log("can add base");
         cauldron.addAsset(usdcId, address(usdc));
         cauldron.setRateOracle(usdcId, IOracle(address(chiRateOracle)));
         cauldron.addBase(usdcId);
@@ -47,7 +47,7 @@ contract AssetAndBaseAdditionTests is ZeroState {
 
 contract AssetAndIlkAddedTests is AssetAddedState {
     function testSameIdentifier() public {
-        console.log('cannot add asset with same identifier');
+        console.log("cannot add asset with same identifier");
         vm.expectRevert("Id already used");
         cauldron.addAsset(usdcId, address(usdc));
     }
@@ -113,7 +113,6 @@ contract IlkAddition is IlkAddedState {
 }
 
 contract OracleAddition is ZeroState {
-    
     function testNotAllowedToAddRateOracleForUnknownBase() public {
         console.log("cannot add rate oracle for unknown base");
         vm.expectRevert("Base not found");
@@ -200,11 +199,7 @@ contract CauldronTestOnBuiltVault is VaultBuiltState {
 
     function testPour() public {
         console.log("can pour into a vault");
-        cauldron.pour(
-            vaultId,
-            INK.i128(),
-            ART.i128()
-        );
+        cauldron.pour(vaultId, INK.i128(), ART.i128());
 
         (uint128 art, uint128 ink) = cauldron.balances(vaultId);
         assertEq(ink, uint128(INK));
@@ -235,15 +230,9 @@ contract CauldronTestOnBuiltVault is VaultBuiltState {
 
     function testCannotTweakVaultWithDebt() public {
         console.log("cannot tweak vault with debt");
-        cauldron.pour(
-            vaultId,
-            INK.i128(),
-            ART.i128()
-        );
+        cauldron.pour(vaultId, INK.i128(), ART.i128());
 
         // Adding new base and ilks to it
-        chiRateOracle.setSource(daiId, RATE, WAD, WAD * 2);
-        chiRateOracle.setSource(daiId, CHI, WAD, WAD * 2);
         makeBase(daiId, address(dai), daiJoin, address(chiRateOracle), 12);
         cauldron.setSpotOracle(daiId, usdcId, spotOracle, 1000000);
         cauldron.setSpotOracle(daiId, wethId, spotOracle, 1000000);
@@ -281,7 +270,9 @@ contract CauldronStirTests is CauldronPouredState {
     }
 
     function testUndercollateralizedAtDestination() public {
-        console.log("cannot stir into vault with undercollateralized destination");
+        console.log(
+            "cannot stir into vault with undercollateralized destination"
+        );
         cauldron.pour(vaultId, 0, ART.i128());
         cauldron.build(address(this), otherVaultId, baseId, daiId);
         vm.expectRevert("Undercollateralized at destination");
@@ -344,15 +335,16 @@ contract CauldronSlurpTests is BorrowedState {
 contract UtilityFunctionTests is BorrowedState {
     function testDebtFromBase() public {
         console.log("can get debt from base");
-        uint128 art  = cauldron.debtFromBase(baseId, INK.u128());
+        uint128 art = cauldron.debtFromBase(baseId, INK.u128());
         assertEq(art, ART.u128() * 1e5);
     }
 
     function testDebtToBase() public {
         console.log("can get debt to base");
-        uint128 base  = cauldron.debtToBase(baseId, ART.u128());
+        uint128 base = cauldron.debtToBase(baseId, ART.u128());
         assertEq(base, 1e18);
     }
+
     function testLevel() public {
         console.log("can get level");
         int256 level = cauldron.level(vaultId);
@@ -363,11 +355,14 @@ contract UtilityFunctionTests is BorrowedState {
 contract FuzzTestsOnCauldronPouredState is CauldronPouredState {
     function testFuzz_Pouring(int128 amount) public {
         int256 startLevel = cauldron.level(vaultId);
-        vm.assume(amount>1 );
+        vm.assume(amount > 1);
         (address owner, , bytes6 ilkId) = cauldron.vaults(vaultId);
         deal(cauldron.assets(ilkId), owner, uint(int(amount)));
-        IERC20(cauldron.assets(ilkId)).approve(address(ladle.joins(ilkId)), uint(int(amount)));
-        ladle.pour(vaultId,msg.sender,amount,0);
+        IERC20(cauldron.assets(ilkId)).approve(
+            address(ladle.joins(ilkId)),
+            uint(int(amount))
+        );
+        ladle.pour(vaultId, msg.sender, amount, 0);
         assertGt(cauldron.level(vaultId), 1);
     }
 
@@ -380,68 +375,82 @@ contract FuzzTestsOnCauldronPouredState is CauldronPouredState {
         vm.assume(art.u128() >= dust); // Check if min debt is achieved
 
         int256 startLevel = cauldron.level(vaultId);
-        ladle.pour(vaultId,msg.sender, 0, art);
-        
-        assertGt(startLevel,cauldron.level(vaultId));
+        ladle.pour(vaultId, msg.sender, 0, art);
+
+        assertGt(startLevel, cauldron.level(vaultId));
     }
 }
 
 contract FuzzLevelTestsOnBorrowedState is BorrowedState {
     function testFuzz_levelGoesUpAsArtComesDown(int128 art) public {
-        vm.assume(art < 0);// Since we are paying back
+        vm.assume(art < 0); // Since we are paying back
         // Level goes up as art comes down
-        (uint128 currentArt,) = cauldron.balances(vaultId);
-        vm.assume(currentArt.i128() + art >= 0);// Prevent paying back more than borrowed
+        (uint128 currentArt, ) = cauldron.balances(vaultId);
+        vm.assume(currentArt.i128() + art >= 0); // Prevent paying back more than borrowed
 
         int256 startLevel = cauldron.level(vaultId);
         (, bytes6 baseId, ) = cauldron.vaults(vaultId);
-        IERC20(cauldron.assets(baseId)).approve(address(ladle.joins(baseId)), uint(int(art)));
-        ladle.pour(vaultId,msg.sender, 0, art);
-        
-        assertLt(startLevel,cauldron.level(vaultId));
+        IERC20(cauldron.assets(baseId)).approve(
+            address(ladle.joins(baseId)),
+            uint(int(art))
+        );
+        ladle.pour(vaultId, msg.sender, 0, art);
+
+        assertLt(startLevel, cauldron.level(vaultId));
     }
 
     function testFuzz_levelGoesUpAsInkGoesUp(int128 ink) public {
         // Level goes up as ink goes up
-        vm.assume(ink > 0);// Since we want to add collateral
+        vm.assume(ink > 0); // Since we want to add collateral
 
         int256 startLevel = cauldron.level(vaultId);
-        (address owner, ,bytes6 ilkId ) = cauldron.vaults(vaultId);
+        (address owner, , bytes6 ilkId) = cauldron.vaults(vaultId);
         deal(cauldron.assets(ilkId), owner, uint(int(ink)));
-        IERC20(cauldron.assets(ilkId)).approve(address(ladle.joins(ilkId)), uint(int(ink)));
-        ladle.pour(vaultId,msg.sender, ink, 0);
-        
-        assertLt(startLevel,cauldron.level(vaultId));
+        IERC20(cauldron.assets(ilkId)).approve(
+            address(ladle.joins(ilkId)),
+            uint(int(ink))
+        );
+        ladle.pour(vaultId, msg.sender, ink, 0);
+
+        assertLt(startLevel, cauldron.level(vaultId));
     }
 
     function testFuzz_levelGoesDownAsInkGoesDown(int128 ink) public {
         // Level goes down as ink goes down
-        vm.assume(ink < 0);// Since we want to remove collateral
+        vm.assume(ink < 0); // Since we want to remove collateral
         (uint128 currentArt, uint128 currentInk) = cauldron.balances(vaultId);
-        vm.assume(currentInk.i128() + ink >= 0);// Prevent removing more than collateral
-        vm.assume(getAbove(currentInk.add(ink).i128(), currentArt.i128(), vaultId));
+        vm.assume(currentInk.i128() + ink >= 0); // Prevent removing more than collateral
+        vm.assume(
+            getAbove(currentInk.add(ink).i128(), currentArt.i128(), vaultId)
+        );
         int256 startLevel = cauldron.level(vaultId);
-        ladle.pour(vaultId,msg.sender, ink, 0);
-        
-        assertGt(startLevel,cauldron.level(vaultId));
+        ladle.pour(vaultId, msg.sender, ink, 0);
+
+        assertGt(startLevel, cauldron.level(vaultId));
     }
 
     function testFuzz_levelGoesDownAsRatioGoesUp(uint32 ratio) public {
         // Level goes down as ratio goes up
         (, bytes6 baseId, bytes6 ilkId) = cauldron.vaults(vaultId);
 
-        (IOracle oracle, uint32 currentRatio) = cauldron.spotOracles(baseId, ilkId);
+        (IOracle oracle, uint32 currentRatio) = cauldron.spotOracles(
+            baseId,
+            ilkId
+        );
         vm.assume(ratio > currentRatio);
         int256 startLevel = cauldron.level(vaultId);
         cauldron.setSpotOracle(baseId, ilkId, oracle, ratio);
-        assertGt(startLevel,cauldron.level(vaultId));
+        assertGt(startLevel, cauldron.level(vaultId));
     }
 
     function testFuzz_levelGoesUpAsRatioGoesDown(uint32 ratio) public {
         // Level goes up as ratio goes down
         (, bytes6 baseId, bytes6 ilkId) = cauldron.vaults(vaultId);
 
-        (IOracle oracle, uint32 currentRatio) = cauldron.spotOracles(baseId, ilkId);
+        (IOracle oracle, uint32 currentRatio) = cauldron.spotOracles(
+            baseId,
+            ilkId
+        );
         vm.assume(ratio < currentRatio);
         int256 startLevel = cauldron.level(vaultId);
         cauldron.setSpotOracle(baseId, ilkId, oracle, ratio);
@@ -450,27 +459,27 @@ contract FuzzLevelTestsOnBorrowedState is BorrowedState {
 
     function testFuzz_levelGoesDownAsPriceGoesUp(int256 price) public {
         vm.assume(price > 0);
-        (, bytes6 baseId, ) = cauldron.vaults(vaultId);
-        (, int256 currentPrice, , ,) = usdcAggregator.latestRoundData();
-        
+        (, bytes6 baseId, bytes6 ilkId) = cauldron.vaults(vaultId);
+        (, int256 currentPrice, , , ) = ethAggregator.latestRoundData();
+
         // Level goes down as price goes up
         vm.assume(price > currentPrice);
         int256 startLevel = cauldron.level(vaultId);
-        usdcAggregator.set(uint256(price));
-        assertGt(startLevel,cauldron.level(vaultId));
+        ethAggregator.set(uint256(price));
+        assertGt(startLevel, cauldron.level(vaultId));
     }
 
     function testFuzz_levelGoesupAsPriceGoesDown(int256 price) public {
         // Level goes up as price goes down
         vm.assume(price > 0);
         (, bytes6 baseId, ) = cauldron.vaults(vaultId);
-        (, int256 currentPrice, , ,) = usdcAggregator.latestRoundData();
-        
+        (, int256 currentPrice, , , ) = ethAggregator.latestRoundData();
+
         vm.assume(price < currentPrice);
         int256 startLevel = cauldron.level(vaultId);
-        usdcAggregator.set(uint256(price));
+        ethAggregator.set(uint256(price));
         console.logInt(startLevel);
         console.logInt(cauldron.level(vaultId));
-        assertLt(startLevel,cauldron.level(vaultId));
+        assertLt(startLevel, cauldron.level(vaultId));
     }
 }

@@ -10573,8 +10573,8 @@
       }
     },
     "src/test/variable/Fixture.sol": {
-      "lastModificationDate": 1678446385283,
-      "contentHash": "fc4956ce6e38d66239547bbb17631b0f",
+      "lastModificationDate": 1678447304712,
+      "contentHash": "867d9934ca0b55d4ddcaaf1588611677",
       "sourceName": "src/test/variable/Fixture.sol",
       "solcConfig": {
         "settings": {
@@ -10687,8 +10687,8 @@
       }
     },
     "src/test/variable/FixtureStates.sol": {
-      "lastModificationDate": 1678446363485,
-      "contentHash": "c7ec7e0e8c8b25aaacd6eac651325e8e",
+      "lastModificationDate": 1678447346991,
+      "contentHash": "d7d80b561e5532f3951fcbffa79e0bc0",
       "sourceName": "src/test/variable/FixtureStates.sol",
       "solcConfig": {
         "settings": {
@@ -10842,8 +10842,8 @@
       }
     },
     "src/test/variable/VRCauldron.t.sol": {
-      "lastModificationDate": 1678446537965,
-      "contentHash": "575777a72a96316834adcc827cdadcdd",
+      "lastModificationDate": 1678447478093,
+      "contentHash": "2baee05a01dac6cd53f5b5fffc16d145",
       "sourceName": "src/test/variable/VRCauldron.t.sol",
       "solcConfig": {
         "settings": {
@@ -10992,8 +10992,8 @@
       }
     },
     "src/test/variable/VRLadle.t.sol": {
-      "lastModificationDate": 1678446550925,
-      "contentHash": "b32a5c3338fdab98e570a7d63456dbee",
+      "lastModificationDate": 1678447926085,
+      "contentHash": "fc74b6ea9350274fe7c8e183e65c7645",
       "sourceName": "src/test/variable/VRLadle.t.sol",
       "solcConfig": {
         "settings": {
@@ -11240,8 +11240,8 @@
       }
     },
     "src/test/variable/VYToken.t.sol": {
-      "lastModificationDate": 1678445284186,
-      "contentHash": "e4cb4fbcb2f75c31dad3aef846d887ae",
+      "lastModificationDate": 1678447569385,
+      "contentHash": "cb00187c5c2c0c5e40c53886f9c1e6a5",
       "sourceName": "src/test/variable/VYToken.t.sol",
       "solcConfig": {
         "settings": {
