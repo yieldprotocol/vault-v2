@@ -366,13 +366,14 @@ contract FuzzTestsOnCauldronPouredState is CauldronPouredState {
         assertGt(cauldron.level(vaultId), 1);
     }
 
-    function testFuzz_LevelGoesDownAsArtGoesUp(int128 art) public {
+    function testFuzz_levelGoesDownAsArtGoesUp(int128 art) public {
         // Level goes down as art goes up
         (uint128 dust, ) = giveMeDustAndLine(vaultId);
-
-        vm.assume(art > 0); // Since we want to borrow
+        (, bytes6 baseId, bytes6 ilkId) = cauldron.vaults(vaultId);
+        vm.assume(art > 0); // Since we want to borrow  
         vm.assume(getAbove(INK.i128(), art, vaultId)); // Check if not undercollateralized
         vm.assume(art.u128() >= dust); // Check if min debt is achieved
+        vm.assume(art.u256() <= ladle.joins(baseId).storedBalance()); // Check if enough balance in join
 
         int256 startLevel = cauldron.level(vaultId);
         ladle.pour(vaultId, msg.sender, 0, art);
@@ -462,24 +463,24 @@ contract FuzzLevelTestsOnBorrowedState is BorrowedState {
         (, bytes6 baseId, bytes6 ilkId) = cauldron.vaults(vaultId);
         (, int256 currentPrice, , , ) = ethAggregator.latestRoundData();
 
-        // Level goes down as price goes up
-        vm.assume(price > currentPrice);
+        // Level goes down as price goes up, we are setting the price of eth down to get base price up
+        vm.assume(price < currentPrice);
         int256 startLevel = cauldron.level(vaultId);
         ethAggregator.set(uint256(price));
         assertGt(startLevel, cauldron.level(vaultId));
     }
 
-    function testFuzz_levelGoesupAsPriceGoesDown(int256 price) public {
+    function testFuzz_levelGoesUpAsPriceGoesDown(int256 price) public {
         // Level goes up as price goes down
         vm.assume(price > 0);
         (, bytes6 baseId, ) = cauldron.vaults(vaultId);
         (, int256 currentPrice, , , ) = ethAggregator.latestRoundData();
 
-        vm.assume(price < currentPrice);
+        vm.assume(price > currentPrice);
+        vm.assume(price < 1e40);// To prevent Chainlink Multioracle overflow error over large values
+
         int256 startLevel = cauldron.level(vaultId);
         ethAggregator.set(uint256(price));
-        console.logInt(startLevel);
-        console.logInt(cauldron.level(vaultId));
         assertLt(startLevel, cauldron.level(vaultId));
     }
 }
