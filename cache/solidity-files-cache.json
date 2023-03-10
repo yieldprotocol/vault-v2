@@ -11409,8 +11409,8 @@
       }
     },
     "src/variable/VRCauldron.sol": {
-      "lastModificationDate": 1678446419684,
-      "contentHash": "1a0e8e98181ad512ccd35745d5edbfb7",
+      "lastModificationDate": 1678447057859,
+      "contentHash": "ba4c7748a2efd3576c60afc6ed4d6831",
       "sourceName": "src/variable/VRCauldron.sol",
       "solcConfig": {
         "settings": {

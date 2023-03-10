@@ -392,9 +392,12 @@ contract VRCauldron is AccessControl, Constants {
         ) = vaultData(vaultId);
 
         // Normalize the base amount to debt terms
-        int128 art = base > 0
-            ? _debtFromBase(vault_.baseId, base.u128()).i128()
-            : -_debtFromBase(vault_.baseId, (-base).u128()).i128();
+        int128 art = base;
+
+        if (base != 0)
+            art = base > 0
+                ? _debtFromBase(vault_.baseId, base.u128()).i128()
+                : -_debtFromBase(vault_.baseId, (-base).u128()).i128();
 
         balances_ = _pour(vaultId, vault_, balances_, ink, art);
 
