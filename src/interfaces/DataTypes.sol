@@ -59,3 +59,11 @@ library DataTypes {
         uint128 sum; // Current concurrent auctioned collateral
     }
 }
+
+library VRDataTypes {
+    struct Vault {
+        address owner;
+        bytes6 baseId; // Each variable rate vault is related to only one base.
+        bytes6 ilkId; // Asset accepted as collateral
+    }
+}
