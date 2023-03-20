@@ -11,8 +11,9 @@ import "@yield-protocol/utils-v2/src/utils/Cast.sol";
 import "../interfaces/IJoin.sol";
 import "../interfaces/IOracle.sol";
 import "../constants/Constants.sol";
+import { UUPSUpgradeable } from "openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
-contract VYToken is IERC3156FlashLender, AccessControl, ERC20Permit, Constants {
+contract VYToken is IERC3156FlashLender, UUPSUpgradeable, AccessControl, ERC20Permit, Constants {
     using Math for uint256;
     using Cast for uint256;
 
@@ -20,12 +21,14 @@ contract VYToken is IERC3156FlashLender, AccessControl, ERC20Permit, Constants {
     event FlashFeeFactorSet(uint256 indexed fee);
     event Redeemed(address indexed holder, address indexed receiver, uint256 principalAmount, uint256 underlyingAmount);
 
+    bool public initialized;
+
     bytes32 internal constant FLASH_LOAN_RETURN = keccak256("ERC3156FlashBorrower.onFlashLoan");
     uint256 constant FLASH_LOANS_DISABLED = type(uint256).max;
     uint256 public flashFeeFactor = FLASH_LOANS_DISABLED; // Fee on flash loans, as a percentage in fixed point with 18 decimals. Flash loans disabled by default by overflow from `flashFee`.
 
-    IOracle public oracle; // Oracle for the savings rate.
-    IJoin public join; // Source of redemption funds.
+    IOracle public immutable oracle; // Oracle for the savings rate.
+    IJoin public immutable join; // Source of redemption funds.
     address public immutable underlying;
     bytes6 public immutable underlyingId; // Needed to access the oracle
 
@@ -44,15 +47,17 @@ contract VYToken is IERC3156FlashLender, AccessControl, ERC20Permit, Constants {
         oracle = oracle_;
     }
 
-    /// @dev Point to a different Oracle or Join
-    function point(bytes32 param, address value) external auth {
-        if (param == "oracle") {
-            oracle = IOracle(value);
-        } else if (param == "join") {
-            join = IJoin(value);
-        } else revert("Unrecognized parameter");
-        emit Point(param, value);
+    /// @dev Give the ROOT role and create a LOCK role with itself as the admin role and no members. 
+    /// Calling setRoleAdmin(msg.sig, LOCK) means no one can grant that msg.sig role anymore.
+    function initialize (address root_) public {
+        require(!initialized, "Already initialized");
+        initialized = true;             // On an uninitialized contract, no governance functions can be executed, because no one has permission to do so
+        _grantRole(ROOT, root_);      // Grant ROOT
+        _setRoleAdmin(LOCK, LOCK);      // Create the LOCK role by setting itself as its own admin, creating an independent role tree
     }
+
+    /// @dev Allow to set a new implementation
+    function _authorizeUpgrade(address newImplementation) internal override auth {}
 
     /// @dev Set the flash loan fee factor
     function setFlashFeeFactor(uint256 flashFeeFactor_) external auth {
@@ -144,7 +149,7 @@ contract VYToken is IERC3156FlashLender, AccessControl, ERC20Permit, Constants {
     }
 
     ///@dev returns the maximum mintable amount for the address holder in terms of the principal
-    function maxMint(address holder) external view returns (uint256 maxPrincipalAmount) {
+    function maxMint(address) external view returns (uint256 maxPrincipalAmount) {
         return type(uint256).max - _totalSupply;
     }
 
@@ -160,7 +165,7 @@ contract VYToken is IERC3156FlashLender, AccessControl, ERC20Permit, Constants {
     }
 
     ///@dev returns the maximum depositable amount for the address holder in terms of the underlying
-    function maxDeposit(address holder) external returns (uint256 maxUnderlyingAmount) {
+    function maxDeposit(address) external returns (uint256 maxUnderlyingAmount) {
         return _convertToUnderlying(type(uint256).max - _totalSupply);
     }
 

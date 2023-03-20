@@ -4,30 +4,6 @@ pragma solidity >=0.8.13;
 import "./FixtureStates.sol";
 
 contract VYTokenTest is VYTokenZeroState {
-    function testChangeOracle() public {
-        console.log("can change the CHI oracle");
-        vm.expectEmit(true, false, false, true);
-        emit Point("oracle", address(this));
-        vm.prank(timelock);
-        vyToken.point("oracle", address(this));
-        assertEq(address(vyToken.oracle()), address(this));
-    }
-
-    function testChangeJoin() public {
-        console.log("can change Join");
-        vm.expectEmit(true, false, false, true);
-        emit Point("join", address(this));
-        vm.prank(timelock);
-        vyToken.point("join", address(this));
-        assertEq(address(vyToken.join()), address(this));
-    }
-
-    function testRevertsOnInvalidPoint() public {
-        console.log("reverts on invalid point");
-        vm.prank(timelock);
-        vm.expectRevert("Unrecognized parameter");
-        vyToken.point("invalid", address(this));
-    }
 
     function testMintWithUnderlying() public {
         console.log("can mint with underlying");

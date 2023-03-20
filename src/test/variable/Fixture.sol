@@ -7,10 +7,10 @@ import "forge-std/src/Vm.sol";
 import {TestConstants} from "../utils/TestConstants.sol";
 import {TestExtensions} from "../utils/TestExtensions.sol";
 import "../../variable/VRLadle.sol";
+import "../../variable/VRRouter.sol";
 import "../../variable/VRCauldron.sol";
 import "../../variable/VYToken.sol";
 import "../../Witch.sol";
-import "../../Router.sol";
 import "../../oracles/compound/CompoundMultiOracle.sol";
 import "../../oracles/chainlink/ChainlinkMultiOracle.sol";
 import "../../oracles/accumulator/AccumulatorMultiOracle.sol";
@@ -19,6 +19,7 @@ import "../../mocks/oracles/compound/CTokenChiMock.sol";
 import "../../mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol";
 import "../../FlashJoin.sol";
 import "../../interfaces/ILadle.sol";
+import "../../interfaces/IRouter.sol";
 import "../../interfaces/ICauldron.sol";
 import "../../interfaces/IJoin.sol";
 import "../../interfaces/DataTypes.sol";
@@ -39,6 +40,7 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
     address public admin = makeAddr("admin");
     address public user = makeAddr("user");
     VRCauldron public cauldron;
+    VRRouter public router;
     VRLadle public ladle;
     Witch public witch;
     USDCMock public usdc;
@@ -88,13 +90,17 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
         otherERC20 = new ERC20Mock("Other ERC20", "OTHERERC20");
 
         cauldron = new VRCauldron();
+        cauldron.initialize(address(this));
+        router = new VRRouter();
         ladle = new VRLadle(
             IVRCauldron(address(cauldron)),
+            IRouter(address(router)),
             IWETH9(address(weth))
         );
+        router.initialize(address(ladle));
+        ladle.initialize(address(this));
         witch = new Witch(ICauldron(address(cauldron)), ILadle(address(ladle)));
 
-        
         restrictedERC20Mock = new RestrictedERC20Mock("Restricted", "RESTRICTED");
 
         usdcJoin = new FlashJoin(address(usdc));
@@ -178,7 +184,6 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
     function ladleGovAuth() public {
         bytes4[] memory roles = new bytes4[](5);
         roles[0] = VRLadle.addJoin.selector;
-        roles[1] = VRLadle.addModule.selector;
         roles[2] = VRLadle.setFee.selector;
         roles[3] = VRLadle.addToken.selector;
         roles[4] = VRLadle.addIntegration.selector;

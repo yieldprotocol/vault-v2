@@ -534,7 +534,7 @@ contract RouteAndIntegrationTests is CompleteSetup {
 
     function testOnlyCauldronCanUseRouter() public {
         console.log('router can be called only by cauldron');
-        Router router = ladle.router();
+        IRouter router = ladle.router();
         vm.expectRevert("Only owner");
         router.route(address(cauldron),'0x00000000');
     }
