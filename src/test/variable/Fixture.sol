@@ -33,6 +33,8 @@ import "@yield-protocol/utils-v2/src/interfaces/IWETH9.sol";
 import "@yield-protocol/utils-v2/src/token/IERC20Metadata.sol";
 import "@yield-protocol/utils-v2/src/utils/Cast.sol";
 import "@yield-protocol/utils-v2/src/utils/Math.sol";
+import "openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+
 using Cast for uint256;
 using Cast for uint256;
 using Math for uint256;
@@ -69,6 +71,10 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
     ChainlinkAggregatorV3Mock public daiAggregator;
     ChainlinkAggregatorV3Mock public usdcAggregator;
     ChainlinkAggregatorV3Mock public baseAggregator;
+
+    ERC1967Proxy public cauldronProxy;
+    ERC1967Proxy public ladleProxy;
+    ERC1967Proxy public vyTokenProxy;
 
     bytes12 public vaultId = 0x000000000000000000000001;
     bytes12 public zeroVaultId = 0x000000000000000000000000;
@@ -110,6 +116,7 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
 
         setUpOracles();
         vyToken = new VYToken(baseId, IOracle(address(chiRateOracle)), IJoin(baseJoin),base.name(), base.symbol());
+        vyToken.initialize(address(this));
         // Setting permissions
         ladleGovAuth();
         cauldronGovAuth(address(ladle));
@@ -122,6 +129,11 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
         roles[0] = Join.join.selector;
         roles[1] = Join.exit.selector;
         baseJoin.grantRoles(roles, address(vyToken));
+
+        // The proxies are set here temporarily, to be able to test the gas cost
+        cauldronProxy = new ERC1967Proxy(address(cauldron), abi.encodeWithSignature("initialize(address)", address(this)));
+        ladleProxy = new ERC1967Proxy(address(ladle), abi.encodeWithSignature("initialize(address)", address(this)));
+        vyTokenProxy = new ERC1967Proxy(address(vyToken), abi.encodeWithSignature("initialize(address)", address(this)));
     }
 
     function setUpOracles() internal {
