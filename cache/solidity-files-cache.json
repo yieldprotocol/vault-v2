@@ -5148,6 +5148,59 @@
         }
       }
     },
+    "src/oracles/VariableInterestRateOracle.sol": {
+      "lastModificationDate": 1679419107289,
+      "contentHash": "8383d70aa5786ae86f5359c3451fd598",
+      "sourceName": "src/oracles/VariableInterestRateOracle.sol",
+      "solcConfig": {
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "metadata": {
+            "bytecodeHash": "ipfs",
+            "appendCBOR": true
+          },
+          "outputSelection": {
+            "*": {
+              "": [
+                "ast"
+              ],
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ]
+            }
+          },
+          "evmVersion": "london",
+          "libraries": {}
+        }
+      },
+      "imports": [
+        "lib/forge-std/src/console2.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/access/AccessControl.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/token/IERC20.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/Cast.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/Math.sol",
+        "src/constants/Constants.sol",
+        "src/interfaces/DataTypes.sol",
+        "src/interfaces/ICauldron.sol",
+        "src/interfaces/IERC5095.sol",
+        "src/interfaces/IFYToken.sol",
+        "src/interfaces/IJoin.sol",
+        "src/interfaces/IOracle.sol"
+      ],
+      "versionRequirement": ">=0.8.13",
+      "artifacts": {
+        "VariableInterestRateOracle": {
+          "0.8.15+commit.e14f2714.Darwin.appleclang": "VariableInterestRateOracle.sol/VariableInterestRateOracle.json"
+        }
+      }
+    },
     "src/oracles/accumulator/AccumulatorMultiOracle.sol": {
       "lastModificationDate": 1677499641263,
       "contentHash": "f77f8696a88dbe9674f1fdd8fc88db25",
@@ -9579,6 +9632,92 @@
       "artifacts": {
         "UniswapOracleTest": {
           "0.8.15+commit.e14f2714.Darwin.appleclang": "UniswapOracle.t.sol/UniswapOracleTest.json"
+        }
+      }
+    },
+    "src/test/oracles/VariableIROracle.t.sol": {
+      "lastModificationDate": 1679417600884,
+      "contentHash": "64383d4bc30acf3b83299d216081018e",
+      "sourceName": "src/test/oracles/VariableIROracle.t.sol",
+      "solcConfig": {
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "metadata": {
+            "bytecodeHash": "ipfs",
+            "appendCBOR": true
+          },
+          "outputSelection": {
+            "*": {
+              "": [
+                "ast"
+              ],
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ]
+            }
+          },
+          "evmVersion": "london",
+          "libraries": {}
+        }
+      },
+      "imports": [
+        "lib/forge-std/lib/ds-test/src/test.sol",
+        "lib/forge-std/src/Base.sol",
+        "lib/forge-std/src/StdAssertions.sol",
+        "lib/forge-std/src/StdChains.sol",
+        "lib/forge-std/src/StdCheats.sol",
+        "lib/forge-std/src/StdError.sol",
+        "lib/forge-std/src/StdInvariant.sol",
+        "lib/forge-std/src/StdJson.sol",
+        "lib/forge-std/src/StdMath.sol",
+        "lib/forge-std/src/StdStorage.sol",
+        "lib/forge-std/src/StdUtils.sol",
+        "lib/forge-std/src/Test.sol",
+        "lib/forge-std/src/Vm.sol",
+        "lib/forge-std/src/console.sol",
+        "lib/forge-std/src/console2.sol",
+        "lib/forge-std/src/interfaces/IMulticall3.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/access/AccessControl.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/token/ERC20.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/token/IERC20.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/token/IERC20Metadata.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/token/IERC2612.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/Cast.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/Math.sol",
+        "lib/yieldspace-tv/src/interfaces/IMaturingToken.sol",
+        "lib/yieldspace-tv/src/interfaces/IPool.sol",
+        "lib/yieldspace-tv/src/interfaces/IPoolOracle.sol",
+        "src/constants/Constants.sol",
+        "src/interfaces/DataTypes.sol",
+        "src/interfaces/ICauldron.sol",
+        "src/interfaces/IERC5095.sol",
+        "src/interfaces/IFYToken.sol",
+        "src/interfaces/IJoin.sol",
+        "src/interfaces/IOracle.sol",
+        "src/oracles/VariableInterestRateOracle.sol",
+        "src/test/utils/Mocks.sol",
+        "src/test/utils/TestConstants.sol"
+      ],
+      "versionRequirement": ">=0.8.13",
+      "artifacts": {
+        "AccumulatorOracleTest": {
+          "0.8.15+commit.e14f2714.Darwin.appleclang": "VariableIROracle.t.sol/AccumulatorOracleTest.json"
+        },
+        "WithSourceSet": {
+          "0.8.15+commit.e14f2714.Darwin.appleclang": "VariableIROracle.t.sol/WithSourceSet.json"
+        },
+        "WithSourceSetTest": {
+          "0.8.15+commit.e14f2714.Darwin.appleclang": "VariableIROracle.t.sol/WithSourceSetTest.json"
+        },
+        "ZeroState": {
+          "0.8.15+commit.e14f2714.Darwin.appleclang": "VariableIROracle.t.sol/ZeroState.json"
         }
       }
     },
