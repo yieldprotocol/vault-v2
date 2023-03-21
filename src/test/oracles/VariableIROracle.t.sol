@@ -8,7 +8,9 @@ import "../utils/TestConstants.sol";
 import "../utils/Mocks.sol";
 
 abstract contract ZeroState is Test, TestConstants {
-    VariableInterestRateOracle public accumulator;
+    using Mocks for *;
+
+    VariableInterestRateOracle public variableInterestRateOracle;
 
     struct InterestRateParameter {
         /// @dev rate accumulated so far - check `get` for details
@@ -34,9 +36,9 @@ abstract contract ZeroState is Test, TestConstants {
     bytes6 public baseOne = 0x6d1caec02cbf;
     bytes6 public baseTwo = 0x8a4fee8b848e;
     ICauldron internal cauldron;
-    IJoin ethJoin = IJoin(0x3bDb887Dc46ec0E964Df89fFE2980db0121f0fD0);
-    IJoin daiJoin = IJoin(0x4fE92119CDf873Cf8826F4E6EcfD4E578E3D44Dc);
-    IJoin usdcJoin = IJoin(0x0d9A1A773be5a83eEbda23bf98efB8585C3ae4f4);
+    IJoin ethJoin;
+    IJoin daiJoin;
+    IJoin usdcJoin;
     // IJoin fraxJoin = IJoin();
     // IJoin usdtJoin = IJoin();
 
@@ -51,10 +53,10 @@ abstract contract ZeroState is Test, TestConstants {
             accumulated: 1000000000000000000,
             lastUpdated: block.timestamp,
             baseVariableBorrowRate: 0,
-            slope1: 40000 ,
-            slope2: 3000000 ,
+            slope1: 40000,
+            slope2: 3000000,
             join: ethJoin,
-            ilks: new bytes6[](0)
+            ilks: new bytes6[](2)
         });
     InterestRateParameter internal daiParameters =
         InterestRateParameter({
@@ -62,8 +64,8 @@ abstract contract ZeroState is Test, TestConstants {
             accumulated: 1000000000000000000,
             lastUpdated: block.timestamp,
             baseVariableBorrowRate: 0,
-            slope1: 40000 ,
-            slope2: 600000 ,
+            slope1: 40000,
+            slope2: 600000,
             join: daiJoin,
             ilks: new bytes6[](2)
         });
@@ -73,182 +75,203 @@ abstract contract ZeroState is Test, TestConstants {
             accumulated: 1000000,
             lastUpdated: block.timestamp,
             baseVariableBorrowRate: 0,
-            slope1: 40000 ,
-            slope2: 3000000 ,
+            slope1: 40000,
+            slope2: 600000,
             join: usdcJoin,
-            ilks: new bytes6[](0)
+            ilks: new bytes6[](2)
         });
 
+    InterestRateParameter internal sourceParameters;
+
     function setUpMock() public {
+        usdcJoin = IJoin(Mocks.mock("Join"));
+        daiJoin = IJoin(Mocks.mock("Join"));
+        ethJoin = IJoin(Mocks.mock("Join"));
         cauldron = ICauldron(Mocks.mock("Cauldron"));
-        accumulator = new VariableInterestRateOracle(cauldron);
-        accumulator.grantRole(accumulator.setSource.selector, address(this));
-        accumulator.grantRole(
-            accumulator.updateParameters.selector,
+        variableInterestRateOracle = new VariableInterestRateOracle(cauldron);
+        
+        variableInterestRateOracle.grantRole(variableInterestRateOracle.setSource.selector, address(this));
+        variableInterestRateOracle.grantRole(
+            variableInterestRateOracle.updateParameters.selector,
             address(this)
         );
+        sourceParameters.join = usdcJoin;
 
         baseOne = 0x6d1caec02cbf;
         baseTwo = 0x8a4fee8b848e;
+
+        DataTypes.Debt memory debt = DataTypes.Debt({
+            max: 0,
+            min: 0,
+            dec: 0,
+            sum: 10000e18 // Used by oracle
+        });
+        cauldron.debt.mock(baseOne, baseOne, debt);
+        for (uint256 i = 0; i < sourceParameters.ilks.length; i++) {
+            cauldron.debt.mock(baseOne, sourceParameters.ilks[i], debt);
+        }
+
+        sourceParameters.join.storedBalance.mock(100000e18);
     }
 
     function setUpHarness(string memory network) public {
+        vm.createSelectFork(MAINNET, 16877055);
+        ethJoin = IJoin(0x3bDb887Dc46ec0E964Df89fFE2980db0121f0fD0);
+        daiJoin = IJoin(0x4fE92119CDf873Cf8826F4E6EcfD4E578E3D44Dc);
+        usdcJoin = IJoin(0x0d9A1A773be5a83eEbda23bf98efB8585C3ae4f4);
         timelock = addresses[network][TIMELOCK];
 
-        accumulator = new VariableInterestRateOracle(
+        variableInterestRateOracle = new VariableInterestRateOracle(
             ICauldron(addresses[network][CAULDRON])
         );
+        sourceParameters.join = daiJoin;
         baseOne = bytes6(0x303100000000);
         underlying = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
 
-        // vm.startPrank(timelock);
-        accumulator.grantRole(accumulator.setSource.selector, address(this));
-        accumulator.grantRole(
-            accumulator.updateParameters.selector,
+        variableInterestRateOracle.grantRole(variableInterestRateOracle.setSource.selector, address(this));
+        variableInterestRateOracle.grantRole(
+            variableInterestRateOracle.updateParameters.selector,
             address(this)
         );
-        // vm.stopPrank();
     }
 
     function setUp() public virtual {
-        vm.createSelectFork(MAINNET, 16877055);
-        daiParameters.ilks[0] = DAI;
-        daiParameters.ilks[1] = USDC;
-        // accumulator = new VariableInterestRateOracle(
-        //     ICauldron(addresses[MAINNET][CAULDRON])
-        // );
+        sourceParameters = daiParameters;
+        sourceParameters.ilks[0] = USDC;
+        sourceParameters.ilks[1] = ETH;
         // string memory rpc = vm.envOr(RPC, MAINNET);
         // vm.createSelectFork(rpc);
         // string memory network = vm.envOr(NETWORK, LOCALHOST);
         // setUpMock();
-        // if (vm.envOr(MOCK, true)) setUpMock();
+        // if (vm.envOr(MOCK, true))
+        setUpMock();
         // else
-        setUpHarness("MAINNET");
+        // setUpHarness("MAINNET");
     }
 }
 
 abstract contract WithSourceSet is ZeroState {
     function setUp() public override {
         super.setUp();
-        accumulator.setSource(
+        variableInterestRateOracle.setSource(
             baseOne,
             RATE,
-            daiParameters.optimalUsageRate,
-            daiParameters.accumulated,
-            daiParameters.baseVariableBorrowRate,
-            daiParameters.slope1,
-            daiParameters.slope2,
-            daiParameters.join,
-            daiParameters.ilks
+            sourceParameters.optimalUsageRate,
+            sourceParameters.accumulated,
+            sourceParameters.baseVariableBorrowRate,
+            sourceParameters.slope1,
+            sourceParameters.slope2,
+            sourceParameters.join,
+            sourceParameters.ilks
         );
     }
 }
 
-contract AccumulatorOracleTest is ZeroState {
+contract VariableInterestRateOracleOracleTest is ZeroState {
     function testSetSourceOnlyOnce() public {
-        accumulator.setSource(
+        variableInterestRateOracle.setSource(
             baseOne,
             RATE,
-            daiParameters.optimalUsageRate,
-            daiParameters.accumulated,
-            daiParameters.baseVariableBorrowRate,
-            daiParameters.slope1,
-            daiParameters.slope2,
-            daiParameters.join,
-            daiParameters.ilks
+            sourceParameters.optimalUsageRate,
+            sourceParameters.accumulated,
+            sourceParameters.baseVariableBorrowRate,
+            sourceParameters.slope1,
+            sourceParameters.slope2,
+            sourceParameters.join,
+            sourceParameters.ilks
         );
         vm.expectRevert("Source is already set");
-        accumulator.setSource(
+        variableInterestRateOracle.setSource(
             baseOne,
             RATE,
-            daiParameters.optimalUsageRate,
-            daiParameters.accumulated,
-            daiParameters.baseVariableBorrowRate,
-            daiParameters.slope1,
-            daiParameters.slope2,
-            daiParameters.join,
-            daiParameters.ilks
+            sourceParameters.optimalUsageRate,
+            sourceParameters.accumulated,
+            sourceParameters.baseVariableBorrowRate,
+            sourceParameters.slope1,
+            sourceParameters.slope2,
+            sourceParameters.join,
+            sourceParameters.ilks
         );
     }
 
     function testCannotCallUninitializedSource() public {
         vm.expectRevert("Source not found");
-        accumulator.updateParameters(
+        variableInterestRateOracle.updateParameters(
             baseOne,
             RATE,
-            daiParameters.optimalUsageRate,
-            daiParameters.baseVariableBorrowRate,
-            daiParameters.slope1,
-            daiParameters.slope2,
-            daiParameters.join
+            sourceParameters.optimalUsageRate,
+            sourceParameters.baseVariableBorrowRate,
+            sourceParameters.slope1,
+            sourceParameters.slope2,
+            sourceParameters.join
         );
     }
 
     function testCannotCallStaleInterestRateParameter() public {
-        accumulator.setSource(
+        variableInterestRateOracle.setSource(
             baseOne,
             RATE,
-            daiParameters.optimalUsageRate,
-            daiParameters.accumulated,
-            daiParameters.baseVariableBorrowRate,
-            daiParameters.slope1,
-            daiParameters.slope2,
-            daiParameters.join,
-            daiParameters.ilks
+            sourceParameters.optimalUsageRate,
+            sourceParameters.accumulated,
+            sourceParameters.baseVariableBorrowRate,
+            sourceParameters.slope1,
+            sourceParameters.slope2,
+            sourceParameters.join,
+            sourceParameters.ilks
         );
         skip(100);
         vm.expectRevert("stale InterestRateParameter");
-        accumulator.updateParameters(
+        variableInterestRateOracle.updateParameters(
             baseOne,
             RATE,
-            daiParameters.optimalUsageRate,
-            daiParameters.baseVariableBorrowRate,
-            daiParameters.slope1,
-            daiParameters.slope2,
-            daiParameters.join
+            sourceParameters.optimalUsageRate,
+            sourceParameters.baseVariableBorrowRate,
+            sourceParameters.slope1,
+            sourceParameters.slope2,
+            sourceParameters.join
         );
     }
 
     function testRevertOnSourceUnknown() public {
-        accumulator.setSource(
+        variableInterestRateOracle.setSource(
             baseOne,
             RATE,
-            daiParameters.optimalUsageRate,
-            daiParameters.accumulated,
-            daiParameters.baseVariableBorrowRate,
-            daiParameters.slope1,
-            daiParameters.slope2,
-            daiParameters.join,
-            daiParameters.ilks
+            sourceParameters.optimalUsageRate,
+            sourceParameters.accumulated,
+            sourceParameters.baseVariableBorrowRate,
+            sourceParameters.slope1,
+            sourceParameters.slope2,
+            sourceParameters.join,
+            sourceParameters.ilks
         );
         vm.expectRevert("Source not found");
-        accumulator.peek(bytes32(baseTwo), RATE, WAD);
+        variableInterestRateOracle.peek(bytes32(baseTwo), RATE, WAD);
         vm.expectRevert("Source not found");
-        accumulator.peek(bytes32(baseOne), CHI, WAD);
+        variableInterestRateOracle.peek(bytes32(baseOne), CHI, WAD);
     }
 
     // function testDoesNotMixUpSources() public {
-    //     accumulator.setSource(
+    //     variableInterestRateOracle.setSource(
     //         baseOne,
     //         RATE,
-    //         daiParameters.optimalUsageRate,
-    //         daiParameters.baseVariableBorrowRate,
-    //         daiParameters.slope1,
-    //         daiParameters.slope2,
-    //         daiParameters.join
+    //         sourceParameters.optimalUsageRate,
+    //         sourceParameters.baseVariableBorrowRate,
+    //         sourceParameters.slope1,
+    //         sourceParameters.slope2,
+    //         sourceParameters.join
     //     );
-    //     accumulator.setSource(baseOne, CHI, WAD * 2, WAD);
-    //     accumulator.setSource(baseTwo, RATE, WAD * 3, WAD);
-    //     accumulator.setSource(baseTwo, CHI, WAD * 4, WAD);
+    //     variableInterestRateOracle.setSource(baseOne, CHI, WAD * 2, WAD);
+    //     variableInterestRateOracle.setSource(baseTwo, RATE, WAD * 3, WAD);
+    //     variableInterestRateOracle.setSource(baseTwo, CHI, WAD * 4, WAD);
 
     //     uint256 amount;
-    //     (amount, ) = accumulator.peek(bytes32(baseOne), RATE, WAD);
+    //     (amount, ) = variableInterestRateOracle.peek(bytes32(baseOne), RATE, WAD);
     //     assertEq(amount, WAD, "Conversion unsuccessful");
-    //     (amount, ) = accumulator.peek(bytes32(baseOne), CHI, WAD);
+    //     (amount, ) = variableInterestRateOracle.peek(bytes32(baseOne), CHI, WAD);
     //     assertEq(amount, WAD * 2, "Conversion unsuccessful");
-    //     (amount, ) = accumulator.peek(bytes32(baseTwo), RATE, WAD);
+    //     (amount, ) = variableInterestRateOracle.peek(bytes32(baseTwo), RATE, WAD);
     //     assertEq(amount, WAD * 3, "Conversion unsuccessful");
-    //     (amount, ) = accumulator.peek(bytes32(baseTwo), CHI, WAD);
+    //     (amount, ) = variableInterestRateOracle.peek(bytes32(baseTwo), CHI, WAD);
     //     assertEq(amount, WAD * 4, "Conversion unsuccessful");
     // }
 }
@@ -256,13 +279,13 @@ contract AccumulatorOracleTest is ZeroState {
 contract WithSourceSetTest is WithSourceSet {
     function testComputesWithoutCheckpoints() public {
         uint256 amount;
-        (amount, ) = accumulator.get(bytes32(baseOne), RATE, WAD);
+        (amount, ) = variableInterestRateOracle.get(bytes32(baseOne), RATE, WAD);
         assertEq(amount, WAD, "Conversion unsuccessful");
         skip(10);
-        (amount, ) = accumulator.get(bytes32(baseOne), RATE, WAD);
+        (amount, ) = variableInterestRateOracle.get(bytes32(baseOne), RATE, WAD);
         assertEq(amount, WAD, "Conversion unsuccessful");
         skip(2);
-        (amount, ) = accumulator.get(bytes32(baseOne), RATE, WAD);
+        (amount, ) = variableInterestRateOracle.get(bytes32(baseOne), RATE, WAD);
         assertEq(amount, WAD, "Conversion unsuccessful");
     }
 
@@ -270,21 +293,21 @@ contract WithSourceSetTest is WithSourceSet {
         uint256 amount;
         vm.roll(block.number + 1);
         skip(1);
-        (amount, ) = accumulator.get(bytes32(baseOne), RATE, WAD);
+        (amount, ) = variableInterestRateOracle.get(bytes32(baseOne), RATE, WAD);
         assertEq(amount, WAD, "Conversion unsuccessful");
         vm.roll(block.number + 1);
         skip(10);
-        (amount, ) = accumulator.get(bytes32(baseOne), RATE, WAD);
+        (amount, ) = variableInterestRateOracle.get(bytes32(baseOne), RATE, WAD);
         assertEq(amount, WAD, "Conversion unsuccessful");
     }
 
     function testUpdatesPeek() public {
         uint256 amount;
         skip(10);
-        (amount, ) = accumulator.peek(bytes32(baseOne), RATE, WAD);
+        (amount, ) = variableInterestRateOracle.peek(bytes32(baseOne), RATE, WAD);
         assertEq(amount, WAD, "Conversion unsuccessful");
         vm.roll(block.number + 1);
-        accumulator.get(bytes32(baseOne), RATE, WAD);
-        (amount, ) = accumulator.peek(bytes32(baseOne), RATE, WAD);
+        variableInterestRateOracle.get(bytes32(baseOne), RATE, WAD);
+        (amount, ) = variableInterestRateOracle.peek(bytes32(baseOne), RATE, WAD);
     }
 }

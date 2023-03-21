@@ -5149,8 +5149,8 @@
       }
     },
     "src/oracles/VariableInterestRateOracle.sol": {
-      "lastModificationDate": 1679420081405,
-      "contentHash": "308c34520b4c8b81a1dc5425aa16083b",
+      "lastModificationDate": 1679435171236,
+      "contentHash": "7fc7f238f24ea0296a08d3c700541634",
       "sourceName": "src/oracles/VariableInterestRateOracle.sol",
       "solcConfig": {
         "settings": {
@@ -9636,8 +9636,8 @@
       }
     },
     "src/test/oracles/VariableIROracle.t.sol": {
-      "lastModificationDate": 1679420001929,
-      "contentHash": "5772a5e139fd9e2fcad32697680cf1bd",
+      "lastModificationDate": 1679434833823,
+      "contentHash": "0c73724f589f189cca25c3d3d44b1f37",
       "sourceName": "src/test/oracles/VariableIROracle.t.sol",
       "solcConfig": {
         "settings": {
@@ -9707,8 +9707,8 @@
       ],
       "versionRequirement": ">=0.8.13",
       "artifacts": {
-        "AccumulatorOracleTest": {
-          "0.8.15+commit.e14f2714.Darwin.appleclang": "VariableIROracle.t.sol/AccumulatorOracleTest.json"
+        "VariableInterestRateOracleOracleTest": {
+          "0.8.15+commit.e14f2714.Darwin.appleclang": "VariableIROracle.t.sol/VariableInterestRateOracleOracleTest.json"
         },
         "WithSourceSet": {
           "0.8.15+commit.e14f2714.Darwin.appleclang": "VariableIROracle.t.sol/WithSourceSet.json"

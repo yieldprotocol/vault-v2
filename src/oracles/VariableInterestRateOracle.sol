@@ -32,8 +32,15 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
         bytes6[] ilks;
     }
 
+    /* State Variables
+     ******************************************************************************************************************/
+
     mapping(bytes6 => mapping(bytes6 => InterestRateParameter)) public sources;
+
     ICauldron public cauldron;
+
+    /* Events
+     ******************************************************************************************************************/
     event SourceSet(
         bytes6 indexed baseId,
         bytes6 indexed kind,
@@ -161,36 +168,37 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
         InterestRateParameter memory rateParameters = sources[base.b6()][
             kind.b6()
         ];
+
         require(rateParameters.accumulated != 0, "Source not found");
 
         uint256 secondsSinceLastUpdate = (block.timestamp -
             rateParameters.lastUpdated);
         if (secondsSinceLastUpdate > 0) {
-            //1. Calculate the utilization rate
+            // Calculate the total debt
             uint128 totalDebt;
+            DataTypes.Debt memory debt_;
+            debt_ = cauldron.debt(base.b6(), base.b6());
+            totalDebt = totalDebt + debt_.sum;
+
             for (uint256 i = 0; i < rateParameters.ilks.length; i++) {
-                DataTypes.Debt memory debt_ = cauldron.debt(
-                    base.b6(),
-                    rateParameters.ilks[i]
-                );
+                debt_ = cauldron.debt(base.b6(), rateParameters.ilks[i]);
                 totalDebt = totalDebt + debt_.sum;
             }
-            // DataTypes.Debt memory debt_ = cauldron.debt(base.b6(), base.b6());
-            // Total borrows / Total Liquidity
+
+            // Calculate utilization rate
+            // Total debt / Total Liquidity
             uint256 utilizationRate = uint256(totalDebt).wdiv(
                 rateParameters.join.storedBalance()
             );
-
-            uint256 borrowRate;
-
+            uint256 interestRate;
             if (utilizationRate <= rateParameters.optimalUsageRate * 1e12) {
-                borrowRate =
+                interestRate =
                     rateParameters.baseVariableBorrowRate +
                     (utilizationRate.wmul(rateParameters.slope1 * 1e12)).wdiv(
                         rateParameters.optimalUsageRate * 1e12
                     );
             } else {
-                borrowRate =
+                interestRate =
                     rateParameters.baseVariableBorrowRate +
                     rateParameters.slope1 *
                     1e12 +
@@ -199,11 +207,11 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
                         .wdiv(1e18 - rateParameters.optimalUsageRate * 1e12);
             }
             // Calculate per second rate
-            // borrowRate = (borrowRate * 1e12)/(365 days);
-
-            rateParameters.accumulated *= borrowRate.wpow(
+            // interestRate = interestRate / 365 days;
+            rateParameters.accumulated *= interestRate.wpow(
                 secondsSinceLastUpdate
             );
+
             rateParameters.accumulated /= 1e18;
             rateParameters.lastUpdated = block.timestamp;
 
