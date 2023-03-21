@@ -9,12 +9,6 @@ import "../interfaces/ICauldron.sol";
 import "../constants/Constants.sol";
 import "forge-std/src/console2.sol";
 
-/**
-A collection of independent Accumulator Oracles
-
-Each Accumulator is simple: it starts when `setSource` is called, 
-and each `get` call returns perSecondRate ^ (time in seconds since oracle creation)
- */
 contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
     using Cast for bytes32;
     using Math for uint256;
@@ -34,6 +28,8 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
         uint256 slope2;
         // @dev join
         IJoin join;
+        // @dev ilks
+        bytes6[] ilks;
     }
 
     mapping(bytes6 => mapping(bytes6 => InterestRateParameter)) public sources;
@@ -72,7 +68,8 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
         uint256 baseVariableBorrowRate,
         uint256 slope1,
         uint256 slope2,
-        IJoin join
+        IJoin join,
+        bytes6[] memory ilks
     ) external auth {
         InterestRateParameter memory source = sources[baseId][kindId];
         require(source.accumulated == 0, "Source is already set");
@@ -84,7 +81,8 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
             baseVariableBorrowRate: baseVariableBorrowRate,
             slope1: slope1,
             slope2: slope2,
-            join: join
+            join: join,
+            ilks: ilks
         });
         emit SourceSet(
             baseId,
@@ -97,12 +95,6 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
         );
     }
 
-    /**
-    @notice Updates accumulation rate
-    
-    The accumulation rate can only be updated on an up-to-date oracle: get() was called in the
-    same block. See get() for more details
-     */
     function updateParameters(
         bytes6 baseId,
         bytes6 kindId,
@@ -136,9 +128,6 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
         );
     }
 
-    /**
-     * @notice Retrieve the latest stored accumulated rate.
-     */
     function peek(
         bytes32 base,
         bytes32 kind,
@@ -159,18 +148,6 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
         updateTime = block.timestamp;
     }
 
-    /**
-    @notice Retrieve the latest accumulated rate from source, updating it if necessary.
-
-    Computes baseRate ^ (block.timestamp - creation timestamp)
-
-    pow() is not O(1), so the naive implementation will become slower as the time passes
-    To workaround that, each time get() is called, we:
-        1) compute the return value
-        2) store the return value in `accumulated` field, update lastUpdated timestamp
-
-    Becase we have `accumulated`, step 1 becomes `accumulated * baseRate ^ (block.timestamp - lastUpdated)
-     */
     function get(
         bytes32 base,
         bytes32 kind,
@@ -190,13 +167,21 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
             rateParameters.lastUpdated);
         if (secondsSinceLastUpdate > 0) {
             //1. Calculate the utilization rate
-            DataTypes.Debt memory debt_ = cauldron.debt(base.b6(), base.b6());
+            uint128 totalDebt;
+            for (uint256 i = 0; i < rateParameters.ilks.length; i++) {
+                DataTypes.Debt memory debt_ = cauldron.debt(
+                    base.b6(),
+                    rateParameters.ilks[i]
+                );
+                totalDebt = totalDebt + debt_.sum;
+            }
+            // DataTypes.Debt memory debt_ = cauldron.debt(base.b6(), base.b6());
             // Total borrows / Total Liquidity
-            uint256 utilizationRate = uint256(debt_.sum).wdiv(
+            uint256 utilizationRate = uint256(totalDebt).wdiv(
                 rateParameters.join.storedBalance()
             );
 
-            uint256 borrowRate = 0;
+            uint256 borrowRate;
 
             if (utilizationRate <= rateParameters.optimalUsageRate * 1e12) {
                 borrowRate =

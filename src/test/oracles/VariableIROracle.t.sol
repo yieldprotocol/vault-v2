@@ -25,6 +25,8 @@ abstract contract ZeroState is Test, TestConstants {
         uint256 slope2;
         // @dev join
         IJoin join;
+        // @dev ilks
+        bytes6[] ilks;
     }
 
     address timelock;
@@ -51,7 +53,8 @@ abstract contract ZeroState is Test, TestConstants {
             baseVariableBorrowRate: 0,
             slope1: 40000 ,
             slope2: 3000000 ,
-            join: ethJoin
+            join: ethJoin,
+            ilks: new bytes6[](0)
         });
     InterestRateParameter internal daiParameters =
         InterestRateParameter({
@@ -61,7 +64,8 @@ abstract contract ZeroState is Test, TestConstants {
             baseVariableBorrowRate: 0,
             slope1: 40000 ,
             slope2: 600000 ,
-            join: daiJoin
+            join: daiJoin,
+            ilks: new bytes6[](2)
         });
     InterestRateParameter internal usdcParameters =
         InterestRateParameter({
@@ -71,7 +75,8 @@ abstract contract ZeroState is Test, TestConstants {
             baseVariableBorrowRate: 0,
             slope1: 40000 ,
             slope2: 3000000 ,
-            join: usdcJoin
+            join: usdcJoin,
+            ilks: new bytes6[](0)
         });
 
     function setUpMock() public {
@@ -107,6 +112,8 @@ abstract contract ZeroState is Test, TestConstants {
 
     function setUp() public virtual {
         vm.createSelectFork(MAINNET, 16877055);
+        daiParameters.ilks[0] = DAI;
+        daiParameters.ilks[1] = USDC;
         // accumulator = new VariableInterestRateOracle(
         //     ICauldron(addresses[MAINNET][CAULDRON])
         // );
@@ -131,7 +138,8 @@ abstract contract WithSourceSet is ZeroState {
             daiParameters.baseVariableBorrowRate,
             daiParameters.slope1,
             daiParameters.slope2,
-            daiParameters.join
+            daiParameters.join,
+            daiParameters.ilks
         );
     }
 }
@@ -146,7 +154,8 @@ contract AccumulatorOracleTest is ZeroState {
             daiParameters.baseVariableBorrowRate,
             daiParameters.slope1,
             daiParameters.slope2,
-            daiParameters.join
+            daiParameters.join,
+            daiParameters.ilks
         );
         vm.expectRevert("Source is already set");
         accumulator.setSource(
@@ -157,7 +166,8 @@ contract AccumulatorOracleTest is ZeroState {
             daiParameters.baseVariableBorrowRate,
             daiParameters.slope1,
             daiParameters.slope2,
-            daiParameters.join
+            daiParameters.join,
+            daiParameters.ilks
         );
     }
 
@@ -183,7 +193,8 @@ contract AccumulatorOracleTest is ZeroState {
             daiParameters.baseVariableBorrowRate,
             daiParameters.slope1,
             daiParameters.slope2,
-            daiParameters.join
+            daiParameters.join,
+            daiParameters.ilks
         );
         skip(100);
         vm.expectRevert("stale InterestRateParameter");
@@ -207,7 +218,8 @@ contract AccumulatorOracleTest is ZeroState {
             daiParameters.baseVariableBorrowRate,
             daiParameters.slope1,
             daiParameters.slope2,
-            daiParameters.join
+            daiParameters.join,
+            daiParameters.ilks
         );
         vm.expectRevert("Source not found");
         accumulator.peek(bytes32(baseTwo), RATE, WAD);
