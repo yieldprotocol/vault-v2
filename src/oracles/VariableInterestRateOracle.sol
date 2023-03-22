@@ -6,6 +6,7 @@ import "@yield-protocol/utils-v2/src/utils/Cast.sol";
 import "@yield-protocol/utils-v2/src/utils/Math.sol";
 import "../interfaces/IOracle.sol";
 import "../interfaces/ICauldron.sol";
+import "../interfaces/ILadle.sol";
 import "../constants/Constants.sol";
 import "forge-std/src/console2.sol";
 
@@ -38,6 +39,7 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
     mapping(bytes6 => mapping(bytes6 => InterestRateParameter)) public sources;
 
     ICauldron public cauldron;
+    ILadle public ladle;
 
     /* Events
      ******************************************************************************************************************/
@@ -60,8 +62,9 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
         IJoin join
     );
 
-    constructor(ICauldron cauldron_) {
+    constructor(ICauldron cauldron_, ILadle ladle_) {
         cauldron = cauldron_;
+        ladle = ladle_;
     }
 
     /** 
@@ -75,22 +78,23 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
         uint256 baseVariableBorrowRate,
         uint256 slope1,
         uint256 slope2,
-        IJoin join,
         bytes6[] memory ilks
     ) external auth {
         InterestRateParameter memory source = sources[baseId][kindId];
         require(source.accumulated == 0, "Source is already set");
-
+        IJoin join = ladle.joins(baseId);
+        
         sources[baseId][kindId] = InterestRateParameter({
-            optimalUsageRate: optimalUsageRate,
+            optimalUsageRate: optimalUsageRate * 1e12,
             accumulated: accumulated,
             lastUpdated: block.timestamp,
             baseVariableBorrowRate: baseVariableBorrowRate,
-            slope1: slope1,
-            slope2: slope2,
+            slope1: slope1 * 1e12,
+            slope2: slope2 * 1e12,
             join: join,
             ilks: ilks
         });
+
         emit SourceSet(
             baseId,
             kindId,
@@ -108,8 +112,7 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
         uint256 optimalUsageRate,
         uint256 baseVariableBorrowRate,
         uint256 slope1,
-        uint256 slope2,
-        IJoin join
+        uint256 slope2
     ) external auth {
         InterestRateParameter memory source = sources[baseId][kindId];
         require(source.accumulated != 0, "Source not found");
@@ -118,10 +121,11 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
             source.lastUpdated == block.timestamp,
             "stale InterestRateParameter"
         );
-        sources[baseId][kindId].optimalUsageRate = optimalUsageRate;
+        IJoin join = ladle.joins(baseId);
+        sources[baseId][kindId].optimalUsageRate = optimalUsageRate * 1e12;
         sources[baseId][kindId].baseVariableBorrowRate = baseVariableBorrowRate;
-        sources[baseId][kindId].slope1 = slope1;
-        sources[baseId][kindId].slope2 = slope2;
+        sources[baseId][kindId].slope1 = slope1 * 1e12;
+        sources[baseId][kindId].slope2 = slope2 * 1e12;
         sources[baseId][kindId].join = join;
 
         emit PerSecondRateUpdated(
@@ -168,7 +172,6 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
         InterestRateParameter memory rateParameters = sources[base.b6()][
             kind.b6()
         ];
-
         require(rateParameters.accumulated != 0, "Source not found");
 
         uint256 secondsSinceLastUpdate = (block.timestamp -
@@ -191,24 +194,23 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
                 rateParameters.join.storedBalance()
             );
             uint256 interestRate;
-            if (utilizationRate <= rateParameters.optimalUsageRate * 1e12) {
+            if (utilizationRate <= rateParameters.optimalUsageRate) {
                 interestRate =
                     rateParameters.baseVariableBorrowRate +
-                    (utilizationRate.wmul(rateParameters.slope1 * 1e12)).wdiv(
-                        rateParameters.optimalUsageRate * 1e12
+                    utilizationRate.wmul(rateParameters.slope1).wdiv(
+                        rateParameters.optimalUsageRate
                     );
             } else {
                 interestRate =
                     rateParameters.baseVariableBorrowRate +
-                    rateParameters.slope1 *
-                    1e12 +
-                    (utilizationRate - rateParameters.optimalUsageRate * 1e12)
-                        .wmul(rateParameters.slope2 * 1e12)
-                        .wdiv(1e18 - rateParameters.optimalUsageRate * 1e12);
+                    rateParameters.slope1 +
+                    (utilizationRate - rateParameters.optimalUsageRate)
+                        .wmul(rateParameters.slope2)
+                        .wdiv(1e18 - rateParameters.optimalUsageRate);
             }
             // Calculate per second rate
-            // interestRate = interestRate / 365 days;
-            rateParameters.accumulated *= interestRate.wpow(
+            interestRate = interestRate / 365 days;
+            rateParameters.accumulated *= (1e18 + interestRate).wpow(
                 secondsSinceLastUpdate
             );
 

@@ -5149,8 +5149,8 @@
       }
     },
     "src/oracles/VariableInterestRateOracle.sol": {
-      "lastModificationDate": 1679435171236,
-      "contentHash": "7fc7f238f24ea0296a08d3c700541634",
+      "lastModificationDate": 1679489319790,
+      "contentHash": "ea0895424f7a3bf39f210d694b09f76e",
       "sourceName": "src/oracles/VariableInterestRateOracle.sol",
       "solcConfig": {
         "settings": {
@@ -5183,15 +5183,25 @@
       "imports": [
         "lib/forge-std/src/console2.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/access/AccessControl.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/interfaces/IWETH9.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/token/ERC20.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/token/IERC20.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/token/IERC20Metadata.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/token/IERC2612.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/Cast.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/IsContract.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/Math.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/RevertMsgExtractor.sol",
+        "lib/yieldspace-tv/src/interfaces/IMaturingToken.sol",
+        "lib/yieldspace-tv/src/interfaces/IPool.sol",
+        "src/Router.sol",
         "src/constants/Constants.sol",
         "src/interfaces/DataTypes.sol",
         "src/interfaces/ICauldron.sol",
         "src/interfaces/IERC5095.sol",
         "src/interfaces/IFYToken.sol",
         "src/interfaces/IJoin.sol",
+        "src/interfaces/ILadle.sol",
         "src/interfaces/IOracle.sol"
       ],
       "versionRequirement": ">=0.8.13",
@@ -8175,7 +8185,7 @@
       }
     },
     "src/test/join/FlashJoin.t.sol": {
-      "lastModificationDate": 1677499641254,
+      "lastModificationDate": 1678444665978,
       "contentHash": "52728dcb19e2d1946adacaeb7b292ace",
       "sourceName": "src/test/join/FlashJoin.t.sol",
       "solcConfig": {
@@ -8261,7 +8271,7 @@
       }
     },
     "src/test/join/Join.t.sol": {
-      "lastModificationDate": 1677499641254,
+      "lastModificationDate": 1678444665978,
       "contentHash": "99f930b94db5104be3d747110d30b6d7",
       "sourceName": "src/test/join/Join.t.sol",
       "solcConfig": {
@@ -8519,7 +8529,7 @@
       }
     },
     "src/test/oracles/AccumulatorOracle.t.sol": {
-      "lastModificationDate": 1677499641253,
+      "lastModificationDate": 1678444665979,
       "contentHash": "3ff730eaf458a6485d1745397760679d",
       "sourceName": "src/test/oracles/AccumulatorOracle.t.sol",
       "solcConfig": {
@@ -8594,7 +8604,7 @@
       }
     },
     "src/test/oracles/CTokenMultiOracle.t.sol": {
-      "lastModificationDate": 1677499641253,
+      "lastModificationDate": 1678444665980,
       "contentHash": "ed46da9a58dc5f4d2a6c305383f0b027",
       "sourceName": "src/test/oracles/CTokenMultiOracle.t.sol",
       "solcConfig": {
@@ -8667,7 +8677,7 @@
       }
     },
     "src/test/oracles/ChainlinkMultiOracle.t.sol": {
-      "lastModificationDate": 1677499641253,
+      "lastModificationDate": 1678444665979,
       "contentHash": "55fbea7071b38f2f3fa3ef4575a80a0c",
       "sourceName": "src/test/oracles/ChainlinkMultiOracle.t.sol",
       "solcConfig": {
@@ -8743,7 +8753,7 @@
       }
     },
     "src/test/oracles/ChainlinkUSDMultiOracle.t.sol": {
-      "lastModificationDate": 1677499641252,
+      "lastModificationDate": 1678444665979,
       "contentHash": "58c8dbe1e62ebf85c8abe4cb4f4ce2d1",
       "sourceName": "src/test/oracles/ChainlinkUSDMultiOracle.t.sol",
       "solcConfig": {
@@ -8820,7 +8830,7 @@
       }
     },
     "src/test/oracles/CompositeMultiOracle.t.sol": {
-      "lastModificationDate": 1677499641252,
+      "lastModificationDate": 1678444665979,
       "contentHash": "18568dad409a49eb28f92db83eb4d627",
       "sourceName": "src/test/oracles/CompositeMultiOracle.t.sol",
       "solcConfig": {
@@ -8897,7 +8907,7 @@
       }
     },
     "src/test/oracles/CompoundMultiOracle.t.sol": {
-      "lastModificationDate": 1677499641252,
+      "lastModificationDate": 1678444665980,
       "contentHash": "a6674ff35055da68d04f0218bef97b19",
       "sourceName": "src/test/oracles/CompoundMultiOracle.t.sol",
       "solcConfig": {
@@ -8970,7 +8980,7 @@
       }
     },
     "src/test/oracles/ConvexOracle.t.sol": {
-      "lastModificationDate": 1677499641252,
+      "lastModificationDate": 1678444665980,
       "contentHash": "c513d51dd4cb2b35182e954712254e66",
       "sourceName": "src/test/oracles/ConvexOracle.t.sol",
       "solcConfig": {
@@ -9044,7 +9054,7 @@
       }
     },
     "src/test/oracles/CrabOracle.t.sol": {
-      "lastModificationDate": 1677499641251,
+      "lastModificationDate": 1678444665980,
       "contentHash": "1b281dfae123db44bd39f177ccab84f7",
       "sourceName": "src/test/oracles/CrabOracle.t.sol",
       "solcConfig": {
@@ -9272,7 +9282,7 @@
       }
     },
     "src/test/oracles/LidoOracle.t.sol": {
-      "lastModificationDate": 1677499641251,
+      "lastModificationDate": 1678444665980,
       "contentHash": "c7d1f36325a705467a6f7e1db92e5881",
       "sourceName": "src/test/oracles/LidoOracle.t.sol",
       "solcConfig": {
@@ -9421,7 +9431,7 @@
       }
     },
     "src/test/oracles/RETHOracle.t.sol": {
-      "lastModificationDate": 1677499641250,
+      "lastModificationDate": 1678444665981,
       "contentHash": "8993552921d5bd0cec1b0e9505442b2f",
       "sourceName": "src/test/oracles/RETHOracle.t.sol",
       "solcConfig": {
@@ -9485,7 +9495,7 @@
       }
     },
     "src/test/oracles/StrategyOracle.t.sol": {
-      "lastModificationDate": 1677499641250,
+      "lastModificationDate": 1678444665981,
       "contentHash": "73a690f07f5a49b3486d6d904a17165f",
       "sourceName": "src/test/oracles/StrategyOracle.t.sol",
       "solcConfig": {
@@ -9555,7 +9565,7 @@
       }
     },
     "src/test/oracles/UniswapOracle.t.sol": {
-      "lastModificationDate": 1677499641250,
+      "lastModificationDate": 1678444665981,
       "contentHash": "915c31d152bd2e0214ff3e98212823d5",
       "sourceName": "src/test/oracles/UniswapOracle.t.sol",
       "solcConfig": {
@@ -9636,8 +9646,8 @@
       }
     },
     "src/test/oracles/VariableIROracle.t.sol": {
-      "lastModificationDate": 1679434833823,
-      "contentHash": "0c73724f589f189cca25c3d3d44b1f37",
+      "lastModificationDate": 1679489483165,
+      "contentHash": "87e2675d06a990604c8ad271b276dac2",
       "sourceName": "src/test/oracles/VariableIROracle.t.sol",
       "solcConfig": {
         "settings": {
@@ -9685,21 +9695,26 @@
         "lib/forge-std/src/console2.sol",
         "lib/forge-std/src/interfaces/IMulticall3.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/access/AccessControl.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/interfaces/IWETH9.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/token/ERC20.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/token/IERC20.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/token/IERC20Metadata.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/token/IERC2612.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/Cast.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/IsContract.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/Math.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/RevertMsgExtractor.sol",
         "lib/yieldspace-tv/src/interfaces/IMaturingToken.sol",
         "lib/yieldspace-tv/src/interfaces/IPool.sol",
         "lib/yieldspace-tv/src/interfaces/IPoolOracle.sol",
+        "src/Router.sol",
         "src/constants/Constants.sol",
         "src/interfaces/DataTypes.sol",
         "src/interfaces/ICauldron.sol",
         "src/interfaces/IERC5095.sol",
         "src/interfaces/IFYToken.sol",
         "src/interfaces/IJoin.sol",
+        "src/interfaces/ILadle.sol",
         "src/interfaces/IOracle.sol",
         "src/oracles/VariableInterestRateOracle.sol",
         "src/test/utils/Mocks.sol",
@@ -10250,7 +10265,7 @@
       }
     },
     "src/test/other/notional/NotionalJoinHarness.t.sol": {
-      "lastModificationDate": 1677499641249,
+      "lastModificationDate": 1678444665982,
       "contentHash": "34f15d0086d0c54ba5f7f334e2f3d3f0",
       "sourceName": "src/test/other/notional/NotionalJoinHarness.t.sol",
       "solcConfig": {
@@ -10383,7 +10398,7 @@
       }
     },
     "src/test/other/tether/TetherJoin.t.sol": {
-      "lastModificationDate": 1677499641248,
+      "lastModificationDate": 1678444665982,
       "contentHash": "dd73fdb47106b8b3dbdf59fc7f04fd33",
       "sourceName": "src/test/other/tether/TetherJoin.t.sol",
       "solcConfig": {
@@ -10557,7 +10572,7 @@
       }
     },
     "src/test/utils/TestConstants.sol": {
-      "lastModificationDate": 1677499641248,
+      "lastModificationDate": 1679489376923,
       "contentHash": "c632ca2b52fdaee35c12cdf4a23f7121",
       "sourceName": "src/test/utils/TestConstants.sol",
       "solcConfig": {
@@ -10712,7 +10727,7 @@
       }
     },
     "src/test/variable/Fixture.sol": {
-      "lastModificationDate": 1678446385283,
+      "lastModificationDate": 1679297343851,
       "contentHash": "fc4956ce6e38d66239547bbb17631b0f",
       "sourceName": "src/test/variable/Fixture.sol",
       "solcConfig": {
@@ -10826,7 +10841,7 @@
       }
     },
     "src/test/variable/FixtureStates.sol": {
-      "lastModificationDate": 1678446363485,
+      "lastModificationDate": 1679297343852,
       "contentHash": "c7ec7e0e8c8b25aaacd6eac651325e8e",
       "sourceName": "src/test/variable/FixtureStates.sol",
       "solcConfig": {
@@ -10981,7 +10996,7 @@
       }
     },
     "src/test/variable/VRCauldron.t.sol": {
-      "lastModificationDate": 1678446537965,
+      "lastModificationDate": 1679297343852,
       "contentHash": "575777a72a96316834adcc827cdadcdd",
       "sourceName": "src/test/variable/VRCauldron.t.sol",
       "solcConfig": {
@@ -11131,7 +11146,7 @@
       }
     },
     "src/test/variable/VRLadle.t.sol": {
-      "lastModificationDate": 1678446550925,
+      "lastModificationDate": 1679297343853,
       "contentHash": "b32a5c3338fdab98e570a7d63456dbee",
       "sourceName": "src/test/variable/VRLadle.t.sol",
       "solcConfig": {
@@ -11379,7 +11394,7 @@
       }
     },
     "src/test/variable/VYToken.t.sol": {
-      "lastModificationDate": 1678445284186,
+      "lastModificationDate": 1679297343853,
       "contentHash": "e4cb4fbcb2f75c31dad3aef846d887ae",
       "sourceName": "src/test/variable/VYToken.t.sol",
       "solcConfig": {
