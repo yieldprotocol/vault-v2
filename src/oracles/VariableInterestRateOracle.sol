@@ -5,10 +5,9 @@ import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/src/utils/Cast.sol";
 import "@yield-protocol/utils-v2/src/utils/Math.sol";
 import "../interfaces/IOracle.sol";
-import "../interfaces/ICauldron.sol";
+import "../variable/interfaces/IVRCauldron.sol";
 import "../interfaces/ILadle.sol";
 import "../constants/Constants.sol";
-import "forge-std/src/console2.sol";
 
 contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
     using Cast for bytes32;
@@ -38,7 +37,7 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
 
     mapping(bytes6 => mapping(bytes6 => InterestRateParameter)) public sources;
 
-    ICauldron public cauldron;
+    IVRCauldron public cauldron;
     ILadle public ladle;
 
     /* Events
@@ -62,7 +61,7 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
         IJoin join
     );
 
-    constructor(ICauldron cauldron_, ILadle ladle_) {
+    constructor(IVRCauldron cauldron_, ILadle ladle_) {
         cauldron = cauldron_;
         ladle = ladle_;
     }
@@ -83,7 +82,7 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
         InterestRateParameter memory source = sources[baseId][kindId];
         require(source.accumulated == 0, "Source is already set");
         IJoin join = ladle.joins(baseId);
-        
+
         sources[baseId][kindId] = InterestRateParameter({
             optimalUsageRate: optimalUsageRate * 1e12,
             accumulated: accumulated,
@@ -156,7 +155,7 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
         accumulated = source.accumulated;
         require(accumulated > 0, "Accumulated rate is zero");
 
-        updateTime = block.timestamp;
+        updateTime = source.lastUpdated;
     }
 
     function get(
@@ -184,8 +183,10 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
             totalDebt = totalDebt + debt_.sum;
 
             for (uint256 i = 0; i < rateParameters.ilks.length; i++) {
-                debt_ = cauldron.debt(base.b6(), rateParameters.ilks[i]);
-                totalDebt = totalDebt + debt_.sum;
+                if (cauldron.ilks(base.b6(), rateParameters.ilks[i])) {
+                    debt_ = cauldron.debt(base.b6(), rateParameters.ilks[i]);
+                    totalDebt = totalDebt + debt_.sum;
+                }
             }
 
             // Calculate utilization rate
@@ -193,6 +194,7 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
             uint256 utilizationRate = uint256(totalDebt).wdiv(
                 rateParameters.join.storedBalance()
             );
+
             uint256 interestRate;
             if (utilizationRate <= rateParameters.optimalUsageRate) {
                 interestRate =
@@ -213,7 +215,6 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
             rateParameters.accumulated *= (1e18 + interestRate).wpow(
                 secondsSinceLastUpdate
             );
-
             rateParameters.accumulated /= 1e18;
             rateParameters.lastUpdated = block.timestamp;
 
