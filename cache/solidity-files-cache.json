@@ -5149,8 +5149,8 @@
       }
     },
     "src/oracles/VariableInterestRateOracle.sol": {
-      "lastModificationDate": 1679508976326,
-      "contentHash": "cc981e0d37482e952ba3ebffac10fa3c",
+      "lastModificationDate": 1679509186633,
+      "contentHash": "9cef0c88bd210ac32501cb59e886d022",
       "sourceName": "src/oracles/VariableInterestRateOracle.sol",
       "solcConfig": {
         "settings": {
@@ -9646,8 +9646,8 @@
       }
     },
     "src/test/oracles/VariableIROracle.t.sol": {
-      "lastModificationDate": 1679509120830,
-      "contentHash": "0175ad5860b9f3f37c85e5f0097a2991",
+      "lastModificationDate": 1679519103980,
+      "contentHash": "9fbc8572ccdf38192df7fc483a11381e",
       "sourceName": "src/test/oracles/VariableIROracle.t.sol",
       "solcConfig": {
         "settings": {

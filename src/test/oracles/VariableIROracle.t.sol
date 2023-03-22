@@ -3,12 +3,14 @@ pragma solidity >=0.8.13;
 
 import "forge-std/src/Test.sol";
 import "@yield-protocol/utils-v2/src/token/IERC20Metadata.sol";
+import "@yield-protocol/utils-v2/src/utils/Math.sol";
 import "../../oracles/VariableInterestRateOracle.sol";
 import "../../variable/interfaces/IVRCauldron.sol";
 import "../utils/TestConstants.sol";
 import "../utils/Mocks.sol";
 
 abstract contract ZeroState is Test, TestConstants {
+    using Math for uint256;
     using Mocks for *;
 
     VariableInterestRateOracle public variableInterestRateOracle;
@@ -44,11 +46,6 @@ abstract contract ZeroState is Test, TestConstants {
     // IJoin fraxJoin = IJoin();
     // IJoin usdtJoin = IJoin();
 
-    modifier onlyMock() {
-        if (!vm.envOr(MOCK, true)) return;
-        _;
-    }
-
     InterestRateParameter internal ethParameters =
         InterestRateParameter({
             optimalUsageRate: 450000,
@@ -57,7 +54,7 @@ abstract contract ZeroState is Test, TestConstants {
             baseVariableBorrowRate: 0,
             slope1: 40000,
             slope2: 3000000,
-            join: ethJoin,
+            join: IJoin(Mocks.mock("Join")),
             ilks: new bytes6[](2)
         });
     InterestRateParameter internal daiParameters =
@@ -68,7 +65,7 @@ abstract contract ZeroState is Test, TestConstants {
             baseVariableBorrowRate: 0,
             slope1: 40000,
             slope2: 600000,
-            join: daiJoin,
+            join: IJoin(Mocks.mock("Join")),
             ilks: new bytes6[](2)
         });
     InterestRateParameter internal usdcParameters =
@@ -79,7 +76,7 @@ abstract contract ZeroState is Test, TestConstants {
             baseVariableBorrowRate: 0,
             slope1: 40000,
             slope2: 600000,
-            join: usdcJoin,
+            join: IJoin(Mocks.mock("Join")),
             ilks: new bytes6[](2)
         });
 
@@ -143,7 +140,7 @@ abstract contract ZeroState is Test, TestConstants {
             IVRCauldron(addresses[network][CAULDRON]),
             ILadle(addresses[network][LADLE])
         );
-        sourceParameters.join = daiJoin;
+
         baseOne = bytes6(0x303100000000);
         underlying = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
 
@@ -162,6 +159,48 @@ abstract contract ZeroState is Test, TestConstants {
         sourceParameters.ilks[0] = USDC;
         sourceParameters.ilks[1] = ETH;
         setUpMock();
+    }
+
+    function getAccumulation(
+        uint totalDebt,
+        uint totalLiquidity,
+        uint secondsSinceLastUpdate,
+        bytes6 base
+    ) internal returns (uint) {
+        (
+            uint256 accumulated,
+            uint256 lastUpdated,
+            uint256 optimalUsageRate,
+            uint256 baseVariableBorrowRate,
+            uint256 slope1,
+            uint256 slope2,
+            IJoin join
+        ) = variableInterestRateOracle.sources(base, RATE);
+
+        uint256 utilizationRate = uint256(totalDebt).wdiv(totalLiquidity);
+        uint256 interestRate;
+        if (utilizationRate <= optimalUsageRate) {
+            interestRate =
+                baseVariableBorrowRate +
+                utilizationRate.wmul(slope1).wdiv(
+                    optimalUsageRate
+                );
+        } else {
+            interestRate =
+                baseVariableBorrowRate +
+                slope1 +
+                (utilizationRate - optimalUsageRate)
+                    .wmul(slope2)
+                    .wdiv(1e18 - optimalUsageRate);
+        }
+        // Calculate per second rate
+        interestRate = interestRate / 365 days;
+        accumulated *= (1e18 + interestRate).wpow(
+            secondsSinceLastUpdate
+        );
+        accumulated /= 1e18;
+        lastUpdated = block.timestamp;
+        return accumulated;
     }
 }
 
@@ -265,23 +304,49 @@ contract WithSourceSetTest is WithSourceSet {
         (amount, ) = variableInterestRateOracle.get(bytes32(baseOne), RATE, 0);
         assertEq(amount, WAD, "Conversion unsuccessful");
         skip(10);
+
+        uint accum = getAccumulation(
+            30000e18,
+            500000e18,
+            10,
+            baseOne
+        );
         (amount, ) = variableInterestRateOracle.get(bytes32(baseOne), RATE, 0);
-        assertEq(amount, WAD, "Conversion unsuccessful");
+        assertEq(amount, accum, "Conversion unsuccessful");
         skip(365 days);
+
+        (accum) = getAccumulation(
+            30000e18,
+            500000e18,
+            365 days,
+            baseOne
+        );
         (amount, ) = variableInterestRateOracle.get(bytes32(baseOne), RATE, 0);
-        assertEq(amount, WAD, "Conversion unsuccessful");
+        assertEq(amount, accum, "Conversion unsuccessful");
     }
 
     function testComputesWithCheckpointing() public {
         uint256 amount;
         vm.roll(block.number + 1);
         skip(1);
+        uint accum = getAccumulation(
+            30000e18,
+            500000e18,
+            1,
+            baseOne
+        );
         (amount, ) = variableInterestRateOracle.get(bytes32(baseOne), RATE, 0);
-        assertEq(amount, WAD, "Conversion unsuccessful");
+        assertEq(amount, accum, "Conversion unsuccessful");
         vm.roll(block.number + 1);
         skip(10);
+        accum = getAccumulation(
+            30000e18,
+            500000e18,
+            10,
+            baseOne
+        );
         (amount, ) = variableInterestRateOracle.get(bytes32(baseOne), RATE, 0);
-        assertEq(amount, WAD, "Conversion unsuccessful");
+        assertEq(amount, accum, "Conversion unsuccessful");
     }
 
     function testUpdatesPeek() public {
