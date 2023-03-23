@@ -54,6 +54,7 @@ contract VYToken is IERC3156FlashLender, UUPSUpgradeable, AccessControl, ERC20Pe
         initialized = true;             // On an uninitialized contract, no governance functions can be executed, because no one has permission to do so
         _grantRole(ROOT, root_);      // Grant ROOT
         _setRoleAdmin(LOCK, LOCK);      // Create the LOCK role by setting itself as its own admin, creating an independent role tree
+        flashFeeFactor = FLASH_LOANS_DISABLED; // Flash loans disabled by default
     }
 
     /// @dev Allow to set a new implementation
