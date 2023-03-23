@@ -66,7 +66,7 @@ contract VRCauldron is AccessControl, Constants {
     // ==== Configuration data ====
     mapping(bytes6 => address) public assets; // Underlyings and collaterals available in Cauldron. 12 bytes still free.
     mapping(bytes6 => bool) public bases; // Assets available in Cauldron for borrowing.
-    mapping(bytes6 => mapping(bytes6 => bool)) public ilks; // [baseId][assetId] Assets that are approved as collateral for a series
+    mapping(bytes6 => mapping(bytes6 => bool)) public ilks; // [baseId][assetId] Assets that are approved as collateral for the base
 
     mapping(bytes6 => IOracle) public rateOracles; // Variable rate oracle for an underlying
     mapping(bytes6 => mapping(bytes6 => DataTypes.SpotOracle))
@@ -167,7 +167,7 @@ contract VRCauldron is AccessControl, Constants {
         require(vaultId != bytes12(0), "Vault id is zero");
         require(baseId != bytes6(0), "Base id is zero");
         require(ilkId != bytes6(0), "Ilk id is zero");
-        require(vaults[vaultId].baseId == bytes6(0), "Vault already exists"); // Series can't take bytes6(0) as their id
+        require(vaults[vaultId].baseId == bytes6(0), "Vault already exists"); // Base can't take bytes6(0) as their id
         require(ilks[baseId][ilkId] == true, "Ilk not added to base");
         vault = VRDataTypes.Vault({owner: owner, baseId: baseId, ilkId: ilkId});
         vaults[vaultId] = vault;

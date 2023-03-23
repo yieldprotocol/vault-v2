@@ -232,7 +232,7 @@ contract VRLadle is VRLadleStorage, AccessControl() {
         return bytes12(keccak256(abi.encodePacked(msg.sender, block.timestamp, salt)));
     }
 
-    /// @dev Create a new vault, linked to a series (and therefore underlying) and a collateral
+    /// @dev Create a new vault, linked to a base and a collateral
     function build(bytes6 baseId, bytes6 ilkId, uint8 salt)
         external virtual payable
         returns(bytes12, VRDataTypes.Vault memory)
@@ -240,7 +240,7 @@ contract VRLadle is VRLadleStorage, AccessControl() {
         return _build(baseId, ilkId, salt);
     }
 
-    /// @dev Create a new vault, linked to a series (and therefore underlying) and a collateral
+    /// @dev Create a new vault, linked to a base and a collateral
     function _build(bytes6 baseId, bytes6 ilkId, uint8 salt)
         internal
         returns(bytes12 vaultId, VRDataTypes.Vault memory vault)
@@ -258,7 +258,7 @@ contract VRLadle is VRLadleStorage, AccessControl() {
         returns(VRDataTypes.Vault memory vault)
     {
         (bytes12 vaultId, ) = getVault(vaultId_); // getVault verifies the ownership as well
-        // tweak checks that the series and the collateral both exist and that the collateral is approved for the series
+        // tweak checks that the base and the collateral both exist and that the collateral is approved for the base
         vault = cauldron.tweak(vaultId, baseId, ilkId);
     }
 

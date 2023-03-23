@@ -11,6 +11,7 @@ Here are the main components of the system:
 3. [VRWitch](./VRWitch.sol) - The contract that handles the liquidation.
 4. [VYToken](./VYToken.sol) - The contract that handles the tokenization of the loan.
 5. [Join](../Join.sol)(not in scope) - The contract that holds the collateral & lent assets.
+6. Oracles (not in scope) - The contract that determines the interest rate & spot price of the collateral in terms of the base.
 
 ---
 
@@ -131,3 +132,11 @@ Here are the contracts that are in scope for the audit:
 | 🔍   | src/variable/interfaces/IVRCauldron.sol | \*\*\*\*        | 1          | 109      | 9        | 6       | 22            | 37             |
 | 🔍   | src/variable/interfaces/IVRWitch.sol    | \*\*\*\*        | 1          | 140      | 46       | 33      | 78            | 19             |
 | 📝🔍 | **Totals**                              | **5**           | **2**      | **1441** | **1078** | **726** | **317**       | **696**        |
+
+---
+# Building & Testing
+This project uses foundry to build and test the contracts. 
+- To build the contracts run the following command:
+```forge build```
+- To run the tests run the following command:
+```forge test --match-path src/test/variable/<contract_name>.sol```
