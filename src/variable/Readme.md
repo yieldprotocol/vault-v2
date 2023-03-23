@@ -13,6 +13,7 @@ Here are the main components of the system:
 5. [Join](../Join.sol) - The contract that holds the collateral & lent assets.
 
 ---
+
 # Contracts
 
 ## VRLadle
@@ -37,13 +38,16 @@ The contract enforces checks to ensure that the loans are not under-collateraliz
 ## VRWitch
 
 It is the liquidation engine built on top of the existing Witch for the fixed rate lending.
+You can refer to [this](https://github.com/code-423n4/2022-07-yield) for more details on the Witch.
 
 ## VYToken
 
+`VYToken` is a mechanism that allows user to lend their assets as we. The `VYToken` is a ERC20 token that represents the amount of asset lent. The `VYToken` can be burnt at any time to get the lent asset back.
 
 ---
 
 # Terminology
+
 - `base` - The asset that is borrowed. Eg. DAI, USDC, USDT, etc.
 - `ilk` - The asset that is used as collateral. Eg. ETH, WBTC, etc.
 
@@ -53,7 +57,9 @@ To borrow a base you need to first deposit the collateral in the protocol. The c
 The user could repay the debt at any time by depositing the base back into the protocol. The protocol will determine the amount owed based on the interest rate at the time of repayment.
 
 ### Under the hood
+
 The borrowing is executed through a batch call made to the `VRLadle` contract. The batch consists of the following operations:
+
 1. `VRLadle.build` - This operation creates a new vault for the user. `Please note this is optional as the user could already have a vault.`
 2. `VRLadle.transfer`/`VRLadle.forwardPermit`/`VRLadle.forwardDaiPermit` - This operation transfers the collateral from the user to the protocol. `Please note that this is optional operation as the user could have already deposited the collateral in the protocol or they could have approved the join to transfer the collateral on their behalf in a separate transaction`
 3. `VRLadle.pour` - This operation posts the collateral and transfers the borrowed base to the user supplied address.
@@ -63,7 +69,9 @@ The borrowing is executed through a batch call made to the `VRLadle` contract. T
 To lend an asset you deposit the asset into the protocol and mint the `VYTokens`. The deposit could happen the same way as described in borrowing. The amount of `VYTokens` minted is determined by the interest rate at the time of lending. The `VYTokens` can be burnt at any time to get the lent back.
 
 ### Under the hood
+
 The lending is executed through a batch call made to the `VRLadle` contract. The batch consists of the following operations:
+
 1. `VRLadle.transfer`/`VRLadle.forwardPermit`/`VRLadle.forwardDaiPermit` - This operation transfers the collateral from the user to the protocol. `Please note that this is optional operation as the user could have already deposited the collateral in the protocol or they could have approved the join to transfer the collateral on their behalf in a separate transaction`
 2. `VRLadle.moduleCall` - This operation calls the `VYToken` contract to mint the `VYTokens` for the user.
 
@@ -76,6 +84,7 @@ The `VRLadle` contract can be configured by the `TimeLock` contract. And the res
 Here are the permissions allocated to different contracts:
 
 `Timelock` will have the following permissions over `VRLadle`:
+
 - `addJoin` - Allows to add a new join to the ladle.
 - `addModule` - Allows to add a new module to the ladle.
 - `setFee` - Allows to set the borrowing fee for the protocol.
@@ -83,6 +92,7 @@ Here are the permissions allocated to different contracts:
 - `addIntegration` - Allows to add a new integration to the ladle.
 
 `VRLadle` has the following permissions over `VRCauldron`:
+
 - `addAsset` - Allows to add an asset to the protocol
 - `addIlks` - Allows to make the supplied asset(s) an ilk to an existing base.
 - `setDebtLimits` - Allows to set the maximum and minimum debt for a base and ilk pair.
@@ -90,28 +100,30 @@ Here are the permissions allocated to different contracts:
 - `setSpotOracle` - Allows to set a spot oracle and its collateralization ratio.
 - `addBase` - Allows to add a new base.
 - `destroy` - Allows to destroy an empty vault.
-- `build` - Allows to 
-- `pour` - Allows to 
+- `build` - Allows to
+- `pour` - Allows to
 - `give` - Allows to transfer ownership of a vault.
 - `tweak` - Allows to change a vault base and/or collateral types.
 - `stir` - Allows to move collateral and debt between vaults.
 
 `VRLadle` will have following permissions over `Joins`:
+
 - `join` - Allows to deposit an asset into the protocol.
 - `exit` - Allows to withdraw an asset from the protocol.
+
+---
 
 # Audit Scope
 
 Here are the contracts that are in scope for the audit:
 
-| Type | File                                    | Logic Contracts | Interfaces | Lines    | nLines   | nSLOC   | Comment Lines | Complex. Score | Capabilities                                                                                                                                                                                              |
-| ---- | --------------------------------------- | --------------- | ---------- | -------- | -------- | ------- | ------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 📝   | src/variable/VRCauldron.sol             | 1               | \*\*\*\*   | 459      | 383      | 286     | 61            | 193            | \*\*\*\*                                                                                                                                                                                                  |
-| 📝   | src/variable/VRLadle.sol                | 1               | \*\*\*\*   | 352      | 284      | 177     | 65            | 250            | **<abbr title='Payable Functions'>💰</abbr><abbr title='DelegateCall'>👥</abbr><abbr title='Uses Hash-Functions'>🧮</abbr>**                                                                              |
-| 📝   | src/variable/VRLadleStorage.sol         | 1               | \*\*\*\*   | 34       | 34       | 27      | 6             | 21             | **<abbr title='create/create2'>🌀</abbr>**                                                                                                                                                                |
-| 📝   | src/variable/VRWitch.sol                | 1               | \*\*\*\*   | 102      | 82       | 46      | 23            | 25             | \*\*\*\*                                                                                                                                                                                                  |
-| 📝   | src/variable/VYToken.sol                | 1               | \*\*\*\*   | 245      | 240      | 151     | 62            | 151            | **<abbr title='Uses Hash-Functions'>🧮</abbr><abbr title='Unchecked Blocks'>Σ</abbr>**                                                                                                                    |
-| 🔍   | src/variable/interfaces/IVRCauldron.sol | \*\*\*\*        | 1          | 109      | 9        | 6       | 22            | 37             | \*\*\*\*                                                                                                                                                                                                  |
-| 🔍   | src/variable/interfaces/IVRWitch.sol    | \*\*\*\*        | 1          | 140      | 46       | 33      | 78            | 19             | \*\*\*\*                                                                                                                                                                                                  |
-| 📝🔍 | **Totals**                              | **5**           | **2**      | **1441** | **1078** | **726** | **317**       | **696**        | **<abbr title='Payable Functions'>💰</abbr><abbr title='DelegateCall'>👥</abbr><abbr title='Uses Hash-Functions'>🧮</abbr><abbr title='create/create2'>🌀</abbr><abbr title='Unchecked Blocks'>Σ</abbr>** |
-
+| Type | File                                    | Logic Contracts | Interfaces | Lines    | nLines   | nSLOC   | Comment Lines | Complex. Score |     |
+| ---- | --------------------------------------- | --------------- | ---------- | -------- | -------- | ------- | ------------- | -------------- | --- |
+| 📝   | src/variable/VRCauldron.sol             | 1               | \*\*\*\*   | 459      | 383      | 286     | 61            | 193            |
+| 📝   | src/variable/VRLadle.sol                | 1               | \*\*\*\*   | 352      | 284      | 177     | 65            | 250            |
+| 📝   | src/variable/VRLadleStorage.sol         | 1               | \*\*\*\*   | 34       | 34       | 27      | 6             | 21             |
+| 📝   | src/variable/VRWitch.sol                | 1               | \*\*\*\*   | 102      | 82       | 46      | 23            | 25             |
+| 📝   | src/variable/VYToken.sol                | 1               | \*\*\*\*   | 245      | 240      | 151     | 62            | 151            |
+| 🔍   | src/variable/interfaces/IVRCauldron.sol | \*\*\*\*        | 1          | 109      | 9        | 6       | 22            | 37             |
+| 🔍   | src/variable/interfaces/IVRWitch.sol    | \*\*\*\*        | 1          | 140      | 46       | 33      | 78            | 19             |
+| 📝🔍 | **Totals**                              | **5**           | **2**      | **1441** | **1078** | **726** | **317**       | **696**        |
