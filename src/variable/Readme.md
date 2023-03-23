@@ -10,13 +10,13 @@ Here are the main components of the system:
 2. [VRCauldron](./VRCauldron.sol) - The contract that handles the accounting.
 3. [VRWitch](./VRWitch.sol) - The contract that handles the liquidation.
 4. [VYToken](./VYToken.sol) - The contract that handles the tokenization of the loan.
-5. [Join](../Join.sol) - The contract that holds the collateral & lent assets.
+5. [Join](../Join.sol)(not in scope) - The contract that holds the collateral & lent assets.
 
 ---
 
 # Contracts
 
-## VRLadle
+## VRLadle (177 SLOC)
 
 Ladle is the contract which does the lending/borrowing of the variable rate loan. It is the main orchestrating contract of the system. Here are the broad operations the contract performs:
 
@@ -27,7 +27,7 @@ Ladle is the contract which does the lending/borrowing of the variable rate loan
 - Perform operations to manage the vaults when needed like moving debt from one vault to another.
 - Keep track of the joins
 
-## VRCauldron
+## VRCauldron (286 SLOC)
 
 Cauldron is the contract which handles the accounting of the variable rate loan. It is the contract that keeps track of the balances of the lenders and borrowers.
 The contract enforces checks to ensure that the loans are not under-collateralized.
@@ -35,12 +35,12 @@ The contract enforces checks to ensure that the loans are not under-collateraliz
 - It keeps track of protocol level data. (debt, configuration(bases, ilks, oracles, asset addresses), etc)
 - It keeps track of user level data (vault, balances, etc)
 
-## VRWitch
+## VRWitch (46 SLOC)
 
-It is the liquidation engine built on top of the existing Witch for the fixed rate lending.
+It is the liquidation engine built on top of the existing battle tested `Witch` for the fixed rate lending. It has been modified to work in absence of `fyToken`. Also, the way the `debtFromBase` & `debtToBase` is calculated has been modified to work with the variable rate.
 You can refer to [this](https://github.com/code-423n4/2022-07-yield) for more details on the Witch.
 
-## VYToken
+## VYToken (151 SLOC)
 
 `VYToken` is a mechanism that allows user to lend their assets as we. The `VYToken` is a ERC20 token that represents the amount of asset lent. The `VYToken` can be burnt at any time to get the lent asset back.
 
@@ -50,6 +50,10 @@ You can refer to [this](https://github.com/code-423n4/2022-07-yield) for more de
 
 - `base` - The asset that is borrowed. Eg. DAI, USDC, USDT, etc.
 - `ilk` - The asset that is used as collateral. Eg. ETH, WBTC, etc.
+- `spotOracle` - The oracle that determines the spot price of the collateral in terms of the base. Eg. ETH/DAI, WBTC/DAI, etc.
+- `rateOracle` - The oracle that determines the interest rate of the base.
+
+# Working
 
 ## How does borrowing work?
 
@@ -66,7 +70,7 @@ The borrowing is executed through a batch call made to the `VRLadle` contract. T
 
 ## How does lending work?
 
-To lend an asset you deposit the asset into the protocol and mint the `VYTokens`. The deposit could happen the same way as described in borrowing. The amount of `VYTokens` minted is determined by the interest rate at the time of lending. The `VYTokens` can be burnt at any time to get the lent back.
+To lend an asset you deposit the asset into the protocol and mint the `VYTokens`. The deposit could happen the same way as described in borrowing. The amount of `VYTokens` minted is determined by the interest rate at the time of lending. The interest is received from the `rateOracle`. The `VYTokens` can be burnt at any time to get the lent back.
 
 ### Under the hood
 
@@ -100,8 +104,8 @@ Here are the permissions allocated to different contracts:
 - `setSpotOracle` - Allows to set a spot oracle and its collateralization ratio.
 - `addBase` - Allows to add a new base.
 - `destroy` - Allows to destroy an empty vault.
-- `build` - Allows to
-- `pour` - Allows to
+- `build` - Allows to create a new vault.
+- `pour` - Allows to deposit collateral and borrow a base.
 - `give` - Allows to transfer ownership of a vault.
 - `tweak` - Allows to change a vault base and/or collateral types.
 - `stir` - Allows to move collateral and debt between vaults.
@@ -117,8 +121,8 @@ Here are the permissions allocated to different contracts:
 
 Here are the contracts that are in scope for the audit:
 
-| Type | File                                    | Logic Contracts | Interfaces | Lines    | nLines   | nSLOC   | Comment Lines | Complex. Score |     |
-| ---- | --------------------------------------- | --------------- | ---------- | -------- | -------- | ------- | ------------- | -------------- | --- |
+| Type | File                                    | Logic Contracts | Interfaces | Lines    | nLines   | nSLOC   | Comment Lines | Complex. Score |
+| ---- | --------------------------------------- | --------------- | ---------- | -------- | -------- | ------- | ------------- | -------------- |
 | 📝   | src/variable/VRCauldron.sol             | 1               | \*\*\*\*   | 459      | 383      | 286     | 61            | 193            |
 | 📝   | src/variable/VRLadle.sol                | 1               | \*\*\*\*   | 352      | 284      | 177     | 65            | 250            |
 | 📝   | src/variable/VRLadleStorage.sol         | 1               | \*\*\*\*   | 34       | 34       | 27      | 6             | 21             |
