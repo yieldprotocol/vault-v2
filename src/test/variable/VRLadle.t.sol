@@ -7,6 +7,42 @@ using Cast for uint256;
 using Cast for int128;
 
 contract VRLadleAdminTests is ZeroState {
+
+    // Test that the storage is initialized
+    function testStorageInitialized() public {
+        assertTrue(ladle.initialized());
+    }
+
+    // Test that the storage can't be initialized again
+    function testInitializeRevertsIfInitialized() public {
+        ladle.grantRole(ladle.initialize.selector, address(this));
+        
+        vm.expectRevert("Already initialized");
+        ladle.initialize(address(this));
+    }
+
+    // Test that only authorized addresses can upgrade
+    function testUpgradeToRevertsIfNotAuthed() public {
+        vm.expectRevert("Access denied");
+        ladle.upgradeTo(address(0));
+    }
+
+    // Test that the upgrade works
+    function testUpgradeTo() public {
+        VRLadle ladleV2 = new VRLadle(
+            IVRCauldron(address(cauldron)),
+            IRouter(address(0)),
+            IWETH9(address(weth))
+        );
+
+        ladle.grantRole(0x3659cfe6, address(this)); // upgradeTo(address)
+        ladle.upgradeTo(address(ladleV2));
+
+        assertEq(address(ladle.router()), address(0));
+        assertTrue(ladle.hasRole(ladle.ROOT(), address(this)));
+        assertTrue(ladle.initialized());
+    }
+
     // @notice Test ability to set borrowing fee
     function testSetBorrowingFee() public {
         console.log('admin can set borrowing fee');

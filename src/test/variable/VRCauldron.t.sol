@@ -2,6 +2,7 @@
 pragma solidity >=0.8.13;
 
 import "./FixtureStates.sol";
+import { VRCauldronV2 } from "../../mocks/VRCauldronUpgrade.sol";
 
 using Cast for uint256;
 using Cast for int128;
@@ -9,6 +10,41 @@ using Cast for uint128;
 
 using Math for uint256;
 using CauldronMath for uint128;
+
+contract UpgradeTests is ZeroState {
+
+    // Test that the storage is initialized
+    function testStorageInitialized() public {
+        assertTrue(cauldron.initialized());
+    }
+
+    // Test that the storage can't be initialized again
+    function testInitializeRevertsIfInitialized() public {
+        cauldron.grantRole(cauldron.initialize.selector, address(this));
+        
+        vm.expectRevert("Already initialized");
+        cauldron.initialize(address(this));
+    }
+
+    // Test that only authorized addresses can upgrade
+    function testUpgradeToRevertsIfNotAuthed() public {
+        vm.expectRevert("Access denied");
+        cauldron.upgradeTo(address(0));
+    }
+
+    // Test that the upgrade works
+    function testUpgradeTo() public {
+        VRCauldronV2 cauldronV2 = new VRCauldronV2();
+
+        cauldron.grantRole(0x3659cfe6, address(this)); // upgradeTo(address)
+        cauldron.upgradeTo(address(cauldronV2));
+
+        assertTrue(cauldron.initialized());
+        assertEq(VRCauldronV2(address(cauldron)).storageCheck(), keccak256("alcueca wuz here"));
+        assertTrue(cauldron.hasRole(cauldron.ROOT(), address(this)));
+        assertTrue(cauldron.initialized()); // This also checks storage was not corrupted
+    }
+}
 
 contract AssetAndBaseAdditionTests is ZeroState {
     function testZeroIdentifier() public {

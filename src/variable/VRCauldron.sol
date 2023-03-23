@@ -88,7 +88,7 @@ contract VRCauldron is UUPSUpgradeable, AccessControl, Constants {
     function initialize (address root_) public {
         require(!initialized, "Already initialized");
         initialized = true;             // On an uninitialized contract, no governance functions can be executed, because no one has permission to do so
-        _grantRole(ROOT, root_);      // Grant ROOT
+        _grantRole(ROOT, root_);        // Grant ROOT
         _setRoleAdmin(LOCK, LOCK);      // Create the LOCK role by setting itself as its own admin, creating an independent role tree
     }
 

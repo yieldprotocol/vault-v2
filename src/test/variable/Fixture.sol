@@ -96,16 +96,23 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
         otherERC20 = new ERC20Mock("Other ERC20", "OTHERERC20");
 
         cauldron = new VRCauldron();
-        cauldron.initialize(address(this));
+        cauldronProxy = new ERC1967Proxy(address(cauldron), abi.encodeWithSignature("initialize(address)", address(this)));
+        cauldron = VRCauldron(address(cauldronProxy));
         router = new VRRouter();
         ladle = new VRLadle(
             IVRCauldron(address(cauldron)),
             IRouter(address(router)),
             IWETH9(address(weth))
         );
+        ladleProxy = new ERC1967Proxy(address(ladle), abi.encodeWithSignature("initialize(address)", address(this)));
+        ladle = VRLadle(payable(ladleProxy));
         router.initialize(address(ladle));
-        ladle.initialize(address(this));
         witch = new Witch(ICauldron(address(cauldron)), ILadle(address(ladle)));
+
+        // Setting permissions
+        ladleGovAuth();
+        cauldronGovAuth(address(ladle));
+        cauldronGovAuth(address(this));
 
         restrictedERC20Mock = new RestrictedERC20Mock("Restricted", "RESTRICTED");
 
@@ -116,11 +123,9 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
 
         setUpOracles();
         vyToken = new VYToken(baseId, IOracle(address(chiRateOracle)), IJoin(baseJoin),base.name(), base.symbol());
-        vyToken.initialize(address(this));
-        // Setting permissions
-        ladleGovAuth();
-        cauldronGovAuth(address(ladle));
-        cauldronGovAuth(address(this));
+        vyTokenProxy = new ERC1967Proxy(address(vyToken), abi.encodeWithSignature("initialize(address)", address(this)));
+        vyToken = VYToken(address(vyTokenProxy));
+
         // Adding assets & making base
         addAsset(baseId, address(base), baseJoin);
         makeBase(baseId, address(base), baseJoin, address(chiRateOracle), 9);
@@ -129,11 +134,6 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
         roles[0] = Join.join.selector;
         roles[1] = Join.exit.selector;
         baseJoin.grantRoles(roles, address(vyToken));
-
-        // The proxies are set here temporarily, to be able to test the gas cost
-        cauldronProxy = new ERC1967Proxy(address(cauldron), abi.encodeWithSignature("initialize(address)", address(this)));
-        ladleProxy = new ERC1967Proxy(address(ladle), abi.encodeWithSignature("initialize(address)", address(this)));
-        vyTokenProxy = new ERC1967Proxy(address(vyToken), abi.encodeWithSignature("initialize(address)", address(this)));
     }
 
     function setUpOracles() internal {
