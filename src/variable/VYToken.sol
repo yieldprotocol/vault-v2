@@ -66,7 +66,6 @@ contract VYToken is IERC3156FlashLender, AccessControl, ERC20Permit, Constants {
     }
 
     ///@dev Converts the amount of the principal to the underlying
-    ///Before maturity, returns amount as if at maturity.
     function _convertToUnderlying(uint256 principalAmount) internal returns (uint256 underlyingAmount) {
         (uint256 chi, ) = oracle.get(underlyingId, CHI, 0); // The value returned is an accumulator, it doesn't need an input amount
         return principalAmount.wmul(chi);
@@ -78,7 +77,6 @@ contract VYToken is IERC3156FlashLender, AccessControl, ERC20Permit, Constants {
     }
 
     ///@dev Converts the amount of the underlying to the principal
-    ///Before maturity, returns amount as if at maturity.
     function _convertToPrincipal(uint256 underlyingAmount) internal returns (uint256 princpalAmount) {
         (uint256 chi, ) = oracle.get(underlyingId, CHI, 0); // The value returned is an accumulator, it doesn't need an input amount
         return underlyingAmount.wdivup(chi);
@@ -94,7 +92,7 @@ contract VYToken is IERC3156FlashLender, AccessControl, ERC20Permit, Constants {
         return _convertToUnderlying(principalAmount);
     }
 
-    /// @dev Burn vyToken after maturity for an amount of principal that increases according to `chi`
+    /// @dev Burn vyToken for an amount of principal that increases according to `chi`
     /// If `amount` is 0, the contract will redeem instead the vyToken balance of this contract. Useful for batches.
     function redeem(uint256 principalAmount, address receiver, address holder) external returns (uint256 underlyingAmount) {
         principalAmount = (principalAmount == 0) ? _balanceOf[address(this)] : principalAmount;
@@ -105,7 +103,7 @@ contract VYToken is IERC3156FlashLender, AccessControl, ERC20Permit, Constants {
         emit Redeemed(holder, receiver, principalAmount, underlyingAmount);
     }
 
-    /// @dev Burn vyToken after maturity for an amount of principal that increases according to `chi`
+    /// @dev Burn vyToken for an amount of principal that increases according to `chi`
     /// If `amount` is 0, the contract will redeem instead the vyToken balance of this contract. Useful for batches.
     function redeem(address receiver, uint256 principalAmount) external returns (uint256 underlyingAmount) {
         principalAmount = (principalAmount == 0) ? _balanceOf[address(this)] : principalAmount;
@@ -126,7 +124,7 @@ contract VYToken is IERC3156FlashLender, AccessControl, ERC20Permit, Constants {
         return _convertToPrincipal(underlyingAmount);
     }
 
-    /// @dev Burn vyToken after maturity for an amount of underlying that increases according to `chi`
+    /// @dev Burn vyToken for an amount of underlying that increases according to `chi`
     /// If `amount` is 0, the contract will redeem instead the vyToken balance of this contract. Useful for batches.
     function withdraw(uint256 underlyingAmount, address receiver, address holder) external returns (uint256 principalAmount) {
         principalAmount = (underlyingAmount == 0) ? _balanceOf[address(this)] : _convertToPrincipal(underlyingAmount);
