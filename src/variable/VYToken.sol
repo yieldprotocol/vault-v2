@@ -40,11 +40,13 @@ contract VYToken is IERC3156FlashLender, UUPSUpgradeable, AccessControl, ERC20Pe
         string memory symbol
     ) ERC20Permit(name, symbol, SafeERC20Namer.tokenDecimals(address(IJoin(join_).asset()))) {
         // The join asset is this vyToken's underlying, from which we inherit the decimals
-
         underlyingId = underlyingId_;
         join = join_;
         underlying = address(IJoin(join_).asset());
         oracle = oracle_;
+
+        // See https://medium.com/immunefi/wormhole-uninitialized-proxy-bugfix-review-90250c41a43a
+        initialized = true; // Lock the implementation contract
     }
 
     /// @dev Give the ROOT role and create a LOCK role with itself as the admin role and no members. 

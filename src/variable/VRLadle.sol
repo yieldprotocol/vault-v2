@@ -45,6 +45,9 @@ contract VRLadle is UUPSUpgradeable, AccessControl() {
         cauldron = cauldron_;
         router = router_;
         weth = weth_;
+
+        // See https://medium.com/immunefi/wormhole-uninitialized-proxy-bugfix-review-90250c41a43a
+        initialized = true; // Lock the implementation contract
     }
 
     // ---- Upgradability ----
