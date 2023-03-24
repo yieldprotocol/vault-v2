@@ -140,3 +140,7 @@ This project uses foundry to build and test the contracts.
 ```forge build```
 - To run the tests run the following command:
 ```forge test --match-path src/test/variable/<contract_name>.sol```
+
+---
+
+# Areas of concern

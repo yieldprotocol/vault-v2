@@ -143,7 +143,7 @@ contract OracleAddition is ZeroState {
     }
 }
 
-contract VaultTest is RateOracleAddedState {
+contract VaultTest is AssetAddedState {
     function testNoZeroVaultId() public {
         console.log("cannot build vault with zero vault id");
         vm.expectRevert("Vault id is zero");

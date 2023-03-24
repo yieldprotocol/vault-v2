@@ -14,90 +14,76 @@ import "@yield-protocol/utils-v2/src/utils/Cast.sol";
 import "dss-interfaces/src/dss/DaiAbstract.sol";
 import "./VRLadleStorage.sol";
 
-/// @dev Ladle orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient user oriented features.
-contract VRLadle is VRLadleStorage, AccessControl() {
+/// @dev Ladle orchestrates contract calls throughout the Yield Protocol into useful and efficient user oriented features.
+contract VRLadle is VRLadleStorage, AccessControl {
     using Math for uint256;
     using Cast for uint256;
     using Cast for uint128;
     using TransferHelper for IERC20;
     using TransferHelper for address payable;
 
-    constructor (IVRCauldron cauldron, IWETH9 weth) VRLadleStorage(cauldron, weth) { }
+    constructor(
+        IVRCauldron cauldron,
+        IWETH9 weth
+    ) VRLadleStorage(cauldron, weth) {}
 
     // ---- Data sourcing ----
     /// @dev Obtains a vault by vaultId from the Cauldron, and verifies that msg.sender is the owner
     /// If bytes(0) is passed as the vaultId it tries to load a vault from the cache
-    function getVault(bytes12 vaultId_)
-        internal view
-        returns (bytes12 vaultId, VRDataTypes.Vault memory vault)
-    {
-        if (vaultId_ == bytes12(0)) { // We use the cache
-            require (cachedVaultId != bytes12(0), "Vault not cached");
+    function getVault(
+        bytes12 vaultId_
+    ) internal view returns (bytes12 vaultId, VRDataTypes.Vault memory vault) {
+        if (vaultId_ == bytes12(0)) {
+            // We use the cache
+            require(cachedVaultId != bytes12(0), "Vault not cached");
             vaultId = cachedVaultId;
         } else {
             vaultId = vaultId_;
         }
         vault = cauldron.vaults(vaultId);
-        require (vault.owner == msg.sender, "Only vault owner");
-    } 
+        require(vault.owner == msg.sender, "Only vault owner");
+    }
 
     /// @dev Obtains a join by assetId, and verifies that it exists
-    function getJoin(bytes6 assetId)
-        internal view returns(IJoin join)
-    {
+    function getJoin(bytes6 assetId) internal view returns (IJoin join) {
         join = joins[assetId];
-        require (join != IJoin(address(0)), "Join not found");
+        require(join != IJoin(address(0)), "Join not found");
     }
 
     // ---- Administration ----
 
     /// @dev Add or remove an integration.
-    function addIntegration(address integration, bool set)
-        external
-        auth
-    {
+    function addIntegration(address integration, bool set) external auth {
         _addIntegration(integration, set);
     }
 
     /// @dev Add or remove an integration.
-    function _addIntegration(address integration, bool set)
-        private
-    {
+    function _addIntegration(address integration, bool set) private {
         integrations[integration] = set;
         emit IntegrationAdded(integration, set);
     }
 
     /// @dev Add or remove a token that the Ladle can call `transfer` or `permit` on.
-    function addToken(address token, bool set)
-        external
-        auth
-    {
+    function addToken(address token, bool set) external auth {
         _addToken(token, set);
     }
-    
 
     /// @dev Add or remove a token that the Ladle can call `transfer` or `permit` on.
-    function _addToken(address token, bool set)
-        private
-    {
+    function _addToken(address token, bool set) private {
         tokens[token] = set;
         emit TokenAdded(token, set);
     }
 
-
     /// @dev Add a new Join for an Asset, or replace an existing one for a new one.
     /// There can be only one Join per Asset. Until a Join is added, no tokens of that Asset can be posted or withdrawn.
-    function addJoin(bytes6 assetId, IJoin join)
-        external
-        auth
-    {
+    function addJoin(bytes6 assetId, IJoin join) external auth {
         address asset = cauldron.assets(assetId);
-        require (asset != address(0), "Asset not found");
-        require (join.asset() == asset, "Mismatched asset and join");
+        require(asset != address(0), "Asset not found");
+        require(join.asset() == asset, "Mismatched asset and join");
         joins[assetId] = join;
 
         bool set = (join != IJoin(address(0))) ? true : false;
-        _addToken(asset, set);                  // address(0) disables the token
+        _addToken(asset, set); // address(0) disables the token
         emit JoinAdded(assetId, address(join));
     }
 
@@ -107,19 +93,13 @@ contract VRLadle is VRLadleStorage, AccessControl() {
     /// Modules must not do any changes to any vault (owner, baseId, ilkId) because of vault caching.
     /// Modules must not be contracts that can self-destruct because of `moduleCall`.
     /// Modules can't use `msg.value` because of `batch`.
-    function addModule(address module, bool set)
-        external
-        auth
-    {
+    function addModule(address module, bool set) external auth {
         modules[module] = set;
         emit ModuleAdded(module, set);
     }
 
     /// @dev Set the fee parameter
-    function setFee(uint256 fee)
-        external
-        auth
-    {
+    function setFee(uint256 fee) external auth {
         borrowingFee = fee;
         emit FeeSet(fee);
     }
@@ -128,10 +108,14 @@ contract VRLadle is VRLadleStorage, AccessControl() {
 
     /// @dev Allows batched call to self (this contract).
     /// @param calls An array of inputs for each call.
-    function batch(bytes[] calldata calls) external payable returns(bytes[] memory results) {
+    function batch(
+        bytes[] calldata calls
+    ) external payable returns (bytes[] memory results) {
         results = new bytes[](calls.length);
         for (uint256 i; i < calls.length; i++) {
-            (bool success, bytes memory result) = address(this).delegatecall(calls[i]);
+            (bool success, bytes memory result) = address(this).delegatecall(
+                calls[i]
+            );
             if (!success) revert(RevertMsgExtractor.getRevertMsg(result));
             results[i] = result;
         }
@@ -141,20 +125,20 @@ contract VRLadle is VRLadleStorage, AccessControl() {
     }
 
     /// @dev Allow users to route calls to a contract, to be used with batch
-    function route(address integration, bytes calldata data)
-        external payable
-        returns (bytes memory result)
-    {
+    function route(
+        address integration,
+        bytes calldata data
+    ) external payable returns (bytes memory result) {
         require(integrations[integration], "Unknown integration");
         return router.route(integration, data);
     }
 
     /// @dev Allow users to use functionality coded in a module, to be used with batch
-    function moduleCall(address module, bytes calldata data)
-        external payable
-        returns (bytes memory result)
-    {
-        require (modules[module], "Unregistered module");
+    function moduleCall(
+        address module,
+        bytes calldata data
+    ) external payable returns (bytes memory result) {
+        require(modules[module], "Unregistered module");
         bool success;
         (success, result) = module.delegatecall(data);
         if (!success) revert(RevertMsgExtractor.getRevertMsg(result));
@@ -163,34 +147,49 @@ contract VRLadle is VRLadleStorage, AccessControl() {
     // ---- Token management ----
 
     /// @dev Execute an ERC2612 permit for the selected token
-    function forwardPermit(IERC2612 token, address spender, uint256 amount, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
-        external payable
-    {
+    function forwardPermit(
+        IERC2612 token,
+        address spender,
+        uint256 amount,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external payable {
         require(tokens[address(token)], "Unknown token");
         token.permit(msg.sender, spender, amount, deadline, v, r, s);
     }
 
     /// @dev Execute a Dai-style permit for the selected token
-    function forwardDaiPermit(DaiAbstract token, address spender, uint256 nonce, uint256 deadline, bool allowed, uint8 v, bytes32 r, bytes32 s)
-        external payable
-    {
+    function forwardDaiPermit(
+        DaiAbstract token,
+        address spender,
+        uint256 nonce,
+        uint256 deadline,
+        bool allowed,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external payable {
         require(tokens[address(token)], "Unknown token");
         token.permit(msg.sender, spender, nonce, deadline, allowed, v, r, s);
     }
 
     /// @dev Allow users to trigger a token transfer from themselves to a receiver through the ladle, to be used with batch
-    function transfer(IERC20 token, address receiver, uint128 wad)
-        external payable
-    {
+    function transfer(
+        IERC20 token,
+        address receiver,
+        uint128 wad
+    ) external payable {
         require(tokens[address(token)], "Unknown token");
         token.safeTransferFrom(msg.sender, receiver, wad);
     }
 
     /// @dev Retrieve any token in the Ladle
-    function retrieve(IERC20 token, address to) 
-        external payable
-        returns (uint256 amount)
-    {
+    function retrieve(
+        IERC20 token,
+        address to
+    ) external payable returns (uint256 amount) {
         require(tokens[address(token)], "Unknown token");
         amount = token.balanceOf(address(this));
         token.safeTransfer(to, amount);
@@ -198,28 +197,26 @@ contract VRLadle is VRLadleStorage, AccessControl() {
 
     /// @dev The WETH9 contract will send ether to BorrowProxy on `weth.withdraw` using this function.
     receive() external payable {
-        require (msg.sender == address(weth), "Only receive from WETH");
+        require(msg.sender == address(weth), "Only receive from WETH");
     }
 
     /// @dev Accept Ether, wrap it and forward it to the WethJoin
     /// This function should be called first in a batch, and the Join should keep track of stored reserves
     /// Passing the id for a join that doesn't link to a contract implemnting IWETH9 will fail
-    function joinEther(bytes6 etherId)
-        external payable
-        returns (uint256 ethTransferred)
-    {
+    function joinEther(
+        bytes6 etherId
+    ) external payable returns (uint256 ethTransferred) {
         ethTransferred = address(this).balance;
         IJoin wethJoin = getJoin(etherId);
-        weth.deposit{ value: ethTransferred }();
+        weth.deposit{value: ethTransferred}();
         IERC20(address(weth)).safeTransfer(address(wethJoin), ethTransferred);
     }
 
     /// @dev Unwrap Wrapped Ether held by this Ladle, and send the Ether
     /// This function should be called last in a batch, and the Ladle should have no reason to keep an WETH balance
-    function exitEther(address payable to)
-        external payable
-        returns (uint256 ethTransferred)
-    {
+    function exitEther(
+        address payable to
+    ) external payable returns (uint256 ethTransferred) {
         ethTransferred = weth.balanceOf(address(this));
         weth.withdraw(ethTransferred);
         to.safeTransferETH(ethTransferred);
@@ -229,52 +226,57 @@ contract VRLadle is VRLadleStorage, AccessControl() {
 
     /// @dev Generate a vaultId. A keccak256 is cheaper than using a counter with a SSTORE, even accounting for eventual collision retries.
     function _generateVaultId(uint8 salt) private view returns (bytes12) {
-        return bytes12(keccak256(abi.encodePacked(msg.sender, block.timestamp, salt)));
+        return
+            bytes12(
+                keccak256(abi.encodePacked(msg.sender, block.timestamp, salt))
+            );
     }
 
     /// @dev Create a new vault, linked to a base and a collateral
-    function build(bytes6 baseId, bytes6 ilkId, uint8 salt)
-        external virtual payable
-        returns(bytes12, VRDataTypes.Vault memory)
-    {
+    function build(
+        bytes6 baseId,
+        bytes6 ilkId,
+        uint8 salt
+    ) external payable virtual returns (bytes12, VRDataTypes.Vault memory) {
         return _build(baseId, ilkId, salt);
     }
 
     /// @dev Create a new vault, linked to a base and a collateral
-    function _build(bytes6 baseId, bytes6 ilkId, uint8 salt)
-        internal
-        returns(bytes12 vaultId, VRDataTypes.Vault memory vault)
-    {
+    function _build(
+        bytes6 baseId,
+        bytes6 ilkId,
+        uint8 salt
+    ) internal returns (bytes12 vaultId, VRDataTypes.Vault memory vault) {
         vaultId = _generateVaultId(salt);
-        while (cauldron.vaults(vaultId).baseId != bytes6(0)) vaultId = _generateVaultId(++salt); // If the vault exists, generate other random vaultId
+        while (cauldron.vaults(vaultId).baseId != bytes6(0))
+            vaultId = _generateVaultId(++salt); // If the vault exists, generate other random vaultId
         vault = cauldron.build(msg.sender, vaultId, baseId, ilkId);
         // Store the vault data in the cache
         cachedVaultId = vaultId;
     }
 
     /// @dev Change a vault base or collateral.
-    function tweak(bytes12 vaultId_, bytes6 baseId, bytes6 ilkId)
-        external payable
-        returns(VRDataTypes.Vault memory vault)
-    {
+    function tweak(
+        bytes12 vaultId_,
+        bytes6 baseId,
+        bytes6 ilkId
+    ) external payable returns (VRDataTypes.Vault memory vault) {
         (bytes12 vaultId, ) = getVault(vaultId_); // getVault verifies the ownership as well
         // tweak checks that the base and the collateral both exist and that the collateral is approved for the base
         vault = cauldron.tweak(vaultId, baseId, ilkId);
     }
 
     /// @dev Give a vault to another user.
-    function give(bytes12 vaultId_, address receiver)
-        external payable
-        returns(VRDataTypes.Vault memory vault)
-    {
+    function give(
+        bytes12 vaultId_,
+        address receiver
+    ) external payable returns (VRDataTypes.Vault memory vault) {
         (bytes12 vaultId, ) = getVault(vaultId_);
         vault = cauldron.give(vaultId, receiver);
     }
 
     /// @dev Destroy an empty vault. Used to recover gas costs.
-    function destroy(bytes12 vaultId_)
-        external payable
-    {
+    function destroy(bytes12 vaultId_) external payable {
         (bytes12 vaultId, ) = getVault(vaultId_);
         cauldron.destroy(vaultId);
     }
@@ -282,28 +284,42 @@ contract VRLadle is VRLadleStorage, AccessControl() {
     // ---- Asset and debt management ----
 
     /// @dev Move collateral and debt between vaults.
-    function stir(bytes12 from, bytes12 to, uint128 ink, uint128 art)
-        external payable
-    {
-        if (ink > 0) require (cauldron.vaults(from).owner == msg.sender, "Only origin vault owner");
-        if (art > 0) require (cauldron.vaults(to).owner == msg.sender, "Only destination vault owner");
+    function stir(
+        bytes12 from,
+        bytes12 to,
+        uint128 ink,
+        uint128 art
+    ) external payable {
+        if (ink > 0)
+            require(
+                cauldron.vaults(from).owner == msg.sender,
+                "Only origin vault owner"
+            );
+        if (art > 0)
+            require(
+                cauldron.vaults(to).owner == msg.sender,
+                "Only destination vault owner"
+            );
         cauldron.stir(from, to, ink, art);
     }
 
     /// @dev Add collateral and borrow from vault, pull assets from and push borrowed asset to user
     /// Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
     /// Borrow only before maturity.
-    function _pour(bytes12 vaultId, VRDataTypes.Vault memory vault, address to, int128 ink, int128 base)
-        private
-    {
-        
+    function _pour(
+        bytes12 vaultId,
+        VRDataTypes.Vault memory vault,
+        address to,
+        int128 ink,
+        int128 base
+    ) private {
         int128 fee;
         if (base > 0 && vault.ilkId != vault.baseId && borrowingFee != 0)
             fee = uint256(int256(base)).wmul(borrowingFee).i128();
 
         // Update accounting
         cauldron.pour(vaultId, ink, base + fee);
-        
+
         // Manage collateral
         if (ink != 0) {
             IJoin ilkJoin = getJoin(vault.ilkId);
@@ -322,19 +338,24 @@ contract VRLadle is VRLadleStorage, AccessControl() {
     /// @dev Add collateral and borrow from vault, pull assets from and push borrowed asset to user
     /// Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
     /// Borrow only before maturity.
-    function pour(bytes12 vaultId_, address to, int128 ink, int128 base)
-        external payable
-    {
+    function pour(
+        bytes12 vaultId_,
+        address to,
+        int128 ink,
+        int128 base
+    ) external payable {
         (bytes12 vaultId, VRDataTypes.Vault memory vault) = getVault(vaultId_);
         _pour(vaultId, vault, to, ink, base);
     }
 
     /// @dev Repay all debt in a vault.
     /// The base tokens need to be already in the join, unaccounted for. The surplus base will be returned to msg.sender.
-    function repay(bytes12 vaultId_, address inkTo, address refundTo, int128 ink)
-        external payable
-        returns (uint128 base, uint256 refund)
-    {
+    function repay(
+        bytes12 vaultId_,
+        address inkTo,
+        address refundTo,
+        int128 ink
+    ) external payable returns (uint128 base, uint256 refund) {
         (bytes12 vaultId, VRDataTypes.Vault memory vault) = getVault(vaultId_);
 
         DataTypes.Balances memory balances = cauldron.balances(vaultId);
@@ -345,7 +366,9 @@ contract VRLadle is VRLadleStorage, AccessControl() {
         // ask for no refund (with refundTo == address(0)), and save gas
         if (refundTo != address(0)) {
             IJoin baseJoin = getJoin(vault.baseId);
-            refund = IERC20(baseJoin.asset()).balanceOf(address(baseJoin)) - baseJoin.storedBalance();
+            refund =
+                IERC20(baseJoin.asset()).balanceOf(address(baseJoin)) -
+                baseJoin.storedBalance();
             baseJoin.exit(refundTo, refund.u128());
         }
     }
