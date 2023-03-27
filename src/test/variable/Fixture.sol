@@ -10,7 +10,7 @@ import "../../variable/VRLadle.sol";
 import "../../variable/VRRouter.sol";
 import "../../variable/VRCauldron.sol";
 import "../../variable/VYToken.sol";
-import "../../Witch.sol";
+import "../../variable/VRWitch.sol";
 import "../../oracles/compound/CompoundMultiOracle.sol";
 import "../../oracles/chainlink/ChainlinkMultiOracle.sol";
 import "../../oracles/accumulator/AccumulatorMultiOracle.sol";
@@ -44,7 +44,7 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
     VRCauldron public cauldron;
     VRRouter public router;
     VRLadle public ladle;
-    Witch public witch;
+    VRWitch public witch;
     USDCMock public usdc;
     WETH9Mock public weth;
     DAIMock public dai;
@@ -107,7 +107,14 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
         ladleProxy = new ERC1967Proxy(address(ladle), abi.encodeWithSignature("initialize(address)", address(this)));
         ladle = VRLadle(payable(ladleProxy));
         router.initialize(address(ladle));
-        witch = new Witch(ICauldron(address(cauldron)), ILadle(address(ladle)));
+
+        witch = new VRWitch(ICauldron(address(cauldron)), ILadle(address(ladle)));
+        ERC1967Proxy witchProxy = new ERC1967Proxy(address(witch), abi.encodeWithSignature(
+            "initialize(address,address)",
+            ILadle(address(ladle)),
+            address(this)
+        ));
+        witch = VRWitch(address(witchProxy));
 
         // Setting permissions
         ladleGovAuth();
@@ -278,7 +285,7 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
         return inkValue.i256() - baseValue.wmul(ratio).i256() >=0;
     }
 
-    function giveMeDustAndLine(bytes12 vault) internal returns (uint128 dust, uint128 line) {
+    function giveMeDustAndLine(bytes12 vault) internal view returns (uint128 dust, uint128 line) {
         (, bytes6 baseId, bytes6 ilkId) = cauldron.vaults(vault);
         (uint96 max, uint24 min, uint8 dec,) = cauldron.debt(baseId,ilkId);
         dust = min * uint128(10)**dec;

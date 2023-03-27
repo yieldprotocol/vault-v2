@@ -50,7 +50,7 @@ contract WitchBase is AccessControl, IWitchEvents, IWitchErrors {
     mapping(bytes6 => mapping(bytes6 => DataTypes.Limits)) public limits;
     mapping(address => bool) public protected;
 
-    constructor(ICauldron cauldron_, ILadle ladle_) public {
+    constructor(ICauldron cauldron_, ILadle ladle_) {
         cauldron = cauldron_;
         ladle = ladle_;
         auctioneerReward = ONE_PERCENT;

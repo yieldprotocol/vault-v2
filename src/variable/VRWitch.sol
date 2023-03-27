@@ -4,6 +4,7 @@ pragma solidity >=0.8.13;
 import "@yield-protocol/utils-v2/src/utils/Cast.sol";
 import "./interfaces/IVRCauldron.sol";
 import "../WitchBase.sol";
+import { UUPSUpgradeable } from "openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 /// @title  The Witch is a DataTypes.Auction/Liquidation Engine for the Yield protocol
 /// @notice The Witch grabs under-collateralised vaults, replacing the owner by itself. Then it sells
@@ -11,12 +12,39 @@ import "../WitchBase.sol";
 /// given increases over time, until it offers to sell all the collateral for underlying to pay
 /// all the debt. The auction is held open at the final price indefinitely.
 /// @dev After the debt is settled, the Witch returns the vault to its original owner.
-contract VRWitch is WitchBase {
+contract VRWitch is WitchBase, UUPSUpgradeable {
     using Cast for uint256;
 
-    constructor(ICauldron cauldron_, ILadle ladle_)
-        WitchBase(cauldron_, ladle_)
-    {}
+    // If we would copy the code from WitchBase here we could make the ladle immutable,
+    // saving some gas. We don't do that to avoid code duplication and minimize the code to be audited.
+
+    bool public initialized;
+
+    constructor(ICauldron cauldron_, ILadle ladle_) WitchBase(cauldron_, ladle_) {
+        // See https://medium.com/immunefi/wormhole-uninitialized-proxy-bugfix-review-90250c41a43a
+        initialized = true; // Lock the implementation contract
+    }
+
+    // ======================================================================
+    // =                    Upgradability management functions                    =
+    // ======================================================================
+
+    /// @dev Give the ROOT role and create a LOCK role with itself as the admin role and no members. 
+    /// Calling setRoleAdmin(msg.sig, LOCK) means no one can grant that msg.sig role anymore.
+    /// Set the ladle as well.
+    function initialize (ILadle ladle_, address root_) public {
+        require(!initialized, "Already initialized");
+        initialized = true;             // On an uninitialized contract, no governance functions can be executed, because no one has permission to do so
+        
+        ladle = ladle_;
+        auctioneerReward = ONE_PERCENT;
+
+        _grantRole(ROOT, root_);   // Grant ROOT
+        _setRoleAdmin(LOCK, LOCK);      // Create the LOCK role by setting itself as its own admin, creating an independent role tree
+    }
+
+    /// @dev Allow to set a new implementation
+    function _authorizeUpgrade(address newImplementation) internal override auth {}
 
     // ======================================================================
     // =                    Auction management functions                    =
