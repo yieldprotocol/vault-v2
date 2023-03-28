@@ -23,6 +23,9 @@ interface IVRCauldron {
     /// @dev Assets available in Cauldron.
     function assets(bytes6 assetsId) external view returns (address);
 
+    /// @dev Returns true if the asset is ilk for the base.
+    function ilks(bytes6 baseId, bytes6 assetId) external view returns (bool);
+
     /// @dev Each vault records debt and collateral balances_.
     function balances(bytes12 vault)
         external
