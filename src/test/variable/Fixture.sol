@@ -110,7 +110,10 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
 
         // Deploying core contracts
         cauldron = new VRCauldron();
-        cauldronProxy = new ERC1967Proxy(address(cauldron), abi.encodeWithSignature("initialize(address)", address(this)));
+        cauldronProxy = new ERC1967Proxy(
+            address(cauldron),
+            abi.encodeWithSignature("initialize(address)", address(this))
+        );
         cauldron = VRCauldron(address(cauldronProxy));
         router = new VRRouter();
         ladle = new VRLadle(
@@ -119,16 +122,28 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
             IWETH9(address(weth))
         );
 
-        ladleProxy = new ERC1967Proxy(address(ladle), abi.encodeWithSignature("initialize(address)", address(this)));
+        chiRateOracle = new AccumulatorMultiOracle();
+        spotOracle = new ChainlinkMultiOracle();
+
+        ladleProxy = new ERC1967Proxy(
+            address(ladle),
+            abi.encodeWithSignature("initialize(address)", address(this))
+        );
         ladle = VRLadle(payable(ladleProxy));
         router.initialize(address(ladle));
 
-        witch = new VRWitch(ICauldron(address(cauldron)), ILadle(address(ladle)));
-        ERC1967Proxy witchProxy = new ERC1967Proxy(address(witch), abi.encodeWithSignature(
-            "initialize(address,address)",
-            ILadle(address(ladle)),
-            address(this)
-        ));
+        witch = new VRWitch(
+            ICauldron(address(cauldron)),
+            ILadle(address(ladle))
+        );
+        ERC1967Proxy witchProxy = new ERC1967Proxy(
+            address(witch),
+            abi.encodeWithSignature(
+                "initialize(address,address)",
+                ILadle(address(ladle)),
+                address(this)
+            )
+        );
         witch = VRWitch(address(witchProxy));
 
         // Setting permissions
@@ -136,7 +151,10 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
         cauldronGovAuth(address(ladle));
         cauldronGovAuth(address(this));
 
-        restrictedERC20Mock = new RestrictedERC20Mock("Restricted", "RESTRICTED");
+        restrictedERC20Mock = new RestrictedERC20Mock(
+            "Restricted",
+            "RESTRICTED"
+        );
 
         usdcJoin = new FlashJoin(address(usdc));
         wethJoin = new FlashJoin(address(weth));
@@ -150,11 +168,22 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
             base.name(),
             base.symbol()
         );
-
         /// Orchestrating the protocol
         setUpOracles();
-        vyToken = new VYToken(baseId, IOracle(address(chiRateOracle)), IJoin(baseJoin),base.name(), base.symbol());
-        vyTokenProxy = new ERC1967Proxy(address(vyToken), abi.encodeWithSignature("initialize(address)", address(this)));
+
+        vyToken = new VYToken(
+            baseId,
+            IOracle(address(chiRateOracle)),
+            IJoin(baseJoin),
+            base.name(),
+            base.symbol()
+        );
+
+        vyTokenProxy = new ERC1967Proxy(
+            address(vyToken),
+            abi.encodeWithSignature("initialize(address)", address(this))
+        );
+
         vyToken = VYToken(address(vyTokenProxy));
 
         // Adding assets & making base
@@ -182,11 +211,9 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
             ChainlinkMultiOracle.setSource.selector,
             address(this)
         );
-
         // Setting up the rate oracle
         chiRateOracle.setSource(baseId, RATE, WAD, WAD * 2); // Borrowing rate
         chiRateOracle.setSource(baseId, CHI, WAD, WAD * 2); // Lending rate
-
         // Setting up the chainlink mock oracle prices
         ethAggregator.set(1e18 / 2);
         daiAggregator.set(1e18 / 2);
@@ -308,7 +335,9 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
         return inkValue.i256() - baseValue.wmul(ratio).i256() >= 0;
     }
 
-    function giveMeDustAndLine(bytes12 vault) internal view returns (uint128 dust, uint128 line) {
+    function giveMeDustAndLine(
+        bytes12 vault
+    ) internal view returns (uint128 dust, uint128 line) {
         (, bytes6 baseId, bytes6 ilkId) = cauldron.vaults(vault);
         (uint96 max, uint24 min, uint8 dec, ) = cauldron.debt(baseId, ilkId);
         dust = min * uint128(10) ** dec;
