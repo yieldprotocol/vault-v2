@@ -822,6 +822,344 @@
         }
       }
     },
+    "lib/openzeppelin-contracts/contracts/interfaces/draft-IERC1822.sol": {
+      "lastModificationDate": 1680017389231,
+      "contentHash": "2858d98e74e67987ec81b39605230b74",
+      "sourceName": "lib/openzeppelin-contracts/contracts/interfaces/draft-IERC1822.sol",
+      "solcConfig": {
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "metadata": {
+            "bytecodeHash": "ipfs",
+            "appendCBOR": true
+          },
+          "outputSelection": {
+            "*": {
+              "": [
+                "ast"
+              ],
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ]
+            }
+          },
+          "evmVersion": "london",
+          "libraries": {}
+        }
+      },
+      "imports": [],
+      "versionRequirement": "^0.8.0",
+      "artifacts": {
+        "IERC1822Proxiable": {
+          "0.8.15+commit.e14f2714.Darwin.appleclang": "draft-IERC1822.sol/IERC1822Proxiable.json"
+        }
+      }
+    },
+    "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol": {
+      "lastModificationDate": 1680017389237,
+      "contentHash": "3fc3c7c0a2956f36e766691bb9473b06",
+      "sourceName": "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol",
+      "solcConfig": {
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "metadata": {
+            "bytecodeHash": "ipfs",
+            "appendCBOR": true
+          },
+          "outputSelection": {
+            "*": {
+              "": [
+                "ast"
+              ],
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ]
+            }
+          },
+          "evmVersion": "london",
+          "libraries": {}
+        }
+      },
+      "imports": [
+        "lib/openzeppelin-contracts/contracts/interfaces/draft-IERC1822.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Upgrade.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/Proxy.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/beacon/IBeacon.sol",
+        "lib/openzeppelin-contracts/contracts/utils/Address.sol",
+        "lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol"
+      ],
+      "versionRequirement": "^0.8.0",
+      "artifacts": {
+        "ERC1967Proxy": {
+          "0.8.15+commit.e14f2714.Darwin.appleclang": "ERC1967Proxy.sol/ERC1967Proxy.json"
+        }
+      }
+    },
+    "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Upgrade.sol": {
+      "lastModificationDate": 1680017391656,
+      "contentHash": "6baa887a798e95b14f34e093f117e9b2",
+      "sourceName": "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Upgrade.sol",
+      "solcConfig": {
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "metadata": {
+            "bytecodeHash": "ipfs",
+            "appendCBOR": true
+          },
+          "outputSelection": {
+            "*": {
+              "": [
+                "ast"
+              ],
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ]
+            }
+          },
+          "evmVersion": "london",
+          "libraries": {}
+        }
+      },
+      "imports": [
+        "lib/openzeppelin-contracts/contracts/interfaces/draft-IERC1822.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/beacon/IBeacon.sol",
+        "lib/openzeppelin-contracts/contracts/utils/Address.sol",
+        "lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol"
+      ],
+      "versionRequirement": "^0.8.2",
+      "artifacts": {
+        "ERC1967Upgrade": {
+          "0.8.15+commit.e14f2714.Darwin.appleclang": "ERC1967Upgrade.sol/ERC1967Upgrade.json"
+        }
+      }
+    },
+    "lib/openzeppelin-contracts/contracts/proxy/Proxy.sol": {
+      "lastModificationDate": 1680017389237,
+      "contentHash": "40b3d81a836d50ff47e03893dcaaf204",
+      "sourceName": "lib/openzeppelin-contracts/contracts/proxy/Proxy.sol",
+      "solcConfig": {
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "metadata": {
+            "bytecodeHash": "ipfs",
+            "appendCBOR": true
+          },
+          "outputSelection": {
+            "*": {
+              "": [
+                "ast"
+              ],
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ]
+            }
+          },
+          "evmVersion": "london",
+          "libraries": {}
+        }
+      },
+      "imports": [],
+      "versionRequirement": "^0.8.0",
+      "artifacts": {
+        "Proxy": {
+          "0.8.15+commit.e14f2714.Darwin.appleclang": "Proxy.sol/Proxy.json"
+        }
+      }
+    },
+    "lib/openzeppelin-contracts/contracts/proxy/beacon/IBeacon.sol": {
+      "lastModificationDate": 1680017389237,
+      "contentHash": "b6bd23bf19e90b771337037706470933",
+      "sourceName": "lib/openzeppelin-contracts/contracts/proxy/beacon/IBeacon.sol",
+      "solcConfig": {
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "metadata": {
+            "bytecodeHash": "ipfs",
+            "appendCBOR": true
+          },
+          "outputSelection": {
+            "*": {
+              "": [
+                "ast"
+              ],
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ]
+            }
+          },
+          "evmVersion": "london",
+          "libraries": {}
+        }
+      },
+      "imports": [],
+      "versionRequirement": "^0.8.0",
+      "artifacts": {
+        "IBeacon": {
+          "0.8.15+commit.e14f2714.Darwin.appleclang": "IBeacon.sol/IBeacon.json"
+        }
+      }
+    },
+    "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol": {
+      "lastModificationDate": 1680017391657,
+      "contentHash": "72741fcafc308d461962c96309d81342",
+      "sourceName": "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
+      "solcConfig": {
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "metadata": {
+            "bytecodeHash": "ipfs",
+            "appendCBOR": true
+          },
+          "outputSelection": {
+            "*": {
+              "": [
+                "ast"
+              ],
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ]
+            }
+          },
+          "evmVersion": "london",
+          "libraries": {}
+        }
+      },
+      "imports": [
+        "lib/openzeppelin-contracts/contracts/interfaces/draft-IERC1822.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Upgrade.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/beacon/IBeacon.sol",
+        "lib/openzeppelin-contracts/contracts/utils/Address.sol",
+        "lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol"
+      ],
+      "versionRequirement": "^0.8.0",
+      "artifacts": {
+        "UUPSUpgradeable": {
+          "0.8.15+commit.e14f2714.Darwin.appleclang": "UUPSUpgradeable.sol/UUPSUpgradeable.json"
+        }
+      }
+    },
+    "lib/openzeppelin-contracts/contracts/utils/Address.sol": {
+      "lastModificationDate": 1680017391661,
+      "contentHash": "f31ad6fc4bbf9c06203987220156a6ba",
+      "sourceName": "lib/openzeppelin-contracts/contracts/utils/Address.sol",
+      "solcConfig": {
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "metadata": {
+            "bytecodeHash": "ipfs",
+            "appendCBOR": true
+          },
+          "outputSelection": {
+            "*": {
+              "": [
+                "ast"
+              ],
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ]
+            }
+          },
+          "evmVersion": "london",
+          "libraries": {}
+        }
+      },
+      "imports": [],
+      "versionRequirement": "^0.8.1",
+      "artifacts": {
+        "Address": {
+          "0.8.15+commit.e14f2714.Darwin.appleclang": "Address.sol/Address.json"
+        }
+      }
+    },
+    "lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol": {
+      "lastModificationDate": 1680017391662,
+      "contentHash": "f993f8f50186952a59ee5e3a30b68222",
+      "sourceName": "lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol",
+      "solcConfig": {
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "metadata": {
+            "bytecodeHash": "ipfs",
+            "appendCBOR": true
+          },
+          "outputSelection": {
+            "*": {
+              "": [
+                "ast"
+              ],
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ]
+            }
+          },
+          "evmVersion": "london",
+          "libraries": {}
+        }
+      },
+      "imports": [],
+      "versionRequirement": "^0.8.0",
+      "artifacts": {
+        "StorageSlot": {
+          "0.8.15+commit.e14f2714.Darwin.appleclang": "StorageSlot.sol/StorageSlot.json"
+        }
+      }
+    },
     "lib/yieldspace-tv/lib/yield-utils-v2/src/access/AccessControl.sol": {
       "lastModificationDate": 1680017327437,
       "contentHash": "8a72d8f5255345c5756cc72a8952b620",
@@ -2373,8 +2711,8 @@
       }
     },
     "src/Router.sol": {
-      "lastModificationDate": 1680019150861,
-      "contentHash": "d7391413179b1c07c3835e97a15b02ce",
+      "lastModificationDate": 1680017418525,
+      "contentHash": "329a135caac2c9d7d345fd961a5e2ee3",
       "sourceName": "src/Router.sol",
       "solcConfig": {
         "settings": {
@@ -2480,8 +2818,8 @@
       }
     },
     "src/WitchBase.sol": {
-      "lastModificationDate": 1680019150861,
-      "contentHash": "f91bab69e794cf96649b06f672cc3577",
+      "lastModificationDate": 1680017418526,
+      "contentHash": "50b74c34922b28ef610b57a0642fbe6a",
       "sourceName": "src/WitchBase.sol",
       "solcConfig": {
         "settings": {
@@ -2953,6 +3291,46 @@
         },
         "VRDataTypes": {
           "0.8.15+commit.e14f2714.Darwin.appleclang": "DataTypes.sol/VRDataTypes.json"
+        }
+      }
+    },
+    "src/interfaces/IAccessControl.sol": {
+      "lastModificationDate": 1680017418526,
+      "contentHash": "9ada9fde70efedbdf32af6dec02a17c9",
+      "sourceName": "src/interfaces/IAccessControl.sol",
+      "solcConfig": {
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "metadata": {
+            "bytecodeHash": "ipfs",
+            "appendCBOR": true
+          },
+          "outputSelection": {
+            "*": {
+              "": [
+                "ast"
+              ],
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ]
+            }
+          },
+          "evmVersion": "london",
+          "libraries": {}
+        }
+      },
+      "imports": [],
+      "versionRequirement": "^0.8.0",
+      "artifacts": {
+        "IAccessControl": {
+          "0.8.15+commit.e14f2714.Darwin.appleclang": "IAccessControl.sol/IAccessControl.json"
         }
       }
     },
@@ -3440,6 +3818,46 @@
       "artifacts": {
         "IOracle": {
           "0.8.15+commit.e14f2714.Darwin.appleclang": "IOracle.sol/IOracle.json"
+        }
+      }
+    },
+    "src/interfaces/IRouter.sol": {
+      "lastModificationDate": 1680017418526,
+      "contentHash": "e0acb500d6a597494ddb8fe27b127fd0",
+      "sourceName": "src/interfaces/IRouter.sol",
+      "solcConfig": {
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "metadata": {
+            "bytecodeHash": "ipfs",
+            "appendCBOR": true
+          },
+          "outputSelection": {
+            "*": {
+              "": [
+                "ast"
+              ],
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ]
+            }
+          },
+          "evmVersion": "london",
+          "libraries": {}
+        }
+      },
+      "imports": [],
+      "versionRequirement": "^0.8.0",
+      "artifacts": {
+        "IRouter": {
+          "0.8.15+commit.e14f2714.Darwin.appleclang": "IRouter.sol/IRouter.json"
         }
       }
     },
@@ -4118,6 +4536,65 @@
       "artifacts": {
         "USDCMock": {
           "0.8.15+commit.e14f2714.Darwin.appleclang": "USDCMock.sol/USDCMock.json"
+        }
+      }
+    },
+    "src/mocks/VRCauldronUpgrade.sol": {
+      "lastModificationDate": 1680017418526,
+      "contentHash": "56555f1374fb7d6b272b8ce1ce8bc3c2",
+      "sourceName": "src/mocks/VRCauldronUpgrade.sol",
+      "solcConfig": {
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "metadata": {
+            "bytecodeHash": "ipfs",
+            "appendCBOR": true
+          },
+          "outputSelection": {
+            "*": {
+              "": [
+                "ast"
+              ],
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ]
+            }
+          },
+          "evmVersion": "london",
+          "libraries": {}
+        }
+      },
+      "imports": [
+        "lib/openzeppelin-contracts/contracts/interfaces/draft-IERC1822.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Upgrade.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/beacon/IBeacon.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
+        "lib/openzeppelin-contracts/contracts/utils/Address.sol",
+        "lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/access/AccessControl.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/token/IERC20.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/Cast.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/Math.sol",
+        "src/Cauldron.sol",
+        "src/constants/Constants.sol",
+        "src/interfaces/DataTypes.sol",
+        "src/interfaces/IERC5095.sol",
+        "src/interfaces/IFYToken.sol",
+        "src/interfaces/IJoin.sol",
+        "src/interfaces/IOracle.sol",
+        "src/variable/VRCauldron.sol"
+      ],
+      "versionRequirement": ">=0.8.13",
+      "artifacts": {
+        "VRCauldronV2": {
+          "0.8.15+commit.e14f2714.Darwin.appleclang": "VRCauldronUpgrade.sol/VRCauldronV2.json"
         }
       }
     },
@@ -10498,8 +10975,8 @@
       }
     },
     "src/test/utils/Mocks.sol": {
-      "lastModificationDate": 1680019150862,
-      "contentHash": "17842a9be2302ddfa2eaa848887f2ed9",
+      "lastModificationDate": 1680017418527,
+      "contentHash": "4e9bc7ea4e1ffb3dde1d719ff489ee7f",
       "sourceName": "src/test/utils/Mocks.sol",
       "solcConfig": {
         "settings": {
@@ -10728,8 +11205,8 @@
       }
     },
     "src/test/variable/Fixture.sol": {
-      "lastModificationDate": 1680019150862,
-      "contentHash": "fc4956ce6e38d66239547bbb17631b0f",
+      "lastModificationDate": 1680018328650,
+      "contentHash": "2cd06b4d376a2fad5d0d27c04399e18e",
       "sourceName": "src/test/variable/Fixture.sol",
       "solcConfig": {
         "settings": {
@@ -10779,6 +11256,14 @@
         "lib/forge-std/src/console.sol",
         "lib/forge-std/src/console2.sol",
         "lib/forge-std/src/interfaces/IMulticall3.sol",
+        "lib/openzeppelin-contracts/contracts/interfaces/draft-IERC1822.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Upgrade.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/Proxy.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/beacon/IBeacon.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
+        "lib/openzeppelin-contracts/contracts/utils/Address.sol",
+        "lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/access/AccessControl.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/interfaces/IWETH9.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/token/ERC20.sol",
@@ -10799,7 +11284,6 @@
         "src/FlashJoin.sol",
         "src/Join.sol",
         "src/Router.sol",
-        "src/Witch.sol",
         "src/WitchBase.sol",
         "src/constants/Constants.sol",
         "src/interfaces/DataTypes.sol",
@@ -10810,6 +11294,7 @@
         "src/interfaces/IJoinFactory.sol",
         "src/interfaces/ILadle.sol",
         "src/interfaces/IOracle.sol",
+        "src/interfaces/IRouter.sol",
         "src/interfaces/IWitchErrors.sol",
         "src/interfaces/IWitchEvents.sol",
         "src/mocks/DAIMock.sol",
@@ -10830,7 +11315,8 @@
         "src/test/utils/TestExtensions.sol",
         "src/variable/VRCauldron.sol",
         "src/variable/VRLadle.sol",
-        "src/variable/VRLadleStorage.sol",
+        "src/variable/VRRouter.sol",
+        "src/variable/VRWitch.sol",
         "src/variable/VYToken.sol",
         "src/variable/interfaces/IVRCauldron.sol"
       ],
@@ -10842,8 +11328,8 @@
       }
     },
     "src/test/variable/FixtureStates.sol": {
-      "lastModificationDate": 1680019150863,
-      "contentHash": "c7ec7e0e8c8b25aaacd6eac651325e8e",
+      "lastModificationDate": 1680017418528,
+      "contentHash": "7830c7dc9a17ac015ad56574d8e14de4",
       "sourceName": "src/test/variable/FixtureStates.sol",
       "solcConfig": {
         "settings": {
@@ -10893,6 +11379,14 @@
         "lib/forge-std/src/console.sol",
         "lib/forge-std/src/console2.sol",
         "lib/forge-std/src/interfaces/IMulticall3.sol",
+        "lib/openzeppelin-contracts/contracts/interfaces/draft-IERC1822.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Upgrade.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/Proxy.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/beacon/IBeacon.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
+        "lib/openzeppelin-contracts/contracts/utils/Address.sol",
+        "lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/access/AccessControl.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/interfaces/IWETH9.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/token/ERC20.sol",
@@ -10913,7 +11407,6 @@
         "src/FlashJoin.sol",
         "src/Join.sol",
         "src/Router.sol",
-        "src/Witch.sol",
         "src/WitchBase.sol",
         "src/constants/Constants.sol",
         "src/interfaces/DataTypes.sol",
@@ -10924,6 +11417,7 @@
         "src/interfaces/IJoinFactory.sol",
         "src/interfaces/ILadle.sol",
         "src/interfaces/IOracle.sol",
+        "src/interfaces/IRouter.sol",
         "src/interfaces/IWitchErrors.sol",
         "src/interfaces/IWitchEvents.sol",
         "src/mocks/DAIMock.sol",
@@ -10946,7 +11440,8 @@
         "src/test/variable/Fixture.sol",
         "src/variable/VRCauldron.sol",
         "src/variable/VRLadle.sol",
-        "src/variable/VRLadleStorage.sol",
+        "src/variable/VRRouter.sol",
+        "src/variable/VRWitch.sol",
         "src/variable/VYToken.sol",
         "src/variable/interfaces/IVRCauldron.sol"
       ],
@@ -10979,9 +11474,6 @@
         "IlkAddedState": {
           "0.8.15+commit.e14f2714.Darwin.appleclang": "FixtureStates.sol/IlkAddedState.json"
         },
-        "RateOracleAddedState": {
-          "0.8.15+commit.e14f2714.Darwin.appleclang": "FixtureStates.sol/RateOracleAddedState.json"
-        },
         "VYTokenZeroState": {
           "0.8.15+commit.e14f2714.Darwin.appleclang": "FixtureStates.sol/VYTokenZeroState.json"
         },
@@ -10997,8 +11489,8 @@
       }
     },
     "src/test/variable/VRCauldron.t.sol": {
-      "lastModificationDate": 1680019150863,
-      "contentHash": "575777a72a96316834adcc827cdadcdd",
+      "lastModificationDate": 1680017418528,
+      "contentHash": "9b053fd52287d6eab41f6ff2a0add81e",
       "sourceName": "src/test/variable/VRCauldron.t.sol",
       "solcConfig": {
         "settings": {
@@ -11048,6 +11540,14 @@
         "lib/forge-std/src/console.sol",
         "lib/forge-std/src/console2.sol",
         "lib/forge-std/src/interfaces/IMulticall3.sol",
+        "lib/openzeppelin-contracts/contracts/interfaces/draft-IERC1822.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Upgrade.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/Proxy.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/beacon/IBeacon.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
+        "lib/openzeppelin-contracts/contracts/utils/Address.sol",
+        "lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/access/AccessControl.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/interfaces/IWETH9.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/token/ERC20.sol",
@@ -11068,7 +11568,6 @@
         "src/FlashJoin.sol",
         "src/Join.sol",
         "src/Router.sol",
-        "src/Witch.sol",
         "src/WitchBase.sol",
         "src/constants/Constants.sol",
         "src/interfaces/DataTypes.sol",
@@ -11079,6 +11578,7 @@
         "src/interfaces/IJoinFactory.sol",
         "src/interfaces/ILadle.sol",
         "src/interfaces/IOracle.sol",
+        "src/interfaces/IRouter.sol",
         "src/interfaces/IWitchErrors.sol",
         "src/interfaces/IWitchEvents.sol",
         "src/mocks/DAIMock.sol",
@@ -11086,6 +11586,7 @@
         "src/mocks/FlashBorrower.sol",
         "src/mocks/RestrictedERC20Mock.sol",
         "src/mocks/USDCMock.sol",
+        "src/mocks/VRCauldronUpgrade.sol",
         "src/mocks/WETH9Mock.sol",
         "src/mocks/oracles/ISourceMock.sol",
         "src/mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol",
@@ -11102,7 +11603,8 @@
         "src/test/variable/FixtureStates.sol",
         "src/variable/VRCauldron.sol",
         "src/variable/VRLadle.sol",
-        "src/variable/VRLadleStorage.sol",
+        "src/variable/VRRouter.sol",
+        "src/variable/VRWitch.sol",
         "src/variable/VYToken.sol",
         "src/variable/interfaces/IVRCauldron.sol"
       ],
@@ -11138,6 +11640,9 @@
         "OracleAddition": {
           "0.8.15+commit.e14f2714.Darwin.appleclang": "VRCauldron.t.sol/OracleAddition.json"
         },
+        "UpgradeTests": {
+          "0.8.15+commit.e14f2714.Darwin.appleclang": "VRCauldron.t.sol/UpgradeTests.json"
+        },
         "UtilityFunctionTests": {
           "0.8.15+commit.e14f2714.Darwin.appleclang": "VRCauldron.t.sol/UtilityFunctionTests.json"
         },
@@ -11147,8 +11652,8 @@
       }
     },
     "src/test/variable/VRLadle.t.sol": {
-      "lastModificationDate": 1680019150863,
-      "contentHash": "b32a5c3338fdab98e570a7d63456dbee",
+      "lastModificationDate": 1680017418528,
+      "contentHash": "f649027f383c63468485efabfa0355cc",
       "sourceName": "src/test/variable/VRLadle.t.sol",
       "solcConfig": {
         "settings": {
@@ -11198,6 +11703,14 @@
         "lib/forge-std/src/console.sol",
         "lib/forge-std/src/console2.sol",
         "lib/forge-std/src/interfaces/IMulticall3.sol",
+        "lib/openzeppelin-contracts/contracts/interfaces/draft-IERC1822.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Upgrade.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/Proxy.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/beacon/IBeacon.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
+        "lib/openzeppelin-contracts/contracts/utils/Address.sol",
+        "lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/access/AccessControl.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/interfaces/IWETH9.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/token/ERC20.sol",
@@ -11218,7 +11731,6 @@
         "src/FlashJoin.sol",
         "src/Join.sol",
         "src/Router.sol",
-        "src/Witch.sol",
         "src/WitchBase.sol",
         "src/constants/Constants.sol",
         "src/interfaces/DataTypes.sol",
@@ -11229,6 +11741,7 @@
         "src/interfaces/IJoinFactory.sol",
         "src/interfaces/ILadle.sol",
         "src/interfaces/IOracle.sol",
+        "src/interfaces/IRouter.sol",
         "src/interfaces/IWitchErrors.sol",
         "src/interfaces/IWitchEvents.sol",
         "src/mocks/DAIMock.sol",
@@ -11252,7 +11765,8 @@
         "src/test/variable/FixtureStates.sol",
         "src/variable/VRCauldron.sol",
         "src/variable/VRLadle.sol",
-        "src/variable/VRLadleStorage.sol",
+        "src/variable/VRRouter.sol",
+        "src/variable/VRWitch.sol",
         "src/variable/VYToken.sol",
         "src/variable/interfaces/IVRCauldron.sol"
       ],
@@ -11297,8 +11811,8 @@
       }
     },
     "src/test/variable/VRWitch.t.sol": {
-      "lastModificationDate": 1680019150863,
-      "contentHash": "38bfc0240316aaa997e70b52702b08ab",
+      "lastModificationDate": 1680017418528,
+      "contentHash": "1b3919a275955602fd2c73cb78646a64",
       "sourceName": "src/test/variable/VRWitch.t.sol",
       "solcConfig": {
         "settings": {
@@ -11345,6 +11859,14 @@
         "lib/forge-std/src/console.sol",
         "lib/forge-std/src/console2.sol",
         "lib/forge-std/src/interfaces/IMulticall3.sol",
+        "lib/openzeppelin-contracts/contracts/interfaces/draft-IERC1822.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Upgrade.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/Proxy.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/beacon/IBeacon.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
+        "lib/openzeppelin-contracts/contracts/utils/Address.sol",
+        "lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/access/AccessControl.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/interfaces/IWETH9.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/token/ERC20.sol",
@@ -11383,6 +11905,9 @@
         "WitchStateZeroTest": {
           "0.8.15+commit.e14f2714.Darwin.appleclang": "VRWitch.t.sol/WitchStateZeroTest.json"
         },
+        "WitchUpgradableTests": {
+          "0.8.15+commit.e14f2714.Darwin.appleclang": "VRWitch.t.sol/WitchUpgradableTests.json"
+        },
         "WitchWithAuction": {
           "0.8.15+commit.e14f2714.Darwin.appleclang": "VRWitch.t.sol/WitchWithAuction.json"
         },
@@ -11395,8 +11920,8 @@
       }
     },
     "src/test/variable/VYToken.t.sol": {
-      "lastModificationDate": 1680019150864,
-      "contentHash": "e4cb4fbcb2f75c31dad3aef846d887ae",
+      "lastModificationDate": 1680017418528,
+      "contentHash": "87d27e2a00381251de40a1ada49a38d9",
       "sourceName": "src/test/variable/VYToken.t.sol",
       "solcConfig": {
         "settings": {
@@ -11446,6 +11971,14 @@
         "lib/forge-std/src/console.sol",
         "lib/forge-std/src/console2.sol",
         "lib/forge-std/src/interfaces/IMulticall3.sol",
+        "lib/openzeppelin-contracts/contracts/interfaces/draft-IERC1822.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Upgrade.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/Proxy.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/beacon/IBeacon.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
+        "lib/openzeppelin-contracts/contracts/utils/Address.sol",
+        "lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/access/AccessControl.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/interfaces/IWETH9.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/token/ERC20.sol",
@@ -11466,7 +11999,6 @@
         "src/FlashJoin.sol",
         "src/Join.sol",
         "src/Router.sol",
-        "src/Witch.sol",
         "src/WitchBase.sol",
         "src/constants/Constants.sol",
         "src/interfaces/DataTypes.sol",
@@ -11477,6 +12009,7 @@
         "src/interfaces/IJoinFactory.sol",
         "src/interfaces/ILadle.sol",
         "src/interfaces/IOracle.sol",
+        "src/interfaces/IRouter.sol",
         "src/interfaces/IWitchErrors.sol",
         "src/interfaces/IWitchEvents.sol",
         "src/mocks/DAIMock.sol",
@@ -11500,7 +12033,8 @@
         "src/test/variable/FixtureStates.sol",
         "src/variable/VRCauldron.sol",
         "src/variable/VRLadle.sol",
-        "src/variable/VRLadleStorage.sol",
+        "src/variable/VRRouter.sol",
+        "src/variable/VRWitch.sol",
         "src/variable/VYToken.sol",
         "src/variable/interfaces/IVRCauldron.sol"
       ],
@@ -11564,8 +12098,8 @@
       }
     },
     "src/variable/VRCauldron.sol": {
-      "lastModificationDate": 1680019150864,
-      "contentHash": "ba4c7748a2efd3576c60afc6ed4d6831",
+      "lastModificationDate": 1680017418528,
+      "contentHash": "558b4fc3fe2bf946a1cf5c1d51eee75c",
       "sourceName": "src/variable/VRCauldron.sol",
       "solcConfig": {
         "settings": {
@@ -11596,6 +12130,12 @@
         }
       },
       "imports": [
+        "lib/openzeppelin-contracts/contracts/interfaces/draft-IERC1822.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Upgrade.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/beacon/IBeacon.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
+        "lib/openzeppelin-contracts/contracts/utils/Address.sol",
+        "lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/access/AccessControl.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/token/IERC20.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/Cast.sol",
@@ -11616,8 +12156,8 @@
       }
     },
     "src/variable/VRLadle.sol": {
-      "lastModificationDate": 1680019150864,
-      "contentHash": "5ba14c8e5bb475b7b7179227836f247a",
+      "lastModificationDate": 1680017418529,
+      "contentHash": "2b5cc35d6b63c100eb9a8f59db0e92ea",
       "sourceName": "src/variable/VRLadle.sol",
       "solcConfig": {
         "settings": {
@@ -11649,6 +12189,12 @@
       },
       "imports": [
         "lib/dss-interfaces/src/dss/DaiAbstract.sol",
+        "lib/openzeppelin-contracts/contracts/interfaces/draft-IERC1822.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Upgrade.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/beacon/IBeacon.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
+        "lib/openzeppelin-contracts/contracts/utils/Address.sol",
+        "lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/access/AccessControl.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/interfaces/IWETH9.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/token/ERC20.sol",
@@ -11657,18 +12203,16 @@
         "lib/yieldspace-tv/lib/yield-utils-v2/src/token/IERC2612.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/token/TransferHelper.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/Cast.sol",
-        "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/IsContract.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/Math.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/RevertMsgExtractor.sol",
         "lib/yieldspace-tv/src/interfaces/IMaturingToken.sol",
         "lib/yieldspace-tv/src/interfaces/IPool.sol",
-        "src/Router.sol",
         "src/interfaces/DataTypes.sol",
         "src/interfaces/IERC5095.sol",
         "src/interfaces/IFYToken.sol",
         "src/interfaces/IJoin.sol",
         "src/interfaces/IOracle.sol",
-        "src/variable/VRLadleStorage.sol",
+        "src/interfaces/IRouter.sol",
         "src/variable/interfaces/IVRCauldron.sol"
       ],
       "versionRequirement": ">=0.8.13",
@@ -11678,10 +12222,10 @@
         }
       }
     },
-    "src/variable/VRLadleStorage.sol": {
-      "lastModificationDate": 1680019150864,
-      "contentHash": "6746720bc3918a464c1009f249fce399",
-      "sourceName": "src/variable/VRLadleStorage.sol",
+    "src/variable/VRRouter.sol": {
+      "lastModificationDate": 1680017418529,
+      "contentHash": "cb0ae0f552cfa30218ce9876b5fb80d3",
+      "sourceName": "src/variable/VRRouter.sol",
       "solcConfig": {
         "settings": {
           "optimizer": {
@@ -11711,33 +12255,19 @@
         }
       },
       "imports": [
-        "lib/yieldspace-tv/lib/yield-utils-v2/src/interfaces/IWETH9.sol",
-        "lib/yieldspace-tv/lib/yield-utils-v2/src/token/ERC20.sol",
-        "lib/yieldspace-tv/lib/yield-utils-v2/src/token/IERC20.sol",
-        "lib/yieldspace-tv/lib/yield-utils-v2/src/token/IERC20Metadata.sol",
-        "lib/yieldspace-tv/lib/yield-utils-v2/src/token/IERC2612.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/IsContract.sol",
-        "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/RevertMsgExtractor.sol",
-        "lib/yieldspace-tv/src/interfaces/IMaturingToken.sol",
-        "lib/yieldspace-tv/src/interfaces/IPool.sol",
-        "src/Router.sol",
-        "src/interfaces/DataTypes.sol",
-        "src/interfaces/IERC5095.sol",
-        "src/interfaces/IFYToken.sol",
-        "src/interfaces/IJoin.sol",
-        "src/interfaces/IOracle.sol",
-        "src/variable/interfaces/IVRCauldron.sol"
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/RevertMsgExtractor.sol"
       ],
       "versionRequirement": ">=0.8.13",
       "artifacts": {
-        "VRLadleStorage": {
-          "0.8.15+commit.e14f2714.Darwin.appleclang": "VRLadleStorage.sol/VRLadleStorage.json"
+        "VRRouter": {
+          "0.8.15+commit.e14f2714.Darwin.appleclang": "VRRouter.sol/VRRouter.json"
         }
       }
     },
     "src/variable/VRWitch.sol": {
-      "lastModificationDate": 1680019150864,
-      "contentHash": "fef66604ac67ca0a227c4fc5e537d364",
+      "lastModificationDate": 1680017418529,
+      "contentHash": "b40889598395269618e1d9f451649d89",
       "sourceName": "src/variable/VRWitch.sol",
       "solcConfig": {
         "settings": {
@@ -11768,6 +12298,12 @@
         }
       },
       "imports": [
+        "lib/openzeppelin-contracts/contracts/interfaces/draft-IERC1822.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Upgrade.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/beacon/IBeacon.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
+        "lib/openzeppelin-contracts/contracts/utils/Address.sol",
+        "lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/access/AccessControl.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/interfaces/IWETH9.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/token/ERC20.sol",
@@ -11801,8 +12337,8 @@
       }
     },
     "src/variable/VYToken.sol": {
-      "lastModificationDate": 1680019150864,
-      "contentHash": "ba303c33c7310c114a608950f4afdee0",
+      "lastModificationDate": 1680018387868,
+      "contentHash": "c86d5709876604e880d30aba0ef32922",
       "sourceName": "src/variable/VYToken.sol",
       "solcConfig": {
         "settings": {
@@ -11835,6 +12371,12 @@
       "imports": [
         "lib/ERC3156/contracts/interfaces/IERC3156FlashBorrower.sol",
         "lib/ERC3156/contracts/interfaces/IERC3156FlashLender.sol",
+        "lib/openzeppelin-contracts/contracts/interfaces/draft-IERC1822.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Upgrade.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/beacon/IBeacon.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
+        "lib/openzeppelin-contracts/contracts/utils/Address.sol",
+        "lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/access/AccessControl.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/token/ERC20.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/token/ERC20Permit.sol",
@@ -11857,8 +12399,8 @@
       }
     },
     "src/variable/interfaces/IVRCauldron.sol": {
-      "lastModificationDate": 1680019150865,
-      "contentHash": "25cf2462af360f370e38748f1cfee15f",
+      "lastModificationDate": 1680017418529,
+      "contentHash": "2c20afbfa5d948e1fbf08694195b40e4",
       "sourceName": "src/variable/interfaces/IVRCauldron.sol",
       "solcConfig": {
         "settings": {

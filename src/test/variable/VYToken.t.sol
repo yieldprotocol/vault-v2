@@ -4,29 +4,36 @@ pragma solidity >=0.8.13;
 import "./FixtureStates.sol";
 
 contract VYTokenTest is VYTokenZeroState {
-    function testChangeOracle() public {
-        console.log("can change the CHI oracle");
-        vm.expectEmit(true, false, false, true);
-        emit Point("oracle", address(this));
-        vm.prank(timelock);
-        vyToken.point("oracle", address(this));
-        assertEq(address(vyToken.oracle()), address(this));
+
+    // Test that the storage is initialized
+    function testStorageInitialized() public {
+        assertTrue(vyToken.initialized());
     }
 
-    function testChangeJoin() public {
-        console.log("can change Join");
-        vm.expectEmit(true, false, false, true);
-        emit Point("join", address(this));
-        vm.prank(timelock);
-        vyToken.point("join", address(this));
-        assertEq(address(vyToken.join()), address(this));
+    // Test that the storage can't be initialized again
+    function testInitializeRevertsIfInitialized() public {
+        vyToken.grantRole(VYToken.initialize.selector, address(this));
+        
+        vm.expectRevert("Already initialized");
+        vyToken.initialize(address(this));
     }
 
-    function testRevertsOnInvalidPoint() public {
-        console.log("reverts on invalid point");
-        vm.prank(timelock);
-        vm.expectRevert("Unrecognized parameter");
-        vyToken.point("invalid", address(this));
+    // Test that only authorized addresses can upgrade
+    function testUpgradeToRevertsIfNotAuthed() public {
+        vm.expectRevert("Access denied");
+        vyToken.upgradeTo(address(0));
+    }
+
+    // Test that the upgrade works
+    function testUpgradeTo() public {
+        VYToken vyTokenV2 = new VYToken(0x303100000000, IOracle(address(1)), baseJoin, base.name(), base.symbol());
+
+        vyToken.grantRole(0x3659cfe6, address(this)); // upgradeTo(address)
+        vyToken.upgradeTo(address(vyTokenV2));
+
+        assertEq(address(vyToken.oracle()), address(1));
+        assertTrue(vyToken.hasRole(vyToken.ROOT(), address(this)));
+        assertTrue(vyToken.initialized());
     }
 
     function testMintWithUnderlying() public {

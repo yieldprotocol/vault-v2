@@ -11,8 +11,9 @@ import "@yield-protocol/utils-v2/src/utils/Cast.sol";
 import "../interfaces/IJoin.sol";
 import "../interfaces/IOracle.sol";
 import "../constants/Constants.sol";
+import { UUPSUpgradeable } from "openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
-contract VYToken is IERC3156FlashLender, AccessControl, ERC20Permit, Constants {
+contract VYToken is IERC3156FlashLender, UUPSUpgradeable, AccessControl, ERC20Permit, Constants {
     using Math for uint256;
     using Cast for uint256;
 
@@ -20,12 +21,14 @@ contract VYToken is IERC3156FlashLender, AccessControl, ERC20Permit, Constants {
     event FlashFeeFactorSet(uint256 indexed fee);
     event Redeemed(address indexed holder, address indexed receiver, uint256 principalAmount, uint256 underlyingAmount);
 
+    bool public initialized;
+
     bytes32 internal constant FLASH_LOAN_RETURN = keccak256("ERC3156FlashBorrower.onFlashLoan");
     uint256 constant FLASH_LOANS_DISABLED = type(uint256).max;
     uint256 public flashFeeFactor = FLASH_LOANS_DISABLED; // Fee on flash loans, as a percentage in fixed point with 18 decimals. Flash loans disabled by default by overflow from `flashFee`.
 
-    IOracle public oracle; // Oracle for the savings rate.
-    IJoin public join; // Source of redemption funds.
+    IOracle public immutable oracle; // Oracle for the savings rate.
+    IJoin public immutable join; // Source of redemption funds.
     address public immutable underlying;
     bytes6 public immutable underlyingId; // Needed to access the oracle
 
@@ -37,22 +40,27 @@ contract VYToken is IERC3156FlashLender, AccessControl, ERC20Permit, Constants {
         string memory symbol
     ) ERC20Permit(name, symbol, SafeERC20Namer.tokenDecimals(address(IJoin(join_).asset()))) {
         // The join asset is this vyToken's underlying, from which we inherit the decimals
-
         underlyingId = underlyingId_;
         join = join_;
         underlying = address(IJoin(join_).asset());
         oracle = oracle_;
+
+        // See https://medium.com/immunefi/wormhole-uninitialized-proxy-bugfix-review-90250c41a43a
+        initialized = true; // Lock the implementation contract
     }
 
-    /// @dev Point to a different Oracle or Join
-    function point(bytes32 param, address value) external auth {
-        if (param == "oracle") {
-            oracle = IOracle(value);
-        } else if (param == "join") {
-            join = IJoin(value);
-        } else revert("Unrecognized parameter");
-        emit Point(param, value);
+    /// @dev Give the ROOT role and create a LOCK role with itself as the admin role and no members. 
+    /// Calling setRoleAdmin(msg.sig, LOCK) means no one can grant that msg.sig role anymore.
+    function initialize (address root_) public {
+        require(!initialized, "Already initialized");
+        initialized = true;             // On an uninitialized contract, no governance functions can be executed, because no one has permission to do so
+        _grantRole(ROOT, root_);      // Grant ROOT
+        _setRoleAdmin(LOCK, LOCK);      // Create the LOCK role by setting itself as its own admin, creating an independent role tree
+        flashFeeFactor = FLASH_LOANS_DISABLED; // Flash loans disabled by default
     }
+
+    /// @dev Allow to set a new implementation
+    function _authorizeUpgrade(address newImplementation) internal override auth {}
 
     /// @dev Set the flash loan fee factor
     function setFlashFeeFactor(uint256 flashFeeFactor_) external auth {
@@ -66,7 +74,6 @@ contract VYToken is IERC3156FlashLender, AccessControl, ERC20Permit, Constants {
     }
 
     ///@dev Converts the amount of the principal to the underlying
-    ///Before maturity, returns amount as if at maturity.
     function _convertToUnderlying(uint256 principalAmount) internal returns (uint256 underlyingAmount) {
         (uint256 chi, ) = oracle.get(underlyingId, CHI, 0); // The value returned is an accumulator, it doesn't need an input amount
         return principalAmount.wmul(chi);
@@ -78,7 +85,6 @@ contract VYToken is IERC3156FlashLender, AccessControl, ERC20Permit, Constants {
     }
 
     ///@dev Converts the amount of the underlying to the principal
-    ///Before maturity, returns amount as if at maturity.
     function _convertToPrincipal(uint256 underlyingAmount) internal returns (uint256 princpalAmount) {
         (uint256 chi, ) = oracle.get(underlyingId, CHI, 0); // The value returned is an accumulator, it doesn't need an input amount
         return underlyingAmount.wdivup(chi);
@@ -94,7 +100,7 @@ contract VYToken is IERC3156FlashLender, AccessControl, ERC20Permit, Constants {
         return _convertToUnderlying(principalAmount);
     }
 
-    /// @dev Burn vyToken after maturity for an amount of principal that increases according to `chi`
+    /// @dev Burn vyToken for an amount of principal that increases according to `chi`
     /// If `amount` is 0, the contract will redeem instead the vyToken balance of this contract. Useful for batches.
     function redeem(uint256 principalAmount, address receiver, address holder) external returns (uint256 underlyingAmount) {
         principalAmount = (principalAmount == 0) ? _balanceOf[address(this)] : principalAmount;
@@ -105,7 +111,7 @@ contract VYToken is IERC3156FlashLender, AccessControl, ERC20Permit, Constants {
         emit Redeemed(holder, receiver, principalAmount, underlyingAmount);
     }
 
-    /// @dev Burn vyToken after maturity for an amount of principal that increases according to `chi`
+    /// @dev Burn vyToken for an amount of principal that increases according to `chi`
     /// If `amount` is 0, the contract will redeem instead the vyToken balance of this contract. Useful for batches.
     function redeem(address receiver, uint256 principalAmount) external returns (uint256 underlyingAmount) {
         principalAmount = (principalAmount == 0) ? _balanceOf[address(this)] : principalAmount;
@@ -126,7 +132,7 @@ contract VYToken is IERC3156FlashLender, AccessControl, ERC20Permit, Constants {
         return _convertToPrincipal(underlyingAmount);
     }
 
-    /// @dev Burn vyToken after maturity for an amount of underlying that increases according to `chi`
+    /// @dev Burn vyToken for an amount of underlying that increases according to `chi`
     /// If `amount` is 0, the contract will redeem instead the vyToken balance of this contract. Useful for batches.
     function withdraw(uint256 underlyingAmount, address receiver, address holder) external returns (uint256 principalAmount) {
         principalAmount = (underlyingAmount == 0) ? _balanceOf[address(this)] : _convertToPrincipal(underlyingAmount);
@@ -144,7 +150,7 @@ contract VYToken is IERC3156FlashLender, AccessControl, ERC20Permit, Constants {
     }
 
     ///@dev returns the maximum mintable amount for the address holder in terms of the principal
-    function maxMint(address holder) external view returns (uint256 maxPrincipalAmount) {
+    function maxMint(address) external view returns (uint256 maxPrincipalAmount) {
         return type(uint256).max - _totalSupply;
     }
 
@@ -160,7 +166,7 @@ contract VYToken is IERC3156FlashLender, AccessControl, ERC20Permit, Constants {
     }
 
     ///@dev returns the maximum depositable amount for the address holder in terms of the underlying
-    function maxDeposit(address holder) external returns (uint256 maxUnderlyingAmount) {
+    function maxDeposit(address) external returns (uint256 maxUnderlyingAmount) {
         return _convertToUnderlying(type(uint256).max - _totalSupply);
     }
 
