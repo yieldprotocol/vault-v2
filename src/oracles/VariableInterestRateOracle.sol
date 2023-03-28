@@ -84,12 +84,12 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
         IJoin join = ladle.joins(baseId);
 
         sources[baseId][kindId] = InterestRateParameter({
-            optimalUsageRate: optimalUsageRate * 1e12,
+            optimalUsageRate: optimalUsageRate,
             accumulated: accumulated,
             lastUpdated: block.timestamp,
             baseVariableBorrowRate: baseVariableBorrowRate,
-            slope1: slope1 * 1e12,
-            slope2: slope2 * 1e12,
+            slope1: slope1,
+            slope2: slope2,
             join: join,
             ilks: ilks
         });
@@ -121,10 +121,10 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
             "stale InterestRateParameter"
         );
         IJoin join = ladle.joins(baseId);
-        sources[baseId][kindId].optimalUsageRate = optimalUsageRate * 1e12;
+        sources[baseId][kindId].optimalUsageRate = optimalUsageRate;
         sources[baseId][kindId].baseVariableBorrowRate = baseVariableBorrowRate;
-        sources[baseId][kindId].slope1 = slope1 * 1e12;
-        sources[baseId][kindId].slope2 = slope2 * 1e12;
+        sources[baseId][kindId].slope1 = slope1;
+        sources[baseId][kindId].slope2 = slope2;
         sources[baseId][kindId].join = join;
 
         emit PerSecondRateUpdated(
