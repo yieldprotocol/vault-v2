@@ -2591,7 +2591,7 @@
       }
     },
     "src/Ladle.sol": {
-      "lastModificationDate": 1679306811910,
+      "lastModificationDate": 1679672047607,
       "contentHash": "1d3d2047df11eca438fa24490fe4a66f",
       "sourceName": "src/Ladle.sol",
       "solcConfig": {
@@ -10951,8 +10951,8 @@
       }
     },
     "src/test/variable/Fixture.sol": {
-      "lastModificationDate": 1679308674415,
-      "contentHash": "17a2e46d6ba1138c00c678814ffa4962",
+      "lastModificationDate": 1679937216880,
+      "contentHash": "c2f8bd476f10012b29e2b3c52044bcad",
       "sourceName": "src/test/variable/Fixture.sol",
       "solcConfig": {
         "settings": {
@@ -11072,8 +11072,8 @@
       }
     },
     "src/test/variable/FixtureStates.sol": {
-      "lastModificationDate": 1679308712032,
-      "contentHash": "2f37b19fe53b4eb63e506312ff1ad525",
+      "lastModificationDate": 1680014012917,
+      "contentHash": "e6d3e8d9bd773cf0824c979bfe73e8f3",
       "sourceName": "src/test/variable/FixtureStates.sol",
       "solcConfig": {
         "settings": {
@@ -11216,9 +11216,6 @@
         "IlkAddedState": {
           "0.8.15+commit.e14f2714.Darwin.appleclang": "FixtureStates.sol/IlkAddedState.json"
         },
-        "RateOracleAddedState": {
-          "0.8.15+commit.e14f2714.Darwin.appleclang": "FixtureStates.sol/RateOracleAddedState.json"
-        },
         "VYTokenZeroState": {
           "0.8.15+commit.e14f2714.Darwin.appleclang": "FixtureStates.sol/VYTokenZeroState.json"
         },
@@ -11234,8 +11231,8 @@
       }
     },
     "src/test/variable/VRCauldron.t.sol": {
-      "lastModificationDate": 1679306128143,
-      "contentHash": "575777a72a96316834adcc827cdadcdd",
+      "lastModificationDate": 1679937216880,
+      "contentHash": "fefbd25b18be6c9fa43b892f0e7faec2",
       "sourceName": "src/test/variable/VRCauldron.t.sol",
       "solcConfig": {
         "settings": {
@@ -11391,8 +11388,8 @@
       }
     },
     "src/test/variable/VRLadle.t.sol": {
-      "lastModificationDate": 1679308952162,
-      "contentHash": "ff87481f6dc5e4acede5c89eb8688190",
+      "lastModificationDate": 1680014181882,
+      "contentHash": "bb45a7689920b1c6227d830ed9260a50",
       "sourceName": "src/test/variable/VRLadle.t.sol",
       "solcConfig": {
         "settings": {
@@ -11548,7 +11545,7 @@
       }
     },
     "src/test/variable/VRWitch.t.sol": {
-      "lastModificationDate": 1679306128144,
+      "lastModificationDate": 1679519867217,
       "contentHash": "38bfc0240316aaa997e70b52702b08ab",
       "sourceName": "src/test/variable/VRWitch.t.sol",
       "solcConfig": {
@@ -11646,8 +11643,8 @@
       }
     },
     "src/test/variable/VYToken.t.sol": {
-      "lastModificationDate": 1679308915186,
-      "contentHash": "8d1cd2d90875d1552f0f519bd1912e25",
+      "lastModificationDate": 1679937216881,
+      "contentHash": "e4cb4fbcb2f75c31dad3aef846d887ae",
       "sourceName": "src/test/variable/VYToken.t.sol",
       "solcConfig": {
         "settings": {
@@ -11911,8 +11908,8 @@
       }
     },
     "src/variable/VRCauldron.sol": {
-      "lastModificationDate": 1679308855427,
-      "contentHash": "8fd1908be62c81f40fda818e2aa76e5d",
+      "lastModificationDate": 1679670551766,
+      "contentHash": "ee4bdb828d66f165accb63ed87d1f8b3",
       "sourceName": "src/variable/VRCauldron.sol",
       "solcConfig": {
         "settings": {
@@ -11969,8 +11966,8 @@
       }
     },
     "src/variable/VRLadle.sol": {
-      "lastModificationDate": 1679308867728,
-      "contentHash": "1845aba8acfdd6323b83232aac76a526",
+      "lastModificationDate": 1680013935558,
+      "contentHash": "4c3bff51fa4edd7c352d47d64a40d213",
       "sourceName": "src/variable/VRLadle.sol",
       "solcConfig": {
         "settings": {
@@ -12079,7 +12076,7 @@
       }
     },
     "src/variable/VRWitch.sol": {
-      "lastModificationDate": 1679306128144,
+      "lastModificationDate": 1679519867219,
       "contentHash": "fef66604ac67ca0a227c4fc5e537d364",
       "sourceName": "src/variable/VRWitch.sol",
       "solcConfig": {
@@ -12144,8 +12141,8 @@
       }
     },
     "src/variable/VYToken.sol": {
-      "lastModificationDate": 1679308851253,
-      "contentHash": "c52fb46b5d3d4665cef4ac11c8a5f40e",
+      "lastModificationDate": 1679576839762,
+      "contentHash": "14112dda6e092e36d296f60025f29e58",
       "sourceName": "src/variable/VYToken.sol",
       "solcConfig": {
         "settings": {
@@ -12206,7 +12203,7 @@
       }
     },
     "src/variable/interfaces/IVRCauldron.sol": {
-      "lastModificationDate": 1679306128145,
+      "lastModificationDate": 1679672059406,
       "contentHash": "2c20afbfa5d948e1fbf08694195b40e4",
       "sourceName": "src/variable/interfaces/IVRCauldron.sol",
       "solcConfig": {
@@ -12253,7 +12250,7 @@
       }
     },
     "src/variable/interfaces/IVRWitch.sol": {
-      "lastModificationDate": 1679306128145,
+      "lastModificationDate": 1679519867219,
       "contentHash": "764068be411012d48a6d165557bc2d1c",
       "sourceName": "src/variable/interfaces/IVRWitch.sol",
       "solcConfig": {

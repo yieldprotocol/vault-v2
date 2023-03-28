@@ -38,6 +38,7 @@ import "openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 using Cast for uint256;
 using Cast for uint256;
 using Math for uint256;
+
 abstract contract Fixture is Test, TestConstants, TestExtensions {
     address public admin = makeAddr("admin");
     address public user = makeAddr("user");
@@ -88,13 +89,26 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
     uint256 public ART = WAD;
     uint256 public FEE = 1000;
     uint128 public unit;
+
     function setUp() public virtual {
+        // Deploying mock tokens
         usdc = new USDCMock();
         weth = new WETH9Mock();
         dai = new DAIMock();
         base = new ERC20Mock("Base", "BASE");
         otherERC20 = new ERC20Mock("Other ERC20", "OTHERERC20");
+        restrictedERC20Mock = new RestrictedERC20Mock(
+            "Restricted",
+            "RESTRICTED"
+        );
 
+        // Deploying mock oracles
+        ethAggregator = new ChainlinkAggregatorV3Mock();
+        daiAggregator = new ChainlinkAggregatorV3Mock();
+        usdcAggregator = new ChainlinkAggregatorV3Mock();
+        baseAggregator = new ChainlinkAggregatorV3Mock();
+
+        // Deploying core contracts
         cauldron = new VRCauldron();
         cauldronProxy = new ERC1967Proxy(address(cauldron), abi.encodeWithSignature("initialize(address)", address(this)));
         cauldron = VRCauldron(address(cauldronProxy));
@@ -104,6 +118,7 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
             IRouter(address(router)),
             IWETH9(address(weth))
         );
+
         ladleProxy = new ERC1967Proxy(address(ladle), abi.encodeWithSignature("initialize(address)", address(this)));
         ladle = VRLadle(payable(ladleProxy));
         router.initialize(address(ladle));
@@ -128,6 +143,15 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
         daiJoin = new FlashJoin(address(dai));
         baseJoin = new FlashJoin(address(base));
 
+        vyToken = new VYToken(
+            baseId,
+            IOracle(address(chiRateOracle)),
+            IJoin(baseJoin),
+            base.name(),
+            base.symbol()
+        );
+
+        /// Orchestrating the protocol
         setUpOracles();
         vyToken = new VYToken(baseId, IOracle(address(chiRateOracle)), IJoin(baseJoin),base.name(), base.symbol());
         vyTokenProxy = new ERC1967Proxy(address(vyToken), abi.encodeWithSignature("initialize(address)", address(this)));
@@ -136,6 +160,7 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
         // Adding assets & making base
         addAsset(baseId, address(base), baseJoin);
         makeBase(baseId, address(base), baseJoin, address(chiRateOracle), 9);
+
         // Setting permission for vyToken
         bytes4[] memory roles = new bytes4[](2);
         roles[0] = Join.join.selector;
@@ -144,8 +169,7 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
     }
 
     function setUpOracles() internal {
-        chiRateOracle = new AccumulatorMultiOracle();
-
+        // Granting permissions
         chiRateOracle.grantRole(
             AccumulatorMultiOracle.setSource.selector,
             address(this)
@@ -154,27 +178,22 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
             AccumulatorMultiOracle.updatePerSecondRate.selector,
             address(this)
         );
-        chiRateOracle.setSource(baseId, RATE, WAD, WAD * 2);
-        chiRateOracle.setSource(baseId, CHI, WAD, WAD * 2);
-
-        ethAggregator = new ChainlinkAggregatorV3Mock();
-        ethAggregator.set(1e18 / 2);
-
-        daiAggregator = new ChainlinkAggregatorV3Mock();
-        daiAggregator.set(1e18 / 2);
-
-        usdcAggregator = new ChainlinkAggregatorV3Mock();
-        usdcAggregator.set(1e18 / 2);
-
-        baseAggregator = new ChainlinkAggregatorV3Mock();
-        baseAggregator.set(1e18 / 2);
-
-        spotOracle = new ChainlinkMultiOracle();
         spotOracle.grantRole(
             ChainlinkMultiOracle.setSource.selector,
             address(this)
         );
 
+        // Setting up the rate oracle
+        chiRateOracle.setSource(baseId, RATE, WAD, WAD * 2); // Borrowing rate
+        chiRateOracle.setSource(baseId, CHI, WAD, WAD * 2); // Lending rate
+
+        // Setting up the chainlink mock oracle prices
+        ethAggregator.set(1e18 / 2);
+        daiAggregator.set(1e18 / 2);
+        usdcAggregator.set(1e18 / 2);
+        baseAggregator.set(1e18 / 2);
+
+        // Setting up the spot oracle
         spotOracle.setSource(
             ETH,
             IERC20Metadata(address(weth)),
@@ -249,11 +268,15 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
         address chirateoracle,
         uint8 salt
     ) internal {
-        
         cauldron.setRateOracle(assetId, IOracle(chirateoracle));
         cauldron.addBase(assetId);
 
-        cauldron.setSpotOracle(assetId, assetId, IOracle(chirateoracle), 1000000);
+        cauldron.setSpotOracle(
+            assetId,
+            assetId,
+            IOracle(chirateoracle),
+            1000000
+        );
         bytes6[] memory ilk = new bytes6[](1);
         ilk[0] = assetId;
         cauldron.addIlks(assetId, ilk);
@@ -264,31 +287,31 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
             uint24(1e6),
             18
         );
-        (bytes12 vaultId_,) = ladle.build(assetId, assetId, salt);
+        (bytes12 vaultId_, ) = ladle.build(assetId, assetId, salt);
         // cauldron.build(address(this), vaultId_, assetId, assetId);
-        IERC20(assetAddress).approve(address(join),INK * 10);
+        IERC20(assetAddress).approve(address(join), INK * 10);
         deal(assetAddress, address(this), INK * 10);
         ladle.pour(vaultId_, address(this), (INK * 10).i128(), 0);
     }
 
-    function getAbove(int128 ink,int128 art, bytes12 vault) internal returns(bool){
+    function getAbove(
+        int128 ink,
+        int128 art,
+        bytes12 vault
+    ) internal returns (bool) {
         (, bytes6 baseId, bytes6 ilkId) = cauldron.vaults(vault);
 
         (IOracle oracle, uint32 ratio1) = cauldron.spotOracles(baseId, ilkId);
         uint256 ratio = uint256(ratio1) * 1e12; // Normalized to 18 decimals
-        (uint256 inkValue, ) = oracle.get(
-            ilkId,
-            baseId,
-            uint256(int(ink))
-        ); // ink * spot
+        (uint256 inkValue, ) = oracle.get(ilkId, baseId, uint256(int(ink))); // ink * spot
         uint256 baseValue = cauldron.debtToBase(baseId, uint128(art));
-        return inkValue.i256() - baseValue.wmul(ratio).i256() >=0;
+        return inkValue.i256() - baseValue.wmul(ratio).i256() >= 0;
     }
 
     function giveMeDustAndLine(bytes12 vault) internal view returns (uint128 dust, uint128 line) {
         (, bytes6 baseId, bytes6 ilkId) = cauldron.vaults(vault);
-        (uint96 max, uint24 min, uint8 dec,) = cauldron.debt(baseId,ilkId);
-        dust = min * uint128(10)**dec;
-        line = max * uint128(10)**dec;
+        (uint96 max, uint24 min, uint8 dec, ) = cauldron.debt(baseId, ilkId);
+        dust = min * uint128(10) ** dec;
+        line = max * uint128(10) ** dec;
     }
 }
