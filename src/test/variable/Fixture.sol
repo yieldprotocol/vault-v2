@@ -7,10 +7,10 @@ import "forge-std/src/Vm.sol";
 import {TestConstants} from "../utils/TestConstants.sol";
 import {TestExtensions} from "../utils/TestExtensions.sol";
 import "../../variable/VRLadle.sol";
+import "../../variable/VRRouter.sol";
 import "../../variable/VRCauldron.sol";
 import "../../variable/VYToken.sol";
-import "../../Witch.sol";
-import "../../Router.sol";
+import "../../variable/VRWitch.sol";
 import "../../oracles/compound/CompoundMultiOracle.sol";
 import "../../oracles/chainlink/ChainlinkMultiOracle.sol";
 import "../../oracles/accumulator/AccumulatorMultiOracle.sol";
@@ -19,6 +19,7 @@ import "../../mocks/oracles/compound/CTokenChiMock.sol";
 import "../../mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol";
 import "../../FlashJoin.sol";
 import "../../interfaces/ILadle.sol";
+import "../../interfaces/IRouter.sol";
 import "../../interfaces/ICauldron.sol";
 import "../../interfaces/IJoin.sol";
 import "../../interfaces/DataTypes.sol";
@@ -32,6 +33,8 @@ import "@yield-protocol/utils-v2/src/interfaces/IWETH9.sol";
 import "@yield-protocol/utils-v2/src/token/IERC20Metadata.sol";
 import "@yield-protocol/utils-v2/src/utils/Cast.sol";
 import "@yield-protocol/utils-v2/src/utils/Math.sol";
+import "openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+
 using Cast for uint256;
 using Cast for uint256;
 using Math for uint256;
@@ -40,8 +43,9 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
     address public admin = makeAddr("admin");
     address public user = makeAddr("user");
     VRCauldron public cauldron;
+    VRRouter public router;
     VRLadle public ladle;
-    Witch public witch;
+    VRWitch public witch;
     USDCMock public usdc;
     WETH9Mock public weth;
     DAIMock public dai;
@@ -68,6 +72,10 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
     ChainlinkAggregatorV3Mock public daiAggregator;
     ChainlinkAggregatorV3Mock public usdcAggregator;
     ChainlinkAggregatorV3Mock public baseAggregator;
+
+    ERC1967Proxy public cauldronProxy;
+    ERC1967Proxy public ladleProxy;
+    ERC1967Proxy public vyTokenProxy;
 
     bytes12 public vaultId = 0x000000000000000000000001;
     bytes12 public zeroVaultId = 0x000000000000000000000000;
@@ -102,15 +110,34 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
 
         // Deploying core contracts
         cauldron = new VRCauldron();
+        cauldronProxy = new ERC1967Proxy(address(cauldron), abi.encodeWithSignature("initialize(address)", address(this)));
+        cauldron = VRCauldron(address(cauldronProxy));
+        router = new VRRouter();
         ladle = new VRLadle(
             IVRCauldron(address(cauldron)),
+            IRouter(address(router)),
             IWETH9(address(weth))
         );
-        witch = new Witch(ICauldron(address(cauldron)), ILadle(address(ladle)));
-        chiRateOracle = new AccumulatorMultiOracle();
-        spotOracle = new ChainlinkMultiOracle();
 
-        // Deploying Joins
+        ladleProxy = new ERC1967Proxy(address(ladle), abi.encodeWithSignature("initialize(address)", address(this)));
+        ladle = VRLadle(payable(ladleProxy));
+        router.initialize(address(ladle));
+
+        witch = new VRWitch(ICauldron(address(cauldron)), ILadle(address(ladle)));
+        ERC1967Proxy witchProxy = new ERC1967Proxy(address(witch), abi.encodeWithSignature(
+            "initialize(address,address)",
+            ILadle(address(ladle)),
+            address(this)
+        ));
+        witch = VRWitch(address(witchProxy));
+
+        // Setting permissions
+        ladleGovAuth();
+        cauldronGovAuth(address(ladle));
+        cauldronGovAuth(address(this));
+
+        restrictedERC20Mock = new RestrictedERC20Mock("Restricted", "RESTRICTED");
+
         usdcJoin = new FlashJoin(address(usdc));
         wethJoin = new FlashJoin(address(weth));
         daiJoin = new FlashJoin(address(dai));
@@ -126,10 +153,10 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
 
         /// Orchestrating the protocol
         setUpOracles();
-        // Setting permissions
-        ladleGovAuth();
-        cauldronGovAuth(address(ladle));
-        cauldronGovAuth(address(this));
+        vyToken = new VYToken(baseId, IOracle(address(chiRateOracle)), IJoin(baseJoin),base.name(), base.symbol());
+        vyTokenProxy = new ERC1967Proxy(address(vyToken), abi.encodeWithSignature("initialize(address)", address(this)));
+        vyToken = VYToken(address(vyTokenProxy));
+
         // Adding assets & making base
         addAsset(baseId, address(base), baseJoin);
         makeBase(baseId, address(base), baseJoin, address(chiRateOracle), 9);
@@ -195,7 +222,6 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
     function ladleGovAuth() public {
         bytes4[] memory roles = new bytes4[](5);
         roles[0] = VRLadle.addJoin.selector;
-        roles[1] = VRLadle.addModule.selector;
         roles[2] = VRLadle.setFee.selector;
         roles[3] = VRLadle.addToken.selector;
         roles[4] = VRLadle.addIntegration.selector;
@@ -282,9 +308,7 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
         return inkValue.i256() - baseValue.wmul(ratio).i256() >= 0;
     }
 
-    function giveMeDustAndLine(
-        bytes12 vault
-    ) internal returns (uint128 dust, uint128 line) {
+    function giveMeDustAndLine(bytes12 vault) internal view returns (uint128 dust, uint128 line) {
         (, bytes6 baseId, bytes6 ilkId) = cauldron.vaults(vault);
         (uint96 max, uint24 min, uint8 dec, ) = cauldron.debt(baseId, ilkId);
         dust = min * uint128(10) ** dec;

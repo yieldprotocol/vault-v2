@@ -9,6 +9,7 @@ import "../../variable/interfaces/IVRWitch.sol";
 import "../../interfaces/IWitchEvents.sol";
 import "../../interfaces/IWitchErrors.sol";
 import "../../variable/VRWitch.sol";
+import "openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 abstract contract WitchStateZero is Test, TestConstants, IWitchEvents, IWitchErrors {
     using Mocks for *;
@@ -38,7 +39,14 @@ abstract contract WitchStateZero is Test, TestConstants, IWitchEvents, IWitchErr
         ladle = ILadle(Mocks.mock("Ladle"));
 
         vm.startPrank(ada);
-        witch = new VRWitch(ICauldron(address(cauldron)), ladle);
+        witch = new VRWitch(ICauldron(address(cauldron)), ILadle(address(ladle)));
+        ERC1967Proxy witchProxy = new ERC1967Proxy(address(witch), abi.encodeWithSignature(
+            "initialize(address,address)",
+            ILadle(address(ladle)),
+            ada
+        ));
+        witch = VRWitch(address(witchProxy));
+
         witch.grantRole(WitchBase.point.selector, ada);
         witch.grantRole(WitchBase.setLineAndLimit.selector, ada);
         witch.grantRole(WitchBase.setProtected.selector, ada);
@@ -49,6 +57,47 @@ abstract contract WitchStateZero is Test, TestConstants, IWitchEvents, IWitchErr
         vm.label(bob, "bob");
 
         iWitch = IVRWitch(address(witch));
+    }
+}
+
+contract WitchUpgradableTests is WitchStateZero {
+
+    // Test that the storage is initialized
+    function testStorageInitialized() public {
+        assertTrue(witch.initialized());
+    }
+
+    // Test that the storage can't be initialized again
+    function testInitializeRevertsIfInitialized() public {
+        vm.startPrank(ada);
+        witch.grantRole(witch.initialize.selector, ada);
+        
+        vm.expectRevert("Already initialized");
+        witch.initialize(ladle, address(this));
+        vm.stopPrank();
+    }
+
+    // Test that only authorized addresses can upgrade
+    function testUpgradeToRevertsIfNotAuthed() public {
+        vm.expectRevert("Access denied");
+        witch.upgradeTo(address(0));
+    }
+
+    // Test that the upgrade works
+    function testUpgradeTo() public {
+        vm.startPrank(ada);
+        VRWitch witchV2 = new VRWitch(
+            ICauldron(address(0)),
+            ILadle(address(0))
+        );
+
+        witch.grantRole(0x3659cfe6, ada); // upgradeTo(address)
+        witch.upgradeTo(address(witchV2));
+
+        assertEq(address(witch.cauldron()), address(0));
+        assertTrue(witch.hasRole(witch.ROOT(), ada));
+        assertTrue(witch.initialized());
+        vm.stopPrank();
     }
 }
 

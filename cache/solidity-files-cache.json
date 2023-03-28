@@ -822,6 +822,344 @@
         }
       }
     },
+    "lib/openzeppelin-contracts/contracts/interfaces/draft-IERC1822.sol": {
+      "lastModificationDate": 1679306220164,
+      "contentHash": "2858d98e74e67987ec81b39605230b74",
+      "sourceName": "lib/openzeppelin-contracts/contracts/interfaces/draft-IERC1822.sol",
+      "solcConfig": {
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "metadata": {
+            "bytecodeHash": "ipfs",
+            "appendCBOR": true
+          },
+          "outputSelection": {
+            "*": {
+              "": [
+                "ast"
+              ],
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ]
+            }
+          },
+          "evmVersion": "london",
+          "libraries": {}
+        }
+      },
+      "imports": [],
+      "versionRequirement": "^0.8.0",
+      "artifacts": {
+        "IERC1822Proxiable": {
+          "0.8.15+commit.e14f2714.Darwin.appleclang": "draft-IERC1822.sol/IERC1822Proxiable.json"
+        }
+      }
+    },
+    "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol": {
+      "lastModificationDate": 1679306220169,
+      "contentHash": "3fc3c7c0a2956f36e766691bb9473b06",
+      "sourceName": "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol",
+      "solcConfig": {
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "metadata": {
+            "bytecodeHash": "ipfs",
+            "appendCBOR": true
+          },
+          "outputSelection": {
+            "*": {
+              "": [
+                "ast"
+              ],
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ]
+            }
+          },
+          "evmVersion": "london",
+          "libraries": {}
+        }
+      },
+      "imports": [
+        "lib/openzeppelin-contracts/contracts/interfaces/draft-IERC1822.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Upgrade.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/Proxy.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/beacon/IBeacon.sol",
+        "lib/openzeppelin-contracts/contracts/utils/Address.sol",
+        "lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol"
+      ],
+      "versionRequirement": "^0.8.0",
+      "artifacts": {
+        "ERC1967Proxy": {
+          "0.8.15+commit.e14f2714.Darwin.appleclang": "ERC1967Proxy.sol/ERC1967Proxy.json"
+        }
+      }
+    },
+    "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Upgrade.sol": {
+      "lastModificationDate": 1679306225724,
+      "contentHash": "6baa887a798e95b14f34e093f117e9b2",
+      "sourceName": "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Upgrade.sol",
+      "solcConfig": {
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "metadata": {
+            "bytecodeHash": "ipfs",
+            "appendCBOR": true
+          },
+          "outputSelection": {
+            "*": {
+              "": [
+                "ast"
+              ],
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ]
+            }
+          },
+          "evmVersion": "london",
+          "libraries": {}
+        }
+      },
+      "imports": [
+        "lib/openzeppelin-contracts/contracts/interfaces/draft-IERC1822.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/beacon/IBeacon.sol",
+        "lib/openzeppelin-contracts/contracts/utils/Address.sol",
+        "lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol"
+      ],
+      "versionRequirement": "^0.8.2",
+      "artifacts": {
+        "ERC1967Upgrade": {
+          "0.8.15+commit.e14f2714.Darwin.appleclang": "ERC1967Upgrade.sol/ERC1967Upgrade.json"
+        }
+      }
+    },
+    "lib/openzeppelin-contracts/contracts/proxy/Proxy.sol": {
+      "lastModificationDate": 1679306220170,
+      "contentHash": "40b3d81a836d50ff47e03893dcaaf204",
+      "sourceName": "lib/openzeppelin-contracts/contracts/proxy/Proxy.sol",
+      "solcConfig": {
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "metadata": {
+            "bytecodeHash": "ipfs",
+            "appendCBOR": true
+          },
+          "outputSelection": {
+            "*": {
+              "": [
+                "ast"
+              ],
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ]
+            }
+          },
+          "evmVersion": "london",
+          "libraries": {}
+        }
+      },
+      "imports": [],
+      "versionRequirement": "^0.8.0",
+      "artifacts": {
+        "Proxy": {
+          "0.8.15+commit.e14f2714.Darwin.appleclang": "Proxy.sol/Proxy.json"
+        }
+      }
+    },
+    "lib/openzeppelin-contracts/contracts/proxy/beacon/IBeacon.sol": {
+      "lastModificationDate": 1679306220170,
+      "contentHash": "b6bd23bf19e90b771337037706470933",
+      "sourceName": "lib/openzeppelin-contracts/contracts/proxy/beacon/IBeacon.sol",
+      "solcConfig": {
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "metadata": {
+            "bytecodeHash": "ipfs",
+            "appendCBOR": true
+          },
+          "outputSelection": {
+            "*": {
+              "": [
+                "ast"
+              ],
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ]
+            }
+          },
+          "evmVersion": "london",
+          "libraries": {}
+        }
+      },
+      "imports": [],
+      "versionRequirement": "^0.8.0",
+      "artifacts": {
+        "IBeacon": {
+          "0.8.15+commit.e14f2714.Darwin.appleclang": "IBeacon.sol/IBeacon.json"
+        }
+      }
+    },
+    "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol": {
+      "lastModificationDate": 1679306225724,
+      "contentHash": "72741fcafc308d461962c96309d81342",
+      "sourceName": "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
+      "solcConfig": {
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "metadata": {
+            "bytecodeHash": "ipfs",
+            "appendCBOR": true
+          },
+          "outputSelection": {
+            "*": {
+              "": [
+                "ast"
+              ],
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ]
+            }
+          },
+          "evmVersion": "london",
+          "libraries": {}
+        }
+      },
+      "imports": [
+        "lib/openzeppelin-contracts/contracts/interfaces/draft-IERC1822.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Upgrade.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/beacon/IBeacon.sol",
+        "lib/openzeppelin-contracts/contracts/utils/Address.sol",
+        "lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol"
+      ],
+      "versionRequirement": "^0.8.0",
+      "artifacts": {
+        "UUPSUpgradeable": {
+          "0.8.15+commit.e14f2714.Darwin.appleclang": "UUPSUpgradeable.sol/UUPSUpgradeable.json"
+        }
+      }
+    },
+    "lib/openzeppelin-contracts/contracts/utils/Address.sol": {
+      "lastModificationDate": 1679306225728,
+      "contentHash": "f31ad6fc4bbf9c06203987220156a6ba",
+      "sourceName": "lib/openzeppelin-contracts/contracts/utils/Address.sol",
+      "solcConfig": {
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "metadata": {
+            "bytecodeHash": "ipfs",
+            "appendCBOR": true
+          },
+          "outputSelection": {
+            "*": {
+              "": [
+                "ast"
+              ],
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ]
+            }
+          },
+          "evmVersion": "london",
+          "libraries": {}
+        }
+      },
+      "imports": [],
+      "versionRequirement": "^0.8.1",
+      "artifacts": {
+        "Address": {
+          "0.8.15+commit.e14f2714.Darwin.appleclang": "Address.sol/Address.json"
+        }
+      }
+    },
+    "lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol": {
+      "lastModificationDate": 1679306225728,
+      "contentHash": "f993f8f50186952a59ee5e3a30b68222",
+      "sourceName": "lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol",
+      "solcConfig": {
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "metadata": {
+            "bytecodeHash": "ipfs",
+            "appendCBOR": true
+          },
+          "outputSelection": {
+            "*": {
+              "": [
+                "ast"
+              ],
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ]
+            }
+          },
+          "evmVersion": "london",
+          "libraries": {}
+        }
+      },
+      "imports": [],
+      "versionRequirement": "^0.8.0",
+      "artifacts": {
+        "StorageSlot": {
+          "0.8.15+commit.e14f2714.Darwin.appleclang": "StorageSlot.sol/StorageSlot.json"
+        }
+      }
+    },
     "lib/yieldspace-tv/lib/yield-utils-v2/src/access/AccessControl.sol": {
       "lastModificationDate": 1677500366813,
       "contentHash": "8a72d8f5255345c5756cc72a8952b620",
@@ -2038,7 +2376,7 @@
       }
     },
     "src/Cauldron.sol": {
-      "lastModificationDate": 1678444665966,
+      "lastModificationDate": 1677500985340,
       "contentHash": "bfad21f10e48bfd70d0570b88c376cf1",
       "sourceName": "src/Cauldron.sol",
       "solcConfig": {
@@ -2092,7 +2430,7 @@
       }
     },
     "src/FYToken.sol": {
-      "lastModificationDate": 1677499641271,
+      "lastModificationDate": 1677500985340,
       "contentHash": "56285becaf2d2a4045241173215503f4",
       "sourceName": "src/FYToken.sol",
       "solcConfig": {
@@ -2150,7 +2488,7 @@
       }
     },
     "src/FlashJoin.sol": {
-      "lastModificationDate": 1677499641270,
+      "lastModificationDate": 1677500985340,
       "contentHash": "4a44e7504ba288801c4a8f2120367635",
       "sourceName": "src/FlashJoin.sol",
       "solcConfig": {
@@ -2202,7 +2540,7 @@
       }
     },
     "src/Join.sol": {
-      "lastModificationDate": 1677499641270,
+      "lastModificationDate": 1677500985341,
       "contentHash": "eca9de66bf065891e2170228e705c3ca",
       "sourceName": "src/Join.sol",
       "solcConfig": {
@@ -2316,7 +2654,7 @@
       }
     },
     "src/LadleStorage.sol": {
-      "lastModificationDate": 1678444665968,
+      "lastModificationDate": 1679306811911,
       "contentHash": "48f86639c130a500429ff93375834227",
       "sourceName": "src/LadleStorage.sol",
       "solcConfig": {
@@ -2373,8 +2711,8 @@
       }
     },
     "src/Router.sol": {
-      "lastModificationDate": 1677499641270,
-      "contentHash": "d7391413179b1c07c3835e97a15b02ce",
+      "lastModificationDate": 1679307406215,
+      "contentHash": "329a135caac2c9d7d345fd961a5e2ee3",
       "sourceName": "src/Router.sol",
       "solcConfig": {
         "settings": {
@@ -2416,7 +2754,7 @@
       }
     },
     "src/Witch.sol": {
-      "lastModificationDate": 1678446320597,
+      "lastModificationDate": 1679306128142,
       "contentHash": "739cb416697668305c29ad0a91130c80",
       "sourceName": "src/Witch.sol",
       "solcConfig": {
@@ -2480,7 +2818,7 @@
       }
     },
     "src/WitchBase.sol": {
-      "lastModificationDate": 1678446453319,
+      "lastModificationDate": 1679306128142,
       "contentHash": "f91bab69e794cf96649b06f672cc3577",
       "sourceName": "src/WitchBase.sol",
       "solcConfig": {
@@ -2543,7 +2881,7 @@
       }
     },
     "src/constants/Constants.sol": {
-      "lastModificationDate": 1677499641269,
+      "lastModificationDate": 1677500985341,
       "contentHash": "c3ddd7ca09b5a70a63845d1b1e8fc739",
       "sourceName": "src/constants/Constants.sol",
       "solcConfig": {
@@ -2583,7 +2921,7 @@
       }
     },
     "src/deprecated/FYTokenFactoryMock.sol": {
-      "lastModificationDate": 1677499641269,
+      "lastModificationDate": 1677500985341,
       "contentHash": "a81b26f8c12de85e68a512ed5d78d5f2",
       "sourceName": "src/deprecated/FYTokenFactoryMock.sol",
       "solcConfig": {
@@ -2643,7 +2981,7 @@
       }
     },
     "src/deprecated/IPoolFactory.sol": {
-      "lastModificationDate": 1677499641269,
+      "lastModificationDate": 1677500985342,
       "contentHash": "800a26da67c69b31e29497f3bb9680d7",
       "sourceName": "src/deprecated/IPoolFactory.sol",
       "solcConfig": {
@@ -2683,7 +3021,7 @@
       }
     },
     "src/deprecated/JoinFactoryMock.sol": {
-      "lastModificationDate": 1677499641269,
+      "lastModificationDate": 1677500985342,
       "contentHash": "dbbb3e0495e54f04ae3fcc51135a8fd1",
       "sourceName": "src/deprecated/JoinFactoryMock.sol",
       "solcConfig": {
@@ -2735,7 +3073,7 @@
       }
     },
     "src/deprecated/PoolFactoryMock.sol": {
-      "lastModificationDate": 1677499641269,
+      "lastModificationDate": 1677500985342,
       "contentHash": "2bac320b9f64546800dd35a2ae485a0e",
       "sourceName": "src/deprecated/PoolFactoryMock.sol",
       "solcConfig": {
@@ -2789,7 +3127,7 @@
       }
     },
     "src/deprecated/Wand.sol": {
-      "lastModificationDate": 1678444665966,
+      "lastModificationDate": 1677500985342,
       "contentHash": "5d942b39275070f71cd57912e6144274",
       "sourceName": "src/deprecated/Wand.sol",
       "solcConfig": {
@@ -2847,7 +3185,7 @@
       }
     },
     "src/deprecated/WitchOld.sol": {
-      "lastModificationDate": 1678444665966,
+      "lastModificationDate": 1677500985342,
       "contentHash": "d0b3fc31f2dce786f01a7b90bde5cdcc",
       "sourceName": "src/deprecated/WitchOld.sol",
       "solcConfig": {
@@ -2908,7 +3246,7 @@
       }
     },
     "src/interfaces/DataTypes.sol": {
-      "lastModificationDate": 1678445162642,
+      "lastModificationDate": 1679306128142,
       "contentHash": "a4b64558f569070a020a9fa86e64030b",
       "sourceName": "src/interfaces/DataTypes.sol",
       "solcConfig": {
@@ -2957,7 +3295,7 @@
       }
     },
     "src/interfaces/ICauldron.sol": {
-      "lastModificationDate": 1678444665967,
+      "lastModificationDate": 1677500985342,
       "contentHash": "3713f28b5f2487e6cd23d9cf06fae066",
       "sourceName": "src/interfaces/ICauldron.sol",
       "solcConfig": {
@@ -3004,7 +3342,7 @@
       }
     },
     "src/interfaces/ICauldronGov.sol": {
-      "lastModificationDate": 1678444665967,
+      "lastModificationDate": 1677500985342,
       "contentHash": "e09763bc5e22803dba05b2ff5a9bb695",
       "sourceName": "src/interfaces/ICauldronGov.sol",
       "solcConfig": {
@@ -3051,7 +3389,7 @@
       }
     },
     "src/interfaces/IERC5095.sol": {
-      "lastModificationDate": 1677499641268,
+      "lastModificationDate": 1677500985342,
       "contentHash": "a52f45d8389356aefa8c48af2dc903d0",
       "sourceName": "src/interfaces/IERC5095.sol",
       "solcConfig": {
@@ -3093,7 +3431,7 @@
       }
     },
     "src/interfaces/IFYToken.sol": {
-      "lastModificationDate": 1677499641268,
+      "lastModificationDate": 1677500985342,
       "contentHash": "2dde05b49e84f14b757b62ef78beb517",
       "sourceName": "src/interfaces/IFYToken.sol",
       "solcConfig": {
@@ -3138,7 +3476,7 @@
       }
     },
     "src/interfaces/IFYTokenFactory.sol": {
-      "lastModificationDate": 1677499641268,
+      "lastModificationDate": 1677500985342,
       "contentHash": "7d2e2f3addf1080c9e0ac318535b4a61",
       "sourceName": "src/interfaces/IFYTokenFactory.sol",
       "solcConfig": {
@@ -3182,7 +3520,7 @@
       }
     },
     "src/interfaces/IJoin.sol": {
-      "lastModificationDate": 1677499641268,
+      "lastModificationDate": 1677500985343,
       "contentHash": "540020ec7d91348df94a506411040ec0",
       "sourceName": "src/interfaces/IJoin.sol",
       "solcConfig": {
@@ -3224,7 +3562,7 @@
       }
     },
     "src/interfaces/IJoinFactory.sol": {
-      "lastModificationDate": 1677499641268,
+      "lastModificationDate": 1677500985343,
       "contentHash": "1426c885a7cb4c4c89931c6e958405e3",
       "sourceName": "src/interfaces/IJoinFactory.sol",
       "solcConfig": {
@@ -3264,7 +3602,7 @@
       }
     },
     "src/interfaces/ILadle.sol": {
-      "lastModificationDate": 1678444665967,
+      "lastModificationDate": 1677500985343,
       "contentHash": "993fb6448ab02c216c47d7cdf496b36e",
       "sourceName": "src/interfaces/ILadle.sol",
       "solcConfig": {
@@ -3321,7 +3659,7 @@
       }
     },
     "src/interfaces/ILadleGov.sol": {
-      "lastModificationDate": 1677499641268,
+      "lastModificationDate": 1677500985343,
       "contentHash": "4a3e1dde77c4c8a5fc0733c6687c8139",
       "sourceName": "src/interfaces/ILadleGov.sol",
       "solcConfig": {
@@ -3364,7 +3702,7 @@
       }
     },
     "src/interfaces/IMultiOracleGov.sol": {
-      "lastModificationDate": 1677499641267,
+      "lastModificationDate": 1677500985343,
       "contentHash": "e0cad6c6985bbddc1c519c53da67ad95",
       "sourceName": "src/interfaces/IMultiOracleGov.sol",
       "solcConfig": {
@@ -3404,7 +3742,7 @@
       }
     },
     "src/interfaces/IOracle.sol": {
-      "lastModificationDate": 1677499641267,
+      "lastModificationDate": 1677500985343,
       "contentHash": "fbec703dd8228a0636d95f02596cca53",
       "sourceName": "src/interfaces/IOracle.sol",
       "solcConfig": {
@@ -3443,8 +3781,48 @@
         }
       }
     },
+    "src/interfaces/IRouter.sol": {
+      "lastModificationDate": 1679307416001,
+      "contentHash": "e0acb500d6a597494ddb8fe27b127fd0",
+      "sourceName": "src/interfaces/IRouter.sol",
+      "solcConfig": {
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "metadata": {
+            "bytecodeHash": "ipfs",
+            "appendCBOR": true
+          },
+          "outputSelection": {
+            "*": {
+              "": [
+                "ast"
+              ],
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ]
+            }
+          },
+          "evmVersion": "london",
+          "libraries": {}
+        }
+      },
+      "imports": [],
+      "versionRequirement": "^0.8.0",
+      "artifacts": {
+        "IRouter": {
+          "0.8.15+commit.e14f2714.Darwin.appleclang": "IRouter.sol/IRouter.json"
+        }
+      }
+    },
     "src/interfaces/IStrategy.sol": {
-      "lastModificationDate": 1677499641267,
+      "lastModificationDate": 1677500985343,
       "contentHash": "77e33c88764c278be63e4d57e74f331c",
       "sourceName": "src/interfaces/IStrategy.sol",
       "solcConfig": {
@@ -3484,7 +3862,7 @@
       }
     },
     "src/interfaces/IWitch.sol": {
-      "lastModificationDate": 1678444665968,
+      "lastModificationDate": 1677500985343,
       "contentHash": "9c7cbc5e6e506d664972afc0301d09c2",
       "sourceName": "src/interfaces/IWitch.sol",
       "solcConfig": {
@@ -3542,7 +3920,7 @@
       }
     },
     "src/interfaces/IWitchErrors.sol": {
-      "lastModificationDate": 1678445145790,
+      "lastModificationDate": 1679306128142,
       "contentHash": "501b2bb333cdb5ad167955b8389a8c9a",
       "sourceName": "src/interfaces/IWitchErrors.sol",
       "solcConfig": {
@@ -3589,7 +3967,7 @@
       }
     },
     "src/interfaces/IWitchEvents.sol": {
-      "lastModificationDate": 1678445153150,
+      "lastModificationDate": 1679306128142,
       "contentHash": "06cebd81fee73ab4df80a6a054e65980",
       "sourceName": "src/interfaces/IWitchEvents.sol",
       "solcConfig": {
@@ -3636,7 +4014,7 @@
       }
     },
     "src/mocks/ConvexPoolMock.sol": {
-      "lastModificationDate": 1678444665968,
+      "lastModificationDate": 1677500985343,
       "contentHash": "59f06a4b00a23526b690a778b0ec1061",
       "sourceName": "src/mocks/ConvexPoolMock.sol",
       "solcConfig": {
@@ -3687,7 +4065,7 @@
       }
     },
     "src/mocks/ConvexYieldWrapperMock.sol": {
-      "lastModificationDate": 1678444665968,
+      "lastModificationDate": 1677500985343,
       "contentHash": "860bdcf3611cc6f4cc67720162ea7dbc",
       "sourceName": "src/mocks/ConvexYieldWrapperMock.sol",
       "solcConfig": {
@@ -3745,7 +4123,7 @@
       }
     },
     "src/mocks/DAIMock.sol": {
-      "lastModificationDate": 1677499641267,
+      "lastModificationDate": 1677500985343,
       "contentHash": "4cfc400e3026ecaadd1b778b977d578b",
       "sourceName": "src/mocks/DAIMock.sol",
       "solcConfig": {
@@ -3789,7 +4167,7 @@
       }
     },
     "src/mocks/ERC20Mock.sol": {
-      "lastModificationDate": 1677499641267,
+      "lastModificationDate": 1677500985344,
       "contentHash": "d10127a12042b0848a077a1b1806bc0c",
       "sourceName": "src/mocks/ERC20Mock.sol",
       "solcConfig": {
@@ -3835,7 +4213,7 @@
       }
     },
     "src/mocks/FlashBorrower.sol": {
-      "lastModificationDate": 1677499641266,
+      "lastModificationDate": 1677500985344,
       "contentHash": "b8671650af40061e7fbe3850b4c26cb5",
       "sourceName": "src/mocks/FlashBorrower.sol",
       "solcConfig": {
@@ -3879,7 +4257,7 @@
       }
     },
     "src/mocks/PoolMock.sol": {
-      "lastModificationDate": 1677499641266,
+      "lastModificationDate": 1677500985344,
       "contentHash": "c15b280ee6d6ba9e896c3cb3830bee38",
       "sourceName": "src/mocks/PoolMock.sol",
       "solcConfig": {
@@ -3935,7 +4313,7 @@
       }
     },
     "src/mocks/RestrictedERC20Mock.sol": {
-      "lastModificationDate": 1677499641266,
+      "lastModificationDate": 1677500985344,
       "contentHash": "ed278818d4467a9965222a2f575dcab0",
       "sourceName": "src/mocks/RestrictedERC20Mock.sol",
       "solcConfig": {
@@ -3982,7 +4360,7 @@
       }
     },
     "src/mocks/TLMMock.sol": {
-      "lastModificationDate": 1677499641266,
+      "lastModificationDate": 1677500985344,
       "contentHash": "e5e6f32ff7f3e5d28a2159e00d2abc6b",
       "sourceName": "src/mocks/TLMMock.sol",
       "solcConfig": {
@@ -4032,7 +4410,7 @@
       }
     },
     "src/mocks/TokenProxy.sol": {
-      "lastModificationDate": 1677499641266,
+      "lastModificationDate": 1677500985344,
       "contentHash": "c1bc4f95082996118aa3856405815e2c",
       "sourceName": "src/mocks/TokenProxy.sol",
       "solcConfig": {
@@ -4076,7 +4454,7 @@
       }
     },
     "src/mocks/USDCMock.sol": {
-      "lastModificationDate": 1677499641266,
+      "lastModificationDate": 1677500985344,
       "contentHash": "36e91fc2f2a61b18464cea61abc40e40",
       "sourceName": "src/mocks/USDCMock.sol",
       "solcConfig": {
@@ -4122,7 +4500,7 @@
       }
     },
     "src/mocks/WETH9Mock.sol": {
-      "lastModificationDate": 1677499641266,
+      "lastModificationDate": 1677500985344,
       "contentHash": "0968bbd7ca8cb68e648aa5ca6a2fe16f",
       "sourceName": "src/mocks/WETH9Mock.sol",
       "solcConfig": {
@@ -4166,7 +4544,7 @@
       }
     },
     "src/mocks/WstETHMock.sol": {
-      "lastModificationDate": 1677499641266,
+      "lastModificationDate": 1677500985345,
       "contentHash": "b2df47e4b404a6e194e94a11edffa4d8",
       "sourceName": "src/mocks/WstETHMock.sol",
       "solcConfig": {
@@ -4212,7 +4590,7 @@
       }
     },
     "src/mocks/YvTokenMock.sol": {
-      "lastModificationDate": 1677499641265,
+      "lastModificationDate": 1677500985345,
       "contentHash": "ff1de7e2fe5066589a44ee1a84125593",
       "sourceName": "src/mocks/YvTokenMock.sol",
       "solcConfig": {
@@ -4257,7 +4635,7 @@
       }
     },
     "src/mocks/oracles/ISourceMock.sol": {
-      "lastModificationDate": 1677499641265,
+      "lastModificationDate": 1677500985345,
       "contentHash": "44e9d8e43fb84387fac4ce7fe69353f0",
       "sourceName": "src/mocks/oracles/ISourceMock.sol",
       "solcConfig": {
@@ -4297,7 +4675,7 @@
       }
     },
     "src/mocks/oracles/OracleMock.sol": {
-      "lastModificationDate": 1677499641265,
+      "lastModificationDate": 1677500985345,
       "contentHash": "ab94ce6bee1e837994859e6e1886d028",
       "sourceName": "src/mocks/oracles/OracleMock.sol",
       "solcConfig": {
@@ -4339,7 +4717,7 @@
       }
     },
     "src/mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol": {
-      "lastModificationDate": 1677499641265,
+      "lastModificationDate": 1677500985345,
       "contentHash": "4bea9abf9ef7926e11c65e0b73e40871",
       "sourceName": "src/mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol",
       "solcConfig": {
@@ -4381,7 +4759,7 @@
       }
     },
     "src/mocks/oracles/chainlink/ChainlinkAggregatorV3MockEx.sol": {
-      "lastModificationDate": 1677499641265,
+      "lastModificationDate": 1677500985345,
       "contentHash": "3ec23d2f742d6cf3208a113d26d68e85",
       "sourceName": "src/mocks/oracles/chainlink/ChainlinkAggregatorV3MockEx.sol",
       "solcConfig": {
@@ -4424,7 +4802,7 @@
       }
     },
     "src/mocks/oracles/chainlink/FlagsInterfaceMock.sol": {
-      "lastModificationDate": 1677499641265,
+      "lastModificationDate": 1677500985345,
       "contentHash": "ce3c5add5ac42ab0b279fd5b1a28624d",
       "sourceName": "src/mocks/oracles/chainlink/FlagsInterfaceMock.sol",
       "solcConfig": {
@@ -4466,7 +4844,7 @@
       }
     },
     "src/mocks/oracles/compound/CTokenChiMock.sol": {
-      "lastModificationDate": 1677499641265,
+      "lastModificationDate": 1677500985345,
       "contentHash": "fbaf55af65ede5b41e5a13e715f87499",
       "sourceName": "src/mocks/oracles/compound/CTokenChiMock.sol",
       "solcConfig": {
@@ -4508,7 +4886,7 @@
       }
     },
     "src/mocks/oracles/compound/CTokenMock.sol": {
-      "lastModificationDate": 1677499641265,
+      "lastModificationDate": 1677500985345,
       "contentHash": "6af91788f1ce96cc22001438fa940424",
       "sourceName": "src/mocks/oracles/compound/CTokenMock.sol",
       "solcConfig": {
@@ -4550,7 +4928,7 @@
       }
     },
     "src/mocks/oracles/compound/CTokenRateMock.sol": {
-      "lastModificationDate": 1677499641265,
+      "lastModificationDate": 1677500985345,
       "contentHash": "b3592dc089d7c5fe16551877c823f6cd",
       "sourceName": "src/mocks/oracles/compound/CTokenRateMock.sol",
       "solcConfig": {
@@ -4592,7 +4970,7 @@
       }
     },
     "src/mocks/oracles/convex/CurvePoolMock.sol": {
-      "lastModificationDate": 1677499641264,
+      "lastModificationDate": 1677500985346,
       "contentHash": "a821051acdb945b4af901fa5fbcd2aa4",
       "sourceName": "src/mocks/oracles/convex/CurvePoolMock.sol",
       "solcConfig": {
@@ -4635,7 +5013,7 @@
       }
     },
     "src/mocks/oracles/lido/WstETHMock.sol": {
-      "lastModificationDate": 1677499641264,
+      "lastModificationDate": 1677500985346,
       "contentHash": "97b6c02ceaf8d34118040c12fba59cd8",
       "sourceName": "src/mocks/oracles/lido/WstETHMock.sol",
       "solcConfig": {
@@ -4683,7 +5061,7 @@
       }
     },
     "src/mocks/oracles/uniswap/UniswapV2PairMock.sol": {
-      "lastModificationDate": 1677499641264,
+      "lastModificationDate": 1677500985346,
       "contentHash": "7524c32b3e7e74e0dfe07c89b45f6161",
       "sourceName": "src/mocks/oracles/uniswap/UniswapV2PairMock.sol",
       "solcConfig": {
@@ -4723,7 +5101,7 @@
       }
     },
     "src/mocks/oracles/uniswap/UniswapV3FactoryMock.sol": {
-      "lastModificationDate": 1677499641264,
+      "lastModificationDate": 1677500985346,
       "contentHash": "86f6dc18a002434300868f7557661467",
       "sourceName": "src/mocks/oracles/uniswap/UniswapV3FactoryMock.sol",
       "solcConfig": {
@@ -4767,7 +5145,7 @@
       }
     },
     "src/mocks/oracles/uniswap/UniswapV3OracleLibraryMock.sol": {
-      "lastModificationDate": 1677499641264,
+      "lastModificationDate": 1677500985346,
       "contentHash": "94086dd7e88f41b6774b4c02fc649f4a",
       "sourceName": "src/mocks/oracles/uniswap/UniswapV3OracleLibraryMock.sol",
       "solcConfig": {
@@ -4813,7 +5191,7 @@
       }
     },
     "src/mocks/oracles/uniswap/UniswapV3PoolMock.sol": {
-      "lastModificationDate": 1677499641264,
+      "lastModificationDate": 1677500985346,
       "contentHash": "af699a9b2dab7167484fbd10d5f2b2ad",
       "sourceName": "src/mocks/oracles/uniswap/UniswapV3PoolMock.sol",
       "solcConfig": {
@@ -4856,7 +5234,7 @@
       }
     },
     "src/modules/HealerModule.sol": {
-      "lastModificationDate": 1678444665970,
+      "lastModificationDate": 1677500985346,
       "contentHash": "143b9671a2c51d508f819687fce4c16b",
       "sourceName": "src/modules/HealerModule.sol",
       "solcConfig": {
@@ -4917,7 +5295,7 @@
       }
     },
     "src/modules/RepayFromLadleModule.sol": {
-      "lastModificationDate": 1678444665970,
+      "lastModificationDate": 1677500985346,
       "contentHash": "856d5fe0d07b5ba0e1d4d809df445b8b",
       "sourceName": "src/modules/RepayFromLadleModule.sol",
       "solcConfig": {
@@ -4977,7 +5355,7 @@
       }
     },
     "src/modules/TLMModule.sol": {
-      "lastModificationDate": 1678444665971,
+      "lastModificationDate": 1677500985346,
       "contentHash": "369d818283378a7340be67f748d56b33",
       "sourceName": "src/modules/TLMModule.sol",
       "solcConfig": {
@@ -5044,7 +5422,7 @@
       }
     },
     "src/modules/WrapEtherModule.sol": {
-      "lastModificationDate": 1678444665971,
+      "lastModificationDate": 1677500985347,
       "contentHash": "4b4b24b86d0c31e2159fce649008f256",
       "sourceName": "src/modules/WrapEtherModule.sol",
       "solcConfig": {
@@ -5103,7 +5481,7 @@
       }
     },
     "src/oracles/IdentityOracle.sol": {
-      "lastModificationDate": 1678444665973,
+      "lastModificationDate": 1679306064328,
       "contentHash": "90e430df84d9d8cca7e4e9c6b793d934",
       "sourceName": "src/oracles/IdentityOracle.sol",
       "solcConfig": {
@@ -5149,7 +5527,7 @@
       }
     },
     "src/oracles/accumulator/AccumulatorMultiOracle.sol": {
-      "lastModificationDate": 1677499641263,
+      "lastModificationDate": 1677500985347,
       "contentHash": "f77f8696a88dbe9674f1fdd8fc88db25",
       "sourceName": "src/oracles/accumulator/AccumulatorMultiOracle.sol",
       "solcConfig": {
@@ -5195,7 +5573,7 @@
       }
     },
     "src/oracles/chainlink/AggregatorV3Interface.sol": {
-      "lastModificationDate": 1677499641263,
+      "lastModificationDate": 1677500985347,
       "contentHash": "b213894d1186ed5f03cceedb9a7811a2",
       "sourceName": "src/oracles/chainlink/AggregatorV3Interface.sol",
       "solcConfig": {
@@ -5235,7 +5613,7 @@
       }
     },
     "src/oracles/chainlink/ChainlinkL2USDMultiOracle.sol": {
-      "lastModificationDate": 1677499641263,
+      "lastModificationDate": 1677500985347,
       "contentHash": "54600a72189318340a2e35068ce967ff",
       "sourceName": "src/oracles/chainlink/ChainlinkL2USDMultiOracle.sol",
       "solcConfig": {
@@ -5285,7 +5663,7 @@
       }
     },
     "src/oracles/chainlink/ChainlinkMultiOracle.sol": {
-      "lastModificationDate": 1677499641263,
+      "lastModificationDate": 1677500985347,
       "contentHash": "a22b18e9ca40e7135457b337d8c3fd38",
       "sourceName": "src/oracles/chainlink/ChainlinkMultiOracle.sol",
       "solcConfig": {
@@ -5333,7 +5711,7 @@
       }
     },
     "src/oracles/chainlink/ChainlinkUSDMultiOracle.sol": {
-      "lastModificationDate": 1677499641263,
+      "lastModificationDate": 1677500985347,
       "contentHash": "e3eafb32950259d322666e47d29ffebd",
       "sourceName": "src/oracles/chainlink/ChainlinkUSDMultiOracle.sol",
       "solcConfig": {
@@ -5382,7 +5760,7 @@
       }
     },
     "src/oracles/chainlink/FlagsInterface.sol": {
-      "lastModificationDate": 1677499641263,
+      "lastModificationDate": 1677500985347,
       "contentHash": "d37f32515fb3edcdcc0728ca80cfe987",
       "sourceName": "src/oracles/chainlink/FlagsInterface.sol",
       "solcConfig": {
@@ -5422,7 +5800,7 @@
       }
     },
     "src/oracles/composite/CompositeMultiOracle.sol": {
-      "lastModificationDate": 1677499641262,
+      "lastModificationDate": 1677500985348,
       "contentHash": "aaf5d39dd4a9b1274f02bf4099bc32ac",
       "sourceName": "src/oracles/composite/CompositeMultiOracle.sol",
       "solcConfig": {
@@ -5466,7 +5844,7 @@
       }
     },
     "src/oracles/compound/CTokenInterface.sol": {
-      "lastModificationDate": 1677499641262,
+      "lastModificationDate": 1677500985348,
       "contentHash": "c2c3908e2ef28463858f56d16113b926",
       "sourceName": "src/oracles/compound/CTokenInterface.sol",
       "solcConfig": {
@@ -5508,7 +5886,7 @@
       }
     },
     "src/oracles/compound/CTokenMultiOracle.sol": {
-      "lastModificationDate": 1677499641262,
+      "lastModificationDate": 1677500985348,
       "contentHash": "37cce1c8be448a4b289477b00f189811",
       "sourceName": "src/oracles/compound/CTokenMultiOracle.sol",
       "solcConfig": {
@@ -5556,7 +5934,7 @@
       }
     },
     "src/oracles/compound/CompoundMultiOracle.sol": {
-      "lastModificationDate": 1677499641262,
+      "lastModificationDate": 1677500985348,
       "contentHash": "a38b16ba44ac30c2261de503e0d7b1ea",
       "sourceName": "src/oracles/compound/CompoundMultiOracle.sol",
       "solcConfig": {
@@ -5603,7 +5981,7 @@
       }
     },
     "src/oracles/convex/Cvx3CrvOracle.sol": {
-      "lastModificationDate": 1677499641262,
+      "lastModificationDate": 1677500985348,
       "contentHash": "c57bb600d05628698d51d7d1614de190",
       "sourceName": "src/oracles/convex/Cvx3CrvOracle.sol",
       "solcConfig": {
@@ -5649,7 +6027,7 @@
       }
     },
     "src/oracles/convex/ICurvePool.sol": {
-      "lastModificationDate": 1677499641262,
+      "lastModificationDate": 1677500985348,
       "contentHash": "e89afd47a330d791e058f8215c6aaf1a",
       "sourceName": "src/oracles/convex/ICurvePool.sol",
       "solcConfig": {
@@ -5689,7 +6067,7 @@
       }
     },
     "src/oracles/crab/CrabOracle.sol": {
-      "lastModificationDate": 1677499641262,
+      "lastModificationDate": 1677500985348,
       "contentHash": "b85271615dd82b3ffa9c49da0c4afcf2",
       "sourceName": "src/oracles/crab/CrabOracle.sol",
       "solcConfig": {
@@ -5737,7 +6115,7 @@
       }
     },
     "src/oracles/euler/ETokenMultiOracle.sol": {
-      "lastModificationDate": 1677499641261,
+      "lastModificationDate": 1677500985349,
       "contentHash": "1bf8321912a233ffc4091c5342c848ff",
       "sourceName": "src/oracles/euler/ETokenMultiOracle.sol",
       "solcConfig": {
@@ -5782,7 +6160,7 @@
       }
     },
     "src/oracles/euler/IEToken.sol": {
-      "lastModificationDate": 1677499641261,
+      "lastModificationDate": 1677500985349,
       "contentHash": "cfd4d6aae3f8d8abf6272154423f73f8",
       "sourceName": "src/oracles/euler/IEToken.sol",
       "solcConfig": {
@@ -5822,7 +6200,7 @@
       }
     },
     "src/oracles/lido/IWstETH.sol": {
-      "lastModificationDate": 1677499641261,
+      "lastModificationDate": 1677500985349,
       "contentHash": "a460d641bb88bcea2f5a410b964f3296",
       "sourceName": "src/oracles/lido/IWstETH.sol",
       "solcConfig": {
@@ -5864,7 +6242,7 @@
       }
     },
     "src/oracles/lido/LidoOracle.sol": {
-      "lastModificationDate": 1677499641261,
+      "lastModificationDate": 1677500985349,
       "contentHash": "9392d449de9d6d72bd8a9feb30bc62c2",
       "sourceName": "src/oracles/lido/LidoOracle.sol",
       "solcConfig": {
@@ -5911,7 +6289,7 @@
       }
     },
     "src/oracles/rocket/RETHOracle.sol": {
-      "lastModificationDate": 1677499641261,
+      "lastModificationDate": 1677500985349,
       "contentHash": "baaee57d6e94e29d174a3711738869b7",
       "sourceName": "src/oracles/rocket/RETHOracle.sol",
       "solcConfig": {
@@ -5959,7 +6337,7 @@
       }
     },
     "src/oracles/strategy/StrategyOracle.sol": {
-      "lastModificationDate": 1677499641260,
+      "lastModificationDate": 1677500985349,
       "contentHash": "95db87bd5d85fb1638640bc20e7053b4",
       "sourceName": "src/oracles/strategy/StrategyOracle.sol",
       "solcConfig": {
@@ -6004,7 +6382,7 @@
       }
     },
     "src/oracles/uniswap/IUniswapV3PoolImmutables.sol": {
-      "lastModificationDate": 1677499641260,
+      "lastModificationDate": 1677500985349,
       "contentHash": "e236e09a9d654fb2f20a6da5dba2bd2f",
       "sourceName": "src/oracles/uniswap/IUniswapV3PoolImmutables.sol",
       "solcConfig": {
@@ -6044,7 +6422,7 @@
       }
     },
     "src/oracles/uniswap/UniswapV3Oracle.sol": {
-      "lastModificationDate": 1677499641260,
+      "lastModificationDate": 1677500985349,
       "contentHash": "26e047d35409662423f0818194fa883f",
       "sourceName": "src/oracles/uniswap/UniswapV3Oracle.sol",
       "solcConfig": {
@@ -6100,7 +6478,7 @@
       }
     },
     "src/oracles/uniswap/uniswapv0.8/FullMath.sol": {
-      "lastModificationDate": 1677499641260,
+      "lastModificationDate": 1677500985350,
       "contentHash": "604af1431f8a64e05968a314822fa488",
       "sourceName": "src/oracles/uniswap/uniswapv0.8/FullMath.sol",
       "solcConfig": {
@@ -6140,7 +6518,7 @@
       }
     },
     "src/oracles/uniswap/uniswapv0.8/IUniswapV3Pool.sol": {
-      "lastModificationDate": 1677499641260,
+      "lastModificationDate": 1677500985350,
       "contentHash": "e6badd8268772b99e7ca397aff11a965",
       "sourceName": "src/oracles/uniswap/uniswapv0.8/IUniswapV3Pool.sol",
       "solcConfig": {
@@ -6187,7 +6565,7 @@
       }
     },
     "src/oracles/uniswap/uniswapv0.8/LowGasSafeMath.sol": {
-      "lastModificationDate": 1677499641260,
+      "lastModificationDate": 1677500985350,
       "contentHash": "ff4d506a22d90b314ab325b437ff7729",
       "sourceName": "src/oracles/uniswap/uniswapv0.8/LowGasSafeMath.sol",
       "solcConfig": {
@@ -6227,7 +6605,7 @@
       }
     },
     "src/oracles/uniswap/uniswapv0.8/OracleLibrary.sol": {
-      "lastModificationDate": 1677499641260,
+      "lastModificationDate": 1677500985350,
       "contentHash": "db5b1e96b6fa2ce26bf049ab8c516366",
       "sourceName": "src/oracles/uniswap/uniswapv0.8/OracleLibrary.sol",
       "solcConfig": {
@@ -6279,7 +6657,7 @@
       }
     },
     "src/oracles/uniswap/uniswapv0.8/PoolAddress.sol": {
-      "lastModificationDate": 1677499641260,
+      "lastModificationDate": 1677500985350,
       "contentHash": "0ede1d2569429314158fd791823e9148",
       "sourceName": "src/oracles/uniswap/uniswapv0.8/PoolAddress.sol",
       "solcConfig": {
@@ -6319,7 +6697,7 @@
       }
     },
     "src/oracles/uniswap/uniswapv0.8/TickMath.sol": {
-      "lastModificationDate": 1677499641259,
+      "lastModificationDate": 1677500985350,
       "contentHash": "51f56be5c19bedfa154a201466e87be6",
       "sourceName": "src/oracles/uniswap/uniswapv0.8/TickMath.sol",
       "solcConfig": {
@@ -6359,7 +6737,7 @@
       }
     },
     "src/oracles/uniswap/uniswapv0.8/pool/IUniswapV3PoolActions.sol": {
-      "lastModificationDate": 1677499641259,
+      "lastModificationDate": 1677500985350,
       "contentHash": "83d338eb1394008c808a20ac7c5bab0c",
       "sourceName": "src/oracles/uniswap/uniswapv0.8/pool/IUniswapV3PoolActions.sol",
       "solcConfig": {
@@ -6399,7 +6777,7 @@
       }
     },
     "src/oracles/uniswap/uniswapv0.8/pool/IUniswapV3PoolDerivedState.sol": {
-      "lastModificationDate": 1677499641259,
+      "lastModificationDate": 1677500985350,
       "contentHash": "25b71180ec9f5132a158334971ee2ace",
       "sourceName": "src/oracles/uniswap/uniswapv0.8/pool/IUniswapV3PoolDerivedState.sol",
       "solcConfig": {
@@ -6439,7 +6817,7 @@
       }
     },
     "src/oracles/uniswap/uniswapv0.8/pool/IUniswapV3PoolEvents.sol": {
-      "lastModificationDate": 1677499641259,
+      "lastModificationDate": 1677500985350,
       "contentHash": "05abb59ec113db1046f7dadc78bb297b",
       "sourceName": "src/oracles/uniswap/uniswapv0.8/pool/IUniswapV3PoolEvents.sol",
       "solcConfig": {
@@ -6479,7 +6857,7 @@
       }
     },
     "src/oracles/uniswap/uniswapv0.8/pool/IUniswapV3PoolImmutables.sol": {
-      "lastModificationDate": 1677499641259,
+      "lastModificationDate": 1677500985350,
       "contentHash": "e236e09a9d654fb2f20a6da5dba2bd2f",
       "sourceName": "src/oracles/uniswap/uniswapv0.8/pool/IUniswapV3PoolImmutables.sol",
       "solcConfig": {
@@ -6519,7 +6897,7 @@
       }
     },
     "src/oracles/uniswap/uniswapv0.8/pool/IUniswapV3PoolOwnerActions.sol": {
-      "lastModificationDate": 1677499641259,
+      "lastModificationDate": 1677500985350,
       "contentHash": "1b06ecc79e75f836c446ccf286e671e4",
       "sourceName": "src/oracles/uniswap/uniswapv0.8/pool/IUniswapV3PoolOwnerActions.sol",
       "solcConfig": {
@@ -6559,7 +6937,7 @@
       }
     },
     "src/oracles/uniswap/uniswapv0.8/pool/IUniswapV3PoolState.sol": {
-      "lastModificationDate": 1677499641259,
+      "lastModificationDate": 1677500985350,
       "contentHash": "0488495ef9087b4513d3b43634035ef9",
       "sourceName": "src/oracles/uniswap/uniswapv0.8/pool/IUniswapV3PoolState.sol",
       "solcConfig": {
@@ -6599,7 +6977,7 @@
       }
     },
     "src/oracles/yearn/IYvToken.sol": {
-      "lastModificationDate": 1677499641258,
+      "lastModificationDate": 1677500985350,
       "contentHash": "9dc68080d5785ae36d098a8ede1d7daf",
       "sourceName": "src/oracles/yearn/IYvToken.sol",
       "solcConfig": {
@@ -6642,7 +7020,7 @@
       }
     },
     "src/oracles/yearn/YearnVaultMultiOracle.sol": {
-      "lastModificationDate": 1678444665975,
+      "lastModificationDate": 1678099945333,
       "contentHash": "758501b60bf0af11544e8fc1578d6cf9",
       "sourceName": "src/oracles/yearn/YearnVaultMultiOracle.sol",
       "solcConfig": {
@@ -6689,7 +7067,7 @@
       }
     },
     "src/oracles/yieldspace/YieldSpaceMultiOracle.sol": {
-      "lastModificationDate": 1677499641258,
+      "lastModificationDate": 1677500985351,
       "contentHash": "96ed0890aa962024b18f4a784003bd41",
       "sourceName": "src/oracles/yieldspace/YieldSpaceMultiOracle.sol",
       "solcConfig": {
@@ -6740,7 +7118,7 @@
       }
     },
     "src/other/contango/ContangoLadle.sol": {
-      "lastModificationDate": 1678444665975,
+      "lastModificationDate": 1677500985351,
       "contentHash": "80ac1df950baf0e14779de3ffbdc89bb",
       "sourceName": "src/other/contango/ContangoLadle.sol",
       "solcConfig": {
@@ -6804,7 +7182,7 @@
       }
     },
     "src/other/contango/ContangoWitch.sol": {
-      "lastModificationDate": 1678445186833,
+      "lastModificationDate": 1679306128142,
       "contentHash": "387c4246beaa0c3541111f24dfb8d0cf",
       "sourceName": "src/other/contango/ContangoWitch.sol",
       "solcConfig": {
@@ -6870,7 +7248,7 @@
       }
     },
     "src/other/contango/interfaces/IContangoLadle.sol": {
-      "lastModificationDate": 1678444665975,
+      "lastModificationDate": 1677500985351,
       "contentHash": "b52ec7e556d20d66531bf885a4e9466b",
       "sourceName": "src/other/contango/interfaces/IContangoLadle.sol",
       "solcConfig": {
@@ -6928,7 +7306,7 @@
       }
     },
     "src/other/contango/interfaces/IContangoWitchListener.sol": {
-      "lastModificationDate": 1677499641257,
+      "lastModificationDate": 1677500985351,
       "contentHash": "4dcb34ccccdcff6e59ed64d65302390e",
       "sourceName": "src/other/contango/interfaces/IContangoWitchListener.sol",
       "solcConfig": {
@@ -6968,7 +7346,7 @@
       }
     },
     "src/other/convex/ConvexJoin.sol": {
-      "lastModificationDate": 1678444665975,
+      "lastModificationDate": 1677500985351,
       "contentHash": "588ae49fcafb47ea0d29f5982657d5e0",
       "sourceName": "src/other/convex/ConvexJoin.sol",
       "solcConfig": {
@@ -7028,7 +7406,7 @@
       }
     },
     "src/other/convex/ConvexModule.sol": {
-      "lastModificationDate": 1678444665975,
+      "lastModificationDate": 1677500985351,
       "contentHash": "1d03761a915274ba81e37cbe5b3c578a",
       "sourceName": "src/other/convex/ConvexModule.sol",
       "solcConfig": {
@@ -7087,7 +7465,7 @@
       }
     },
     "src/other/convex/CvxMining.sol": {
-      "lastModificationDate": 1677499641257,
+      "lastModificationDate": 1677500985351,
       "contentHash": "b4bbfab3943d36b8ca8f4ccdfc370258",
       "sourceName": "src/other/convex/CvxMining.sol",
       "solcConfig": {
@@ -7129,7 +7507,7 @@
       }
     },
     "src/other/convex/interfaces/IConvexDeposits.sol": {
-      "lastModificationDate": 1677499641257,
+      "lastModificationDate": 1677500985351,
       "contentHash": "3027b43c9e67f94fa3c9850b41357114",
       "sourceName": "src/other/convex/interfaces/IConvexDeposits.sol",
       "solcConfig": {
@@ -7169,7 +7547,7 @@
       }
     },
     "src/other/convex/interfaces/IConvexJoin.sol": {
-      "lastModificationDate": 1677499641257,
+      "lastModificationDate": 1677500985352,
       "contentHash": "70485476a0dca0bff99588df9754c261",
       "sourceName": "src/other/convex/interfaces/IConvexJoin.sol",
       "solcConfig": {
@@ -7209,7 +7587,7 @@
       }
     },
     "src/other/convex/interfaces/ICvx.sol": {
-      "lastModificationDate": 1677499641257,
+      "lastModificationDate": 1677500985352,
       "contentHash": "1cbd674278dc1ad5aff0241240720723",
       "sourceName": "src/other/convex/interfaces/ICvx.sol",
       "solcConfig": {
@@ -7249,7 +7627,7 @@
       }
     },
     "src/other/convex/interfaces/IRewardStaking.sol": {
-      "lastModificationDate": 1677499641256,
+      "lastModificationDate": 1677500985352,
       "contentHash": "e723f65694b3775bc182d938bcf19598",
       "sourceName": "src/other/convex/interfaces/IRewardStaking.sol",
       "solcConfig": {
@@ -7289,7 +7667,7 @@
       }
     },
     "src/other/lido/StEthConverter.sol": {
-      "lastModificationDate": 1677499641256,
+      "lastModificationDate": 1677500985352,
       "contentHash": "2186b39d065ead42197108d38843b964",
       "sourceName": "src/other/lido/StEthConverter.sol",
       "solcConfig": {
@@ -7334,7 +7712,7 @@
       }
     },
     "src/other/notional/ERC1155.sol": {
-      "lastModificationDate": 1677499641256,
+      "lastModificationDate": 1677500985352,
       "contentHash": "47c2fbebd45a0f3c61ba2751d867fbfd",
       "sourceName": "src/other/notional/ERC1155.sol",
       "solcConfig": {
@@ -7377,7 +7755,7 @@
       }
     },
     "src/other/notional/ERC1155Mock.sol": {
-      "lastModificationDate": 1677499641256,
+      "lastModificationDate": 1677500985352,
       "contentHash": "8bfe53e4dbd2b7b9194a923104465a0c",
       "sourceName": "src/other/notional/ERC1155Mock.sol",
       "solcConfig": {
@@ -7419,7 +7797,7 @@
       }
     },
     "src/other/notional/FCashMock.sol": {
-      "lastModificationDate": 1677499641256,
+      "lastModificationDate": 1677500985352,
       "contentHash": "54192903a7f90f8fda596f7d330707c5",
       "sourceName": "src/other/notional/FCashMock.sol",
       "solcConfig": {
@@ -7469,7 +7847,7 @@
       }
     },
     "src/other/notional/NotionalJoin.sol": {
-      "lastModificationDate": 1677499641256,
+      "lastModificationDate": 1677500985352,
       "contentHash": "cf5b9df6c1245ea872416c12493525ed",
       "sourceName": "src/other/notional/NotionalJoin.sol",
       "solcConfig": {
@@ -7520,7 +7898,7 @@
       }
     },
     "src/other/notional/NotionalMultiOracle.sol": {
-      "lastModificationDate": 1678444665977,
+      "lastModificationDate": 1679306064329,
       "contentHash": "ae25469a25786e122254fb0bc0f73b4f",
       "sourceName": "src/other/notional/NotionalMultiOracle.sol",
       "solcConfig": {
@@ -7566,7 +7944,7 @@
       }
     },
     "src/other/notional/Transfer1155Module.sol": {
-      "lastModificationDate": 1678444665977,
+      "lastModificationDate": 1677500985353,
       "contentHash": "84c6baf88798989885df4b13ccc1d1a2",
       "sourceName": "src/other/notional/Transfer1155Module.sol",
       "solcConfig": {
@@ -7625,7 +8003,7 @@
       }
     },
     "src/other/notional/interfaces/IBatchAction.sol": {
-      "lastModificationDate": 1677499641255,
+      "lastModificationDate": 1677500985353,
       "contentHash": "927fc9f85037f762f69573227d76b2e9",
       "sourceName": "src/other/notional/interfaces/IBatchAction.sol",
       "solcConfig": {
@@ -7665,7 +8043,7 @@
       }
     },
     "src/other/notional/interfaces/INotionalJoin.sol": {
-      "lastModificationDate": 1677499641255,
+      "lastModificationDate": 1677500985353,
       "contentHash": "c9d88f7310d32a1d920ad02bd7f482d4",
       "sourceName": "src/other/notional/interfaces/INotionalJoin.sol",
       "solcConfig": {
@@ -7708,7 +8086,7 @@
       }
     },
     "src/other/tether/IUSDT.sol": {
-      "lastModificationDate": 1677499641255,
+      "lastModificationDate": 1677500985353,
       "contentHash": "5c4a8103d08bde65e8c291109bd6688f",
       "sourceName": "src/other/tether/IUSDT.sol",
       "solcConfig": {
@@ -7748,7 +8126,7 @@
       }
     },
     "src/other/tether/TetherJoin.sol": {
-      "lastModificationDate": 1677499641255,
+      "lastModificationDate": 1677500985353,
       "contentHash": "3087600c8a27b7dbca389506df0d5349",
       "sourceName": "src/other/tether/TetherJoin.sol",
       "solcConfig": {
@@ -7802,7 +8180,7 @@
       }
     },
     "src/test/Witch.t.sol": {
-      "lastModificationDate": 1678446485229,
+      "lastModificationDate": 1679306128143,
       "contentHash": "34fad432a7be129646021e169c451dae",
       "sourceName": "src/test/Witch.t.sol",
       "solcConfig": {
@@ -7899,7 +8277,7 @@
       }
     },
     "src/test/fyToken/FYToken.t.sol": {
-      "lastModificationDate": 1678444665978,
+      "lastModificationDate": 1677500985353,
       "contentHash": "15841854951d4b33ed24331502ce9abe",
       "sourceName": "src/test/fyToken/FYToken.t.sol",
       "solcConfig": {
@@ -8007,7 +8385,7 @@
       }
     },
     "src/test/fyToken/FYTokenFlash.t.sol": {
-      "lastModificationDate": 1678444665978,
+      "lastModificationDate": 1677500985354,
       "contentHash": "a95e82148d824ae9a71c490bbb187323",
       "sourceName": "src/test/fyToken/FYTokenFlash.t.sol",
       "solcConfig": {
@@ -8122,7 +8500,7 @@
       }
     },
     "src/test/join/FlashJoin.t.sol": {
-      "lastModificationDate": 1677499641254,
+      "lastModificationDate": 1677500985354,
       "contentHash": "52728dcb19e2d1946adacaeb7b292ace",
       "sourceName": "src/test/join/FlashJoin.t.sol",
       "solcConfig": {
@@ -8208,7 +8586,7 @@
       }
     },
     "src/test/join/Join.t.sol": {
-      "lastModificationDate": 1677499641254,
+      "lastModificationDate": 1677500985354,
       "contentHash": "99f930b94db5104be3d747110d30b6d7",
       "sourceName": "src/test/join/Join.t.sol",
       "solcConfig": {
@@ -8298,7 +8676,7 @@
       }
     },
     "src/test/modules/HealerModule.t.sol": {
-      "lastModificationDate": 1678444665979,
+      "lastModificationDate": 1677500985354,
       "contentHash": "c548642a373402a87398131d3c291d9b",
       "sourceName": "src/test/modules/HealerModule.t.sol",
       "solcConfig": {
@@ -8379,7 +8757,7 @@
       }
     },
     "src/test/modules/RepayFromLadleModule.t.sol": {
-      "lastModificationDate": 1678444665979,
+      "lastModificationDate": 1677500985354,
       "contentHash": "0b799e38332723fc51a32ba4c70978b1",
       "sourceName": "src/test/modules/RepayFromLadleModule.t.sol",
       "solcConfig": {
@@ -8466,7 +8844,7 @@
       }
     },
     "src/test/oracles/AccumulatorOracle.t.sol": {
-      "lastModificationDate": 1677499641253,
+      "lastModificationDate": 1677500985355,
       "contentHash": "3ff730eaf458a6485d1745397760679d",
       "sourceName": "src/test/oracles/AccumulatorOracle.t.sol",
       "solcConfig": {
@@ -8541,7 +8919,7 @@
       }
     },
     "src/test/oracles/CTokenMultiOracle.t.sol": {
-      "lastModificationDate": 1677499641253,
+      "lastModificationDate": 1677500985355,
       "contentHash": "ed46da9a58dc5f4d2a6c305383f0b027",
       "sourceName": "src/test/oracles/CTokenMultiOracle.t.sol",
       "solcConfig": {
@@ -8614,7 +8992,7 @@
       }
     },
     "src/test/oracles/ChainlinkMultiOracle.t.sol": {
-      "lastModificationDate": 1677499641253,
+      "lastModificationDate": 1677500985355,
       "contentHash": "55fbea7071b38f2f3fa3ef4575a80a0c",
       "sourceName": "src/test/oracles/ChainlinkMultiOracle.t.sol",
       "solcConfig": {
@@ -8690,7 +9068,7 @@
       }
     },
     "src/test/oracles/ChainlinkUSDMultiOracle.t.sol": {
-      "lastModificationDate": 1677499641252,
+      "lastModificationDate": 1677500985355,
       "contentHash": "58c8dbe1e62ebf85c8abe4cb4f4ce2d1",
       "sourceName": "src/test/oracles/ChainlinkUSDMultiOracle.t.sol",
       "solcConfig": {
@@ -8767,7 +9145,7 @@
       }
     },
     "src/test/oracles/CompositeMultiOracle.t.sol": {
-      "lastModificationDate": 1677499641252,
+      "lastModificationDate": 1677500985355,
       "contentHash": "18568dad409a49eb28f92db83eb4d627",
       "sourceName": "src/test/oracles/CompositeMultiOracle.t.sol",
       "solcConfig": {
@@ -8844,7 +9222,7 @@
       }
     },
     "src/test/oracles/CompoundMultiOracle.t.sol": {
-      "lastModificationDate": 1677499641252,
+      "lastModificationDate": 1677500985356,
       "contentHash": "a6674ff35055da68d04f0218bef97b19",
       "sourceName": "src/test/oracles/CompoundMultiOracle.t.sol",
       "solcConfig": {
@@ -8917,7 +9295,7 @@
       }
     },
     "src/test/oracles/ConvexOracle.t.sol": {
-      "lastModificationDate": 1677499641252,
+      "lastModificationDate": 1677500985356,
       "contentHash": "c513d51dd4cb2b35182e954712254e66",
       "sourceName": "src/test/oracles/ConvexOracle.t.sol",
       "solcConfig": {
@@ -8991,7 +9369,7 @@
       }
     },
     "src/test/oracles/CrabOracle.t.sol": {
-      "lastModificationDate": 1677499641251,
+      "lastModificationDate": 1677500985356,
       "contentHash": "1b281dfae123db44bd39f177ccab84f7",
       "sourceName": "src/test/oracles/CrabOracle.t.sol",
       "solcConfig": {
@@ -9072,7 +9450,7 @@
       }
     },
     "src/test/oracles/ETokenMultiOracle.t.sol": {
-      "lastModificationDate": 1677499641251,
+      "lastModificationDate": 1677500985356,
       "contentHash": "c7b143488069190e39d78217e90c397f",
       "sourceName": "src/test/oracles/ETokenMultiOracle.t.sol",
       "solcConfig": {
@@ -9149,7 +9527,7 @@
       }
     },
     "src/test/oracles/IdentityOracle.t.sol": {
-      "lastModificationDate": 1678444665980,
+      "lastModificationDate": 1679306064329,
       "contentHash": "a2f33f55bc72d40d1213415e3890d9c1",
       "sourceName": "src/test/oracles/IdentityOracle.t.sol",
       "solcConfig": {
@@ -9219,7 +9597,7 @@
       }
     },
     "src/test/oracles/LidoOracle.t.sol": {
-      "lastModificationDate": 1677499641251,
+      "lastModificationDate": 1677500985356,
       "contentHash": "c7d1f36325a705467a6f7e1db92e5881",
       "sourceName": "src/test/oracles/LidoOracle.t.sol",
       "solcConfig": {
@@ -9298,7 +9676,7 @@
       }
     },
     "src/test/oracles/NotionalMultiOracle.t.sol": {
-      "lastModificationDate": 1678444665981,
+      "lastModificationDate": 1677500985356,
       "contentHash": "ede5bda6ac3c4be170cb31151e847d4e",
       "sourceName": "src/test/oracles/NotionalMultiOracle.t.sol",
       "solcConfig": {
@@ -9368,7 +9746,7 @@
       }
     },
     "src/test/oracles/RETHOracle.t.sol": {
-      "lastModificationDate": 1677499641250,
+      "lastModificationDate": 1677500985357,
       "contentHash": "8993552921d5bd0cec1b0e9505442b2f",
       "sourceName": "src/test/oracles/RETHOracle.t.sol",
       "solcConfig": {
@@ -9432,7 +9810,7 @@
       }
     },
     "src/test/oracles/StrategyOracle.t.sol": {
-      "lastModificationDate": 1677499641250,
+      "lastModificationDate": 1677500985357,
       "contentHash": "73a690f07f5a49b3486d6d904a17165f",
       "sourceName": "src/test/oracles/StrategyOracle.t.sol",
       "solcConfig": {
@@ -9502,7 +9880,7 @@
       }
     },
     "src/test/oracles/UniswapOracle.t.sol": {
-      "lastModificationDate": 1677499641250,
+      "lastModificationDate": 1677500985357,
       "contentHash": "915c31d152bd2e0214ff3e98212823d5",
       "sourceName": "src/test/oracles/UniswapOracle.t.sol",
       "solcConfig": {
@@ -9583,7 +9961,7 @@
       }
     },
     "src/test/oracles/YearnVaultMultiOracle.t.sol": {
-      "lastModificationDate": 1678444665981,
+      "lastModificationDate": 1677500985357,
       "contentHash": "66231107e451be12e074a2b39632fc65",
       "sourceName": "src/test/oracles/YearnVaultMultiOracle.t.sol",
       "solcConfig": {
@@ -9656,7 +10034,7 @@
       }
     },
     "src/test/oracles/YieldSpaceMultiOracle.dai.it.t.sol": {
-      "lastModificationDate": 1678444665981,
+      "lastModificationDate": 1677500985357,
       "contentHash": "9d4cbb1f3b3ef1a4a8796127b5698ade",
       "sourceName": "src/test/oracles/YieldSpaceMultiOracle.dai.it.t.sol",
       "solcConfig": {
@@ -9748,7 +10126,7 @@
       }
     },
     "src/test/oracles/YieldSpaceMultiOracle.t.sol": {
-      "lastModificationDate": 1678444665982,
+      "lastModificationDate": 1677500985357,
       "contentHash": "e2f0382f5e6cadfaf854b3b21ae56b1c",
       "sourceName": "src/test/oracles/YieldSpaceMultiOracle.t.sol",
       "solcConfig": {
@@ -9824,7 +10202,7 @@
       }
     },
     "src/test/oracles/YieldSpaceMultiOracle.usdc.it.t.sol": {
-      "lastModificationDate": 1678444665982,
+      "lastModificationDate": 1677500985357,
       "contentHash": "c88e6a415bfa04702cde8722c5cd772b",
       "sourceName": "src/test/oracles/YieldSpaceMultiOracle.usdc.it.t.sol",
       "solcConfig": {
@@ -9907,7 +10285,7 @@
       }
     },
     "src/test/other/contango/ContangoLadle.t.sol": {
-      "lastModificationDate": 1678444665982,
+      "lastModificationDate": 1677500985358,
       "contentHash": "2a42cdbb44d8bc74b34e402808e65cce",
       "sourceName": "src/test/other/contango/ContangoLadle.t.sol",
       "solcConfig": {
@@ -9991,7 +10369,7 @@
       }
     },
     "src/test/other/notional/NotionalJoin.t.sol": {
-      "lastModificationDate": 1678444665982,
+      "lastModificationDate": 1677500985358,
       "contentHash": "eb5c75a0e633784db02a9ffd2cca5f9a",
       "sourceName": "src/test/other/notional/NotionalJoin.t.sol",
       "solcConfig": {
@@ -10111,7 +10489,7 @@
       }
     },
     "src/test/other/notional/NotionalJoinHarness.t.sol": {
-      "lastModificationDate": 1677499641249,
+      "lastModificationDate": 1677500985358,
       "contentHash": "34f15d0086d0c54ba5f7f334e2f3d3f0",
       "sourceName": "src/test/other/notional/NotionalJoinHarness.t.sol",
       "solcConfig": {
@@ -10204,7 +10582,7 @@
       }
     },
     "src/test/other/notional/NotionalTypes.sol": {
-      "lastModificationDate": 1677499641249,
+      "lastModificationDate": 1677500985358,
       "contentHash": "4afe5c0b1d7be060d1a98b52905f9db4",
       "sourceName": "src/test/other/notional/NotionalTypes.sol",
       "solcConfig": {
@@ -10244,7 +10622,7 @@
       }
     },
     "src/test/other/tether/TetherJoin.t.sol": {
-      "lastModificationDate": 1677499641248,
+      "lastModificationDate": 1677500985358,
       "contentHash": "dd73fdb47106b8b3dbdf59fc7f04fd33",
       "sourceName": "src/test/other/tether/TetherJoin.t.sol",
       "solcConfig": {
@@ -10343,7 +10721,7 @@
       }
     },
     "src/test/utils/Mocks.sol": {
-      "lastModificationDate": 1678445229112,
+      "lastModificationDate": 1679306128143,
       "contentHash": "4e9bc7ea4e1ffb3dde1d719ff489ee7f",
       "sourceName": "src/test/utils/Mocks.sol",
       "solcConfig": {
@@ -10418,7 +10796,7 @@
       }
     },
     "src/test/utils/TestConstants.sol": {
-      "lastModificationDate": 1677499641248,
+      "lastModificationDate": 1677500985358,
       "contentHash": "c632ca2b52fdaee35c12cdf4a23f7121",
       "sourceName": "src/test/utils/TestConstants.sol",
       "solcConfig": {
@@ -10458,7 +10836,7 @@
       }
     },
     "src/test/utils/TestExtensions.sol": {
-      "lastModificationDate": 1677499641248,
+      "lastModificationDate": 1677500985358,
       "contentHash": "4abae3e71828d835276c94c24a413f2d",
       "sourceName": "src/test/utils/TestExtensions.sol",
       "solcConfig": {
@@ -10516,7 +10894,7 @@
       }
     },
     "src/test/utils/Utilities.sol": {
-      "lastModificationDate": 1677499641248,
+      "lastModificationDate": 1677500985359,
       "contentHash": "faf18186f6616798ae602ec4eea3132f",
       "sourceName": "src/test/utils/Utilities.sol",
       "solcConfig": {
@@ -10624,6 +11002,12 @@
         "lib/forge-std/src/console.sol",
         "lib/forge-std/src/console2.sol",
         "lib/forge-std/src/interfaces/IMulticall3.sol",
+        "lib/openzeppelin-contracts/contracts/interfaces/draft-IERC1822.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Upgrade.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/beacon/IBeacon.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
+        "lib/openzeppelin-contracts/contracts/utils/Address.sol",
+        "lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/access/AccessControl.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/interfaces/IWETH9.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/token/ERC20.sol",
@@ -10655,6 +11039,7 @@
         "src/interfaces/IJoinFactory.sol",
         "src/interfaces/ILadle.sol",
         "src/interfaces/IOracle.sol",
+        "src/interfaces/IRouter.sol",
         "src/interfaces/IWitchErrors.sol",
         "src/interfaces/IWitchEvents.sol",
         "src/mocks/DAIMock.sol",
@@ -10675,7 +11060,7 @@
         "src/test/utils/TestExtensions.sol",
         "src/variable/VRCauldron.sol",
         "src/variable/VRLadle.sol",
-        "src/variable/VRLadleStorage.sol",
+        "src/variable/VRRouter.sol",
         "src/variable/VYToken.sol",
         "src/variable/interfaces/IVRCauldron.sol"
       ],
@@ -10738,6 +11123,12 @@
         "lib/forge-std/src/console.sol",
         "lib/forge-std/src/console2.sol",
         "lib/forge-std/src/interfaces/IMulticall3.sol",
+        "lib/openzeppelin-contracts/contracts/interfaces/draft-IERC1822.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Upgrade.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/beacon/IBeacon.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
+        "lib/openzeppelin-contracts/contracts/utils/Address.sol",
+        "lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/access/AccessControl.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/interfaces/IWETH9.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/token/ERC20.sol",
@@ -10769,6 +11160,7 @@
         "src/interfaces/IJoinFactory.sol",
         "src/interfaces/ILadle.sol",
         "src/interfaces/IOracle.sol",
+        "src/interfaces/IRouter.sol",
         "src/interfaces/IWitchErrors.sol",
         "src/interfaces/IWitchEvents.sol",
         "src/mocks/DAIMock.sol",
@@ -10791,7 +11183,7 @@
         "src/test/variable/Fixture.sol",
         "src/variable/VRCauldron.sol",
         "src/variable/VRLadle.sol",
-        "src/variable/VRLadleStorage.sol",
+        "src/variable/VRRouter.sol",
         "src/variable/VYToken.sol",
         "src/variable/interfaces/IVRCauldron.sol"
       ],
@@ -10890,6 +11282,12 @@
         "lib/forge-std/src/console.sol",
         "lib/forge-std/src/console2.sol",
         "lib/forge-std/src/interfaces/IMulticall3.sol",
+        "lib/openzeppelin-contracts/contracts/interfaces/draft-IERC1822.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Upgrade.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/beacon/IBeacon.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
+        "lib/openzeppelin-contracts/contracts/utils/Address.sol",
+        "lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/access/AccessControl.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/interfaces/IWETH9.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/token/ERC20.sol",
@@ -10921,6 +11319,7 @@
         "src/interfaces/IJoinFactory.sol",
         "src/interfaces/ILadle.sol",
         "src/interfaces/IOracle.sol",
+        "src/interfaces/IRouter.sol",
         "src/interfaces/IWitchErrors.sol",
         "src/interfaces/IWitchEvents.sol",
         "src/mocks/DAIMock.sol",
@@ -10944,7 +11343,7 @@
         "src/test/variable/FixtureStates.sol",
         "src/variable/VRCauldron.sol",
         "src/variable/VRLadle.sol",
-        "src/variable/VRLadleStorage.sol",
+        "src/variable/VRRouter.sol",
         "src/variable/VYToken.sol",
         "src/variable/interfaces/IVRCauldron.sol"
       ],
@@ -11040,6 +11439,12 @@
         "lib/forge-std/src/console.sol",
         "lib/forge-std/src/console2.sol",
         "lib/forge-std/src/interfaces/IMulticall3.sol",
+        "lib/openzeppelin-contracts/contracts/interfaces/draft-IERC1822.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Upgrade.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/beacon/IBeacon.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
+        "lib/openzeppelin-contracts/contracts/utils/Address.sol",
+        "lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/access/AccessControl.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/interfaces/IWETH9.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/token/ERC20.sol",
@@ -11071,6 +11476,7 @@
         "src/interfaces/IJoinFactory.sol",
         "src/interfaces/ILadle.sol",
         "src/interfaces/IOracle.sol",
+        "src/interfaces/IRouter.sol",
         "src/interfaces/IWitchErrors.sol",
         "src/interfaces/IWitchEvents.sol",
         "src/mocks/DAIMock.sol",
@@ -11094,7 +11500,7 @@
         "src/test/variable/FixtureStates.sol",
         "src/variable/VRCauldron.sol",
         "src/variable/VRLadle.sol",
-        "src/variable/VRLadleStorage.sol",
+        "src/variable/VRRouter.sol",
         "src/variable/VYToken.sol",
         "src/variable/interfaces/IVRCauldron.sol"
       ],
@@ -11288,6 +11694,12 @@
         "lib/forge-std/src/console.sol",
         "lib/forge-std/src/console2.sol",
         "lib/forge-std/src/interfaces/IMulticall3.sol",
+        "lib/openzeppelin-contracts/contracts/interfaces/draft-IERC1822.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Upgrade.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/beacon/IBeacon.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
+        "lib/openzeppelin-contracts/contracts/utils/Address.sol",
+        "lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/access/AccessControl.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/interfaces/IWETH9.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/token/ERC20.sol",
@@ -11319,6 +11731,7 @@
         "src/interfaces/IJoinFactory.sol",
         "src/interfaces/ILadle.sol",
         "src/interfaces/IOracle.sol",
+        "src/interfaces/IRouter.sol",
         "src/interfaces/IWitchErrors.sol",
         "src/interfaces/IWitchEvents.sol",
         "src/mocks/DAIMock.sol",
@@ -11342,7 +11755,7 @@
         "src/test/variable/FixtureStates.sol",
         "src/variable/VRCauldron.sol",
         "src/variable/VRLadle.sol",
-        "src/variable/VRLadleStorage.sol",
+        "src/variable/VRRouter.sol",
         "src/variable/VYToken.sol",
         "src/variable/interfaces/IVRCauldron.sol"
       ],
@@ -11356,8 +11769,97 @@
         }
       }
     },
+    "src/test/variable/VYTokenUpgrade.t.sol": {
+      "lastModificationDate": 1679314165000,
+      "contentHash": "e93e13e29b929b2cb221a15da7902089",
+      "sourceName": "src/test/variable/VYTokenUpgrade.t.sol",
+      "solcConfig": {
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "metadata": {
+            "bytecodeHash": "ipfs",
+            "appendCBOR": true
+          },
+          "outputSelection": {
+            "*": {
+              "": [
+                "ast"
+              ],
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ]
+            }
+          },
+          "evmVersion": "london",
+          "libraries": {}
+        }
+      },
+      "imports": [
+        "lib/ERC3156/contracts/interfaces/IERC3156FlashBorrower.sol",
+        "lib/ERC3156/contracts/interfaces/IERC3156FlashLender.sol",
+        "lib/forge-std/lib/ds-test/src/test.sol",
+        "lib/forge-std/src/Base.sol",
+        "lib/forge-std/src/StdAssertions.sol",
+        "lib/forge-std/src/StdChains.sol",
+        "lib/forge-std/src/StdCheats.sol",
+        "lib/forge-std/src/StdError.sol",
+        "lib/forge-std/src/StdInvariant.sol",
+        "lib/forge-std/src/StdJson.sol",
+        "lib/forge-std/src/StdMath.sol",
+        "lib/forge-std/src/StdStorage.sol",
+        "lib/forge-std/src/StdUtils.sol",
+        "lib/forge-std/src/Test.sol",
+        "lib/forge-std/src/Vm.sol",
+        "lib/forge-std/src/console.sol",
+        "lib/forge-std/src/console2.sol",
+        "lib/forge-std/src/interfaces/IMulticall3.sol",
+        "lib/openzeppelin-contracts/contracts/interfaces/draft-IERC1822.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Upgrade.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/Proxy.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/beacon/IBeacon.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
+        "lib/openzeppelin-contracts/contracts/utils/Address.sol",
+        "lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/access/AccessControl.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/token/ERC20.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/token/ERC20Permit.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/token/IERC20.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/token/IERC20Metadata.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/token/IERC2612.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/token/SafeERC20Namer.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/token/TransferHelper.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/AddressStringUtil.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/Cast.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/Math.sol",
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/RevertMsgExtractor.sol",
+        "src/Join.sol",
+        "src/constants/Constants.sol",
+        "src/interfaces/IJoin.sol",
+        "src/interfaces/IJoinFactory.sol",
+        "src/interfaces/IOracle.sol",
+        "src/mocks/ERC20Mock.sol",
+        "src/variable/VYToken.sol"
+      ],
+      "versionRequirement": ">=0.8.13",
+      "artifacts": {
+        "VYTokenUpgrade": {
+          "0.8.15+commit.e14f2714.Darwin.appleclang": "VYTokenUpgrade.t.sol/VYTokenUpgrade.json"
+        },
+        "VYTokenUpgradeTest": {
+          "0.8.15+commit.e14f2714.Darwin.appleclang": "VYTokenUpgrade.t.sol/VYTokenUpgradeTest.json"
+        }
+      }
+    },
     "src/utils/Giver.sol": {
-      "lastModificationDate": 1678444665983,
+      "lastModificationDate": 1677500985359,
       "contentHash": "d607aedbc9180c81a6a42f37e9884eca",
       "sourceName": "src/utils/Giver.sol",
       "solcConfig": {
@@ -11438,6 +11940,12 @@
         }
       },
       "imports": [
+        "lib/openzeppelin-contracts/contracts/interfaces/draft-IERC1822.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Upgrade.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/beacon/IBeacon.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
+        "lib/openzeppelin-contracts/contracts/utils/Address.sol",
+        "lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/access/AccessControl.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/token/IERC20.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/Cast.sol",
@@ -11491,6 +11999,12 @@
       },
       "imports": [
         "lib/dss-interfaces/src/dss/DaiAbstract.sol",
+        "lib/openzeppelin-contracts/contracts/interfaces/draft-IERC1822.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Upgrade.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/beacon/IBeacon.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
+        "lib/openzeppelin-contracts/contracts/utils/Address.sol",
+        "lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/access/AccessControl.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/interfaces/IWETH9.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/token/ERC20.sol",
@@ -11499,18 +12013,16 @@
         "lib/yieldspace-tv/lib/yield-utils-v2/src/token/IERC2612.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/token/TransferHelper.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/Cast.sol",
-        "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/IsContract.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/Math.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/RevertMsgExtractor.sol",
         "lib/yieldspace-tv/src/interfaces/IMaturingToken.sol",
         "lib/yieldspace-tv/src/interfaces/IPool.sol",
-        "src/Router.sol",
         "src/interfaces/DataTypes.sol",
         "src/interfaces/IERC5095.sol",
         "src/interfaces/IFYToken.sol",
         "src/interfaces/IJoin.sol",
         "src/interfaces/IOracle.sol",
-        "src/variable/VRLadleStorage.sol",
+        "src/interfaces/IRouter.sol",
         "src/variable/interfaces/IVRCauldron.sol"
       ],
       "versionRequirement": ">=0.8.13",
@@ -11520,10 +12032,10 @@
         }
       }
     },
-    "src/variable/VRLadleStorage.sol": {
-      "lastModificationDate": 1679519867218,
-      "contentHash": "6746720bc3918a464c1009f249fce399",
-      "sourceName": "src/variable/VRLadleStorage.sol",
+    "src/variable/VRRouter.sol": {
+      "lastModificationDate": 1679308571864,
+      "contentHash": "cb0ae0f552cfa30218ce9876b5fb80d3",
+      "sourceName": "src/variable/VRRouter.sol",
       "solcConfig": {
         "settings": {
           "optimizer": {
@@ -11553,27 +12065,13 @@
         }
       },
       "imports": [
-        "lib/yieldspace-tv/lib/yield-utils-v2/src/interfaces/IWETH9.sol",
-        "lib/yieldspace-tv/lib/yield-utils-v2/src/token/ERC20.sol",
-        "lib/yieldspace-tv/lib/yield-utils-v2/src/token/IERC20.sol",
-        "lib/yieldspace-tv/lib/yield-utils-v2/src/token/IERC20Metadata.sol",
-        "lib/yieldspace-tv/lib/yield-utils-v2/src/token/IERC2612.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/IsContract.sol",
-        "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/RevertMsgExtractor.sol",
-        "lib/yieldspace-tv/src/interfaces/IMaturingToken.sol",
-        "lib/yieldspace-tv/src/interfaces/IPool.sol",
-        "src/Router.sol",
-        "src/interfaces/DataTypes.sol",
-        "src/interfaces/IERC5095.sol",
-        "src/interfaces/IFYToken.sol",
-        "src/interfaces/IJoin.sol",
-        "src/interfaces/IOracle.sol",
-        "src/variable/interfaces/IVRCauldron.sol"
+        "lib/yieldspace-tv/lib/yield-utils-v2/src/utils/RevertMsgExtractor.sol"
       ],
       "versionRequirement": ">=0.8.13",
       "artifacts": {
-        "VRLadleStorage": {
-          "0.8.15+commit.e14f2714.Darwin.appleclang": "VRLadleStorage.sol/VRLadleStorage.json"
+        "VRRouter": {
+          "0.8.15+commit.e14f2714.Darwin.appleclang": "VRRouter.sol/VRRouter.json"
         }
       }
     },
@@ -11677,6 +12175,12 @@
       "imports": [
         "lib/ERC3156/contracts/interfaces/IERC3156FlashBorrower.sol",
         "lib/ERC3156/contracts/interfaces/IERC3156FlashLender.sol",
+        "lib/openzeppelin-contracts/contracts/interfaces/draft-IERC1822.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Upgrade.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/beacon/IBeacon.sol",
+        "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
+        "lib/openzeppelin-contracts/contracts/utils/Address.sol",
+        "lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/access/AccessControl.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/token/ERC20.sol",
         "lib/yieldspace-tv/lib/yield-utils-v2/src/token/ERC20Permit.sol",

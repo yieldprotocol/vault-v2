@@ -4,7 +4,10 @@ import "../interfaces/IFYToken.sol";
 import "../interfaces/IJoin.sol";
 import "../interfaces/IOracle.sol";
 import "../interfaces/DataTypes.sol";
+import "../interfaces/IRouter.sol";
 import "./interfaces/IVRCauldron.sol";
+import "@yield-protocol/yieldspace-tv/src/interfaces/IPool.sol";
+import "@yield-protocol/utils-v2/src/interfaces/IWETH9.sol";
 import "@yield-protocol/utils-v2/src/token/IERC20.sol";
 import "@yield-protocol/utils-v2/src/token/IERC2612.sol";
 import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
@@ -12,20 +15,54 @@ import "@yield-protocol/utils-v2/src/token/TransferHelper.sol";
 import "@yield-protocol/utils-v2/src/utils/Math.sol";
 import "@yield-protocol/utils-v2/src/utils/Cast.sol";
 import "dss-interfaces/src/dss/DaiAbstract.sol";
-import "./VRLadleStorage.sol";
+import { UUPSUpgradeable } from "openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
-/// @dev Ladle orchestrates contract calls throughout the Yield Protocol into useful and efficient user oriented features.
-contract VRLadle is VRLadleStorage, AccessControl {
+/// @dev Ladle orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient user oriented features.
+contract VRLadle is UUPSUpgradeable, AccessControl() {
     using Math for uint256;
     using Cast for uint256;
     using Cast for uint128;
     using TransferHelper for IERC20;
     using TransferHelper for address payable;
 
-    constructor(
-        IVRCauldron cauldron,
-        IWETH9 weth
-    ) VRLadleStorage(cauldron, weth) {}
+    event JoinAdded(bytes6 indexed assetId, address indexed join);
+    event IntegrationAdded(address indexed integration, bool indexed set);
+    event TokenAdded(address indexed token, bool indexed set);
+    event FeeSet(uint256 fee);
+
+    bool public initialized;
+    IVRCauldron public immutable cauldron;
+    IRouter public immutable router;
+    IWETH9 public immutable weth;
+    uint256 public borrowingFee;
+    bytes12 cachedVaultId;
+
+    mapping (bytes6 => IJoin)                   public joins;            // Join contracts available to manage assets. The same Join can serve multiple assets (ETH-A, ETH-B, etc...)
+    mapping (address => bool)                   public integrations;     // Trusted contracts to call anything on.
+    mapping (address => bool)                   public tokens;           // Trusted contracts to call `transfer` or `permit` on.
+
+    constructor (IVRCauldron cauldron_, IRouter router_, IWETH9 weth_) {
+        cauldron = cauldron_;
+        router = router_;
+        weth = weth_;
+
+        // See https://medium.com/immunefi/wormhole-uninitialized-proxy-bugfix-review-90250c41a43a
+        initialized = true; // Lock the implementation contract
+    }
+
+    // ---- Upgradability ----
+
+    /// @dev Give the ROOT role and create a LOCK role with itself as the admin role and no members. 
+    /// Calling setRoleAdmin(msg.sig, LOCK) means no one can grant that msg.sig role anymore.
+    function initialize (address root_) public {
+        require(!initialized, "Already initialized");
+        initialized = true;             // On an uninitialized contract, no governance functions can be executed, because no one has permission to do so
+        _grantRole(ROOT, root_);   // Grant ROOT
+        _setRoleAdmin(LOCK, LOCK);      // Create the LOCK role by setting itself as its own admin, creating an independent role tree
+    }
+
+    /// @dev Allow to set a new implementation
+    function _authorizeUpgrade(address newImplementation) internal override auth {}
 
     // ---- Data sourcing ----
     /// @dev Obtains a vault by vaultId from the Cauldron, and verifies that msg.sender is the owner
@@ -87,17 +124,6 @@ contract VRLadle is VRLadleStorage, AccessControl {
         emit JoinAdded(assetId, address(join));
     }
 
-    /// @dev Add or remove a module.
-    /// @notice Treat modules as you would Ladle upgrades. Modules have unrestricted access to the Ladle
-    /// storage, and can wreak havoc easily.
-    /// Modules must not do any changes to any vault (owner, baseId, ilkId) because of vault caching.
-    /// Modules must not be contracts that can self-destruct because of `moduleCall`.
-    /// Modules can't use `msg.value` because of `batch`.
-    function addModule(address module, bool set) external auth {
-        modules[module] = set;
-        emit ModuleAdded(module, set);
-    }
-
     /// @dev Set the fee parameter
     function setFee(uint256 fee) external auth {
         borrowingFee = fee;
@@ -131,17 +157,6 @@ contract VRLadle is VRLadleStorage, AccessControl {
     ) external payable returns (bytes memory result) {
         require(integrations[integration], "Unknown integration");
         return router.route(integration, data);
-    }
-
-    /// @dev Allow users to use functionality coded in a module, to be used with batch
-    function moduleCall(
-        address module,
-        bytes calldata data
-    ) external payable returns (bytes memory result) {
-        require(modules[module], "Unregistered module");
-        bool success;
-        (success, result) = module.delegatecall(data);
-        if (!success) revert(RevertMsgExtractor.getRevertMsg(result));
     }
 
     // ---- Token management ----

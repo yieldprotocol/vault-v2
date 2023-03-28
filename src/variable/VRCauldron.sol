@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity >=0.8.13;
+import "../constants/Constants.sol";
 import "../interfaces/IOracle.sol";
 import "../interfaces/DataTypes.sol";
 import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/src/utils/Math.sol";
 import "@yield-protocol/utils-v2/src/utils/Cast.sol";
-
-import "../constants/Constants.sol";
 import { CauldronMath } from "../Cauldron.sol";
+import { UUPSUpgradeable } from "openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 
-contract VRCauldron is AccessControl, Constants {
+contract VRCauldron is UUPSUpgradeable, AccessControl, Constants {
     using CauldronMath for uint128;
     using Math for uint256;
     using Cast for uint128;
@@ -63,14 +63,16 @@ contract VRCauldron is AccessControl, Constants {
         uint128 art
     );
 
+    // ==== Upgradability data ====
+    bool public initialized;
+
     // ==== Configuration data ====
     mapping(bytes6 => address) public assets; // Underlyings and collaterals available in Cauldron. 12 bytes still free.
     mapping(bytes6 => bool) public bases; // Assets available in Cauldron for borrowing.
     mapping(bytes6 => mapping(bytes6 => bool)) public ilks; // [baseId][assetId] Assets that are approved as collateral for the base
 
     mapping(bytes6 => IOracle) public rateOracles; // Variable rate oracle for an underlying
-    mapping(bytes6 => mapping(bytes6 => DataTypes.SpotOracle))
-        public spotOracles; // [assetId][assetId] Spot price oracles
+    mapping(bytes6 => mapping(bytes6 => DataTypes.SpotOracle)) public spotOracles; // [assetId][assetId] Spot price oracles
 
     // ==== Protocol data ====
     mapping(bytes6 => mapping(bytes6 => DataTypes.Debt)) public debt; // [baseId][ilkId] Max and sum of debt per underlying and collateral.
@@ -78,6 +80,25 @@ contract VRCauldron is AccessControl, Constants {
     // ==== User data ====
     mapping(bytes12 => VRDataTypes.Vault) public vaults; // An user can own one or more Vaults, each one with a bytes12 identifier
     mapping(bytes12 => DataTypes.Balances) public balances; // Both debt and assets
+
+    constructor() {
+        // See https://medium.com/immunefi/wormhole-uninitialized-proxy-bugfix-review-90250c41a43a
+        initialized = true; // Lock the implementation contract
+    }
+
+    // ==== Upgradability ====
+
+    /// @dev Give the ROOT role and create a LOCK role with itself as the admin role and no members. 
+    /// Calling setRoleAdmin(msg.sig, LOCK) means no one can grant that msg.sig role anymore.
+    function initialize (address root_) public {
+        require(!initialized, "Already initialized");
+        initialized = true;             // On an uninitialized contract, no governance functions can be executed, because no one has permission to do so
+        _grantRole(ROOT, root_);        // Grant ROOT
+        _setRoleAdmin(LOCK, LOCK);      // Create the LOCK role by setting itself as its own admin, creating an independent role tree
+    }
+
+    /// @dev Allow to set a new implementation
+    function _authorizeUpgrade(address newImplementation) internal override auth {}
 
     // ==== Administration ====
 

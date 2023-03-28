@@ -29,12 +29,7 @@ abstract contract ZeroState is Fixture {
     event VaultGiven(bytes12 indexed vaultId, address indexed receiver);
     event TokenAdded(address indexed token, bool indexed set);
     event IntegrationAdded(address indexed integration, bool indexed set);
-    event Approval(
-        address indexed owmer,
-        address indexed spender,
-        uint256 value
-    );
-    event Point(bytes32 indexed param, address value);
+    event Approval(address indexed owmer, address indexed spender, uint256 value);
     event SeriesMatured(uint256 chiAtMaturity);
     event Redeemed(
         address indexed from,
@@ -162,7 +157,6 @@ abstract contract VYTokenZeroState is ZeroState {
     function setUp() public virtual override {
         super.setUp();
         timelock = address(1);
-        vyToken.grantRole(VYToken.point.selector, address(timelock));
         vyToken.grantRole(VYToken.mint.selector, address(this));
         vyToken.grantRole(VYToken.deposit.selector, address(this));
         vyToken.grantRole(VYToken.setFlashFeeFactor.selector, address(this));

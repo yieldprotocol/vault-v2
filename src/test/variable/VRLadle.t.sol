@@ -7,6 +7,42 @@ using Cast for uint256;
 using Cast for int128;
 
 contract VRLadleAdminTests is ZeroState {
+
+    // Test that the storage is initialized
+    function testStorageInitialized() public {
+        assertTrue(ladle.initialized());
+    }
+
+    // Test that the storage can't be initialized again
+    function testInitializeRevertsIfInitialized() public {
+        ladle.grantRole(ladle.initialize.selector, address(this));
+        
+        vm.expectRevert("Already initialized");
+        ladle.initialize(address(this));
+    }
+
+    // Test that only authorized addresses can upgrade
+    function testUpgradeToRevertsIfNotAuthed() public {
+        vm.expectRevert("Access denied");
+        ladle.upgradeTo(address(0));
+    }
+
+    // Test that the upgrade works
+    function testUpgradeTo() public {
+        VRLadle ladleV2 = new VRLadle(
+            IVRCauldron(address(cauldron)),
+            IRouter(address(0)),
+            IWETH9(address(weth))
+        );
+
+        ladle.grantRole(0x3659cfe6, address(this)); // upgradeTo(address)
+        ladle.upgradeTo(address(ladleV2));
+
+        assertEq(address(ladle.router()), address(0));
+        assertTrue(ladle.hasRole(ladle.ROOT(), address(this)));
+        assertTrue(ladle.initialized());
+    }
+
     // @notice Test ability to set borrowing fee
     function testSetBorrowingFee() public {
         console.log("admin can set borrowing fee");
@@ -459,14 +495,7 @@ contract PermitTests is CompleteSetup {
             );
     }
 
-    function getPermitDigest(
-        bytes memory name,
-        address contractAddress,
-        uint256 chainId,
-        Permit memory permit,
-        uint nonce,
-        uint deadline
-    ) internal view returns (bytes32) {
+    function getPermitDigest(bytes memory name, address contractAddress, uint256 chainId, Permit memory permit, uint nonce, uint deadline) internal pure returns (bytes32) {
         bytes32 DOMAIN_SEPARATOR = keccak256(
             abi.encode(
                 keccak256(
@@ -622,8 +651,8 @@ contract RouteAndIntegrationTests is CompleteSetup {
     }
 
     function testOnlyCauldronCanUseRouter() public {
-        console.log("router can be called only by cauldron");
-        Router router = ladle.router();
+        console.log('router can be called only by cauldron');
+        IRouter router = ladle.router();
         vm.expectRevert("Only owner");
         router.route(address(cauldron), "0x00000000");
     }
