@@ -10573,7 +10573,7 @@
       }
     },
     "src/test/variable/Fixture.sol": {
-      "lastModificationDate": 1679671946655,
+      "lastModificationDate": 1679937216880,
       "contentHash": "c2f8bd476f10012b29e2b3c52044bcad",
       "sourceName": "src/test/variable/Fixture.sol",
       "solcConfig": {
@@ -10687,8 +10687,8 @@
       }
     },
     "src/test/variable/FixtureStates.sol": {
-      "lastModificationDate": 1679671085526,
-      "contentHash": "34871d3a915b64e6eec953ee2afc4d93",
+      "lastModificationDate": 1680014012917,
+      "contentHash": "e6d3e8d9bd773cf0824c979bfe73e8f3",
       "sourceName": "src/test/variable/FixtureStates.sol",
       "solcConfig": {
         "settings": {
@@ -10839,7 +10839,7 @@
       }
     },
     "src/test/variable/VRCauldron.t.sol": {
-      "lastModificationDate": 1679671019026,
+      "lastModificationDate": 1679937216880,
       "contentHash": "fefbd25b18be6c9fa43b892f0e7faec2",
       "sourceName": "src/test/variable/VRCauldron.t.sol",
       "solcConfig": {
@@ -10989,8 +10989,8 @@
       }
     },
     "src/test/variable/VRLadle.t.sol": {
-      "lastModificationDate": 1679519867216,
-      "contentHash": "b32a5c3338fdab98e570a7d63456dbee",
+      "lastModificationDate": 1680014181882,
+      "contentHash": "bb45a7689920b1c6227d830ed9260a50",
       "sourceName": "src/test/variable/VRLadle.t.sol",
       "solcConfig": {
         "settings": {
@@ -11237,7 +11237,7 @@
       }
     },
     "src/test/variable/VYToken.t.sol": {
-      "lastModificationDate": 1679519867217,
+      "lastModificationDate": 1679937216881,
       "contentHash": "e4cb4fbcb2f75c31dad3aef846d887ae",
       "sourceName": "src/test/variable/VYToken.t.sol",
       "solcConfig": {
@@ -11458,8 +11458,8 @@
       }
     },
     "src/variable/VRLadle.sol": {
-      "lastModificationDate": 1679659165370,
-      "contentHash": "20580f793678f0466e7608e24df0ba8e",
+      "lastModificationDate": 1680013935558,
+      "contentHash": "4c3bff51fa4edd7c352d47d64a40d213",
       "sourceName": "src/variable/VRLadle.sol",
       "solcConfig": {
         "settings": {

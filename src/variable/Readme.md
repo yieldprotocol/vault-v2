@@ -143,4 +143,9 @@ This project uses foundry to build and test the contracts.
 
 ---
 
-# Areas of concern
+# Note
+- The protocol follows the [Forward Trust Pattern](https://hackernoon.com/using-the-forward-trust-design-pattern-to-make-scaling-easier). This means there are caveats to using the protocol. Things could go wrong if the protocol is not used from the protocol provided frontend.
+- Gas optimization is not a priority for the audit unless there is a huge improvement.
+- This is a MVP. So, we are focussed towards delivering a usable & safe protocol.
+- We prefer clarity of code to enable faster iteration of the product even by non-core developers.
+- [Here](https://github.com/yieldprotocol/addendum-docs/blob/e1b8c294e5a8db7560c215d58fc3011a5f96c38d/COOKBOOK_VARIABLE.md) is the recepie book which specifies how the protocol can be used from the frontend.

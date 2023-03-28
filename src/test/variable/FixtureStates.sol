@@ -141,7 +141,7 @@ abstract contract ETHVaultBuiltState is CompleteSetup {
 abstract contract ETHVaultPouredState is ETHVaultBuiltState {
     function setUp() public virtual override {
         super.setUp();
-        ladle.joinEther{value: INK}(wethId);
+        ladle.wrapEther{value: INK}(address(ladle.joins(wethId)));
         ladle.pour(ethVaultId, address(this), INK.i128(), 0);
     }
 

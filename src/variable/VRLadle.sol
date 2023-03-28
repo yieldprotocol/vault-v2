@@ -200,21 +200,20 @@ contract VRLadle is VRLadleStorage, AccessControl {
         require(msg.sender == address(weth), "Only receive from WETH");
     }
 
-    /// @dev Accept Ether, wrap it and forward it to the WethJoin
+    /// @dev Accept Ether, wrap it and forward it to the provided address
     /// This function should be called first in a batch, and the Join should keep track of stored reserves
     /// Passing the id for a join that doesn't link to a contract implemnting IWETH9 will fail
-    function joinEther(
-        bytes6 etherId
+    function wrapEther(
+        address to
     ) external payable returns (uint256 ethTransferred) {
         ethTransferred = address(this).balance;
-        IJoin wethJoin = getJoin(etherId);
         weth.deposit{value: ethTransferred}();
-        IERC20(address(weth)).safeTransfer(address(wethJoin), ethTransferred);
+        IERC20(address(weth)).safeTransfer(to, ethTransferred);
     }
 
     /// @dev Unwrap Wrapped Ether held by this Ladle, and send the Ether
     /// This function should be called last in a batch, and the Ladle should have no reason to keep an WETH balance
-    function exitEther(
+    function unwrapEther(
         address payable to
     ) external payable returns (uint256 ethTransferred) {
         ethTransferred = weth.balanceOf(address(this));
