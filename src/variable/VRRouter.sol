@@ -8,13 +8,15 @@ import "@yield-protocol/utils-v2/src/utils/IsContract.sol";
 /// given to the original caller are stripped from the call.
 /// This is useful when implementing generic call routing functions on contracts
 /// that might have ERC20 approvals or AccessControl authorizations.
-contract Router {
+contract VRRouter {
     using IsContract for address;
 
-    address immutable public owner;
+    address public owner;
 
-    constructor () {
-        owner = msg.sender;
+    /// @dev Set the owner, which is the only address that can route calls
+    function initialize(address owner_) public {
+        require(owner == address(0), "Already set");
+        owner = owner_;
     }
 
     /// @dev Allow users to route calls, to be used with batch
