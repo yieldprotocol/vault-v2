@@ -4,7 +4,7 @@ pragma solidity >=0.8.13;
 import "@yield-protocol/utils-v2/src/utils/Cast.sol";
 import "./interfaces/IVRCauldron.sol";
 import "../WitchBase.sol";
-import { UUPSUpgradeable } from "openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 /// @title  The Witch is a DataTypes.Auction/Liquidation Engine for the Yield protocol
 /// @notice The Witch grabs under-collateralised vaults, replacing the owner by itself. Then it sells

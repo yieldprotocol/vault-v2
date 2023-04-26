@@ -24,6 +24,18 @@ contract VYTokenTest is VYTokenZeroState {
         vyToken.upgradeTo(address(0));
     }
 
+     function testDecimals() public {
+        console.log(address(vyToken));
+        console.log(address(vyTokenProxy));
+        console.log("underlying is:", vyToken.underlying());
+        console.log(vyToken.decimals());
+        console.log("Name is", vyToken.name());
+        console.log("Name is", vyToken.symbol());
+
+        console.log("Name is", base.name());
+        console.log("Name is", base.symbol());
+    }
+
     // Test that the upgrade works
     function testUpgradeTo() public {
         VYToken vyTokenV2 = new VYToken(0x303100000000, IOracle(address(1)), baseJoin, base.name(), base.symbol());

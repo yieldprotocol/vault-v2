@@ -33,7 +33,7 @@ import "@yield-protocol/utils-v2/src/interfaces/IWETH9.sol";
 import "@yield-protocol/utils-v2/src/token/IERC20Metadata.sol";
 import "@yield-protocol/utils-v2/src/utils/Cast.sol";
 import "@yield-protocol/utils-v2/src/utils/Math.sol";
-import "openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 using Cast for uint256;
 using Cast for uint256;

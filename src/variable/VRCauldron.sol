@@ -7,7 +7,7 @@ import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/src/utils/Math.sol";
 import "@yield-protocol/utils-v2/src/utils/Cast.sol";
 import { CauldronMath } from "../Cauldron.sol";
-import { UUPSUpgradeable } from "openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 
 contract VRCauldron is UUPSUpgradeable, AccessControl, Constants {

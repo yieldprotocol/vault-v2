@@ -42,7 +42,7 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
 
     /* Events
      ******************************************************************************************************************/
-    event SourceSet(
+    event InterestRateParamSet(
         bytes6 indexed baseId,
         bytes6 indexed kind,
         uint256 optimalUsageRate,
@@ -51,7 +51,7 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
         uint256 slope2,
         IJoin join
     );
-    event PerSecondRateUpdated(
+    event InterestRateParamUpdated(
         bytes6 indexed baseId,
         bytes6 indexed kind,
         uint256 optimalUsageRate,
@@ -69,7 +69,7 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
     /** 
     @notice Set a source
      */
-    function setSource(
+    function setInterestRateParameters(
         bytes6 baseId,
         bytes6 kindId,
         uint256 optimalUsageRate,
@@ -94,7 +94,7 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
             ilks: ilks
         });
 
-        emit SourceSet(
+        emit InterestRateParamSet(
             baseId,
             kindId,
             optimalUsageRate,
@@ -127,7 +127,7 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
         sources[baseId][kindId].slope2 = slope2;
         sources[baseId][kindId].join = join;
 
-        emit PerSecondRateUpdated(
+        emit InterestRateParamUpdated(
             baseId,
             kindId,
             optimalUsageRate,

@@ -11,7 +11,7 @@ import "@yield-protocol/utils-v2/src/utils/Cast.sol";
 import "../interfaces/IJoin.sol";
 import "../interfaces/IOracle.sol";
 import "../constants/Constants.sol";
-import { UUPSUpgradeable } from "openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 contract VYToken is IERC3156FlashLender, UUPSUpgradeable, AccessControl, ERC20Permit, Constants {
     using Math for uint256;
