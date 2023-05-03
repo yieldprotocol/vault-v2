@@ -150,10 +150,9 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
         returns (uint256 accumulated, uint256 updateTime)
     {
         InterestRateParameter memory source = sources[base.b6()][kind.b6()];
-        require(source.accumulated != 0, "Source not found");
+        require(source.accumulated != 0, "Accumulated rate is zero");
 
         accumulated = source.accumulated;
-        require(accumulated > 0, "Accumulated rate is zero");
 
         updateTime = source.lastUpdated;
     }
@@ -179,8 +178,6 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
             // Calculate the total debt
             uint128 totalDebt;
             DataTypes.Debt memory debt_;
-            debt_ = cauldron.debt(base.b6(), base.b6());
-            totalDebt = totalDebt + debt_.sum;
 
             for (uint256 i = 0; i < rateParameters.ilks.length; i++) {
                 if (cauldron.ilks(base.b6(), rateParameters.ilks[i])) {

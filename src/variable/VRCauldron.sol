@@ -286,12 +286,12 @@ contract VRCauldron is UUPSUpgradeable, AccessControl, Constants {
         external
         returns (uint128 art)
     {
-        art = _debtFromBase(baseId, base);
+        art = _baseToArt(baseId, base);
     }
 
     /// @dev Convert a base amount to debt terms.
     /// @notice Think about rounding up if using, since we are dividing.
-    function _debtFromBase(bytes6 baseId, uint128 base)
+    function _baseToArt(bytes6 baseId, uint128 base)
         internal
         returns (uint128 art)
     {
@@ -299,16 +299,17 @@ contract VRCauldron is UUPSUpgradeable, AccessControl, Constants {
         art = uint256(base).wdivup(rate).u128();
     }
 
-    /// @dev Convert a debt amount for a to base terms
+    /// @dev Convert a debt amount to base terms
     function debtToBase(bytes6 baseId, uint128 art)
         external
         returns (uint128 base)
     {
-        base = _debtToBase(baseId, art);
+        base = _artToBase(baseId, art);
     }
 
-    /// @dev Convert a debt amount for a to base terms
-    function _debtToBase(bytes6 baseId, uint128 art)
+    /// @dev Convert a debt amount to base terms
+    /// @return base is the current debt of a position, and is obtained by multiplying the normalized debt (art) by the current rate
+    function _artToBase(bytes6 baseId, uint128 art)
         internal
         returns (uint128 base)
     {
@@ -417,8 +418,8 @@ contract VRCauldron is UUPSUpgradeable, AccessControl, Constants {
 
         if (base != 0)
             art = base > 0
-                ? _debtFromBase(vault_.baseId, base.u128()).i128()
-                : -_debtFromBase(vault_.baseId, (-base).u128()).i128();
+                ? _baseToArt(vault_.baseId, base.u128()).i128()
+                : -_baseToArt(vault_.baseId, (-base).u128()).i128();
 
         balances_ = _pour(vaultId, vault_, balances_, ink, art);
 
@@ -441,7 +442,7 @@ contract VRCauldron is UUPSUpgradeable, AccessControl, Constants {
         ) = vaultData(vaultId);
 
         // Normalize the base amount to debt terms
-        int128 art = _debtFromBase(vault_.baseId, base).i128();
+        int128 art = _baseToArt(vault_.baseId, base).i128();
 
         balances_ = _pour(vaultId, vault_, balances_, -(ink.i128()), -art);
 
@@ -474,7 +475,7 @@ contract VRCauldron is UUPSUpgradeable, AccessControl, Constants {
             vault_.baseId,
             balances_.ink
         ); // ink * spot
-        uint256 baseValue = _debtToBase(vault_.baseId, balances_.art); // art * rate
+        uint256 baseValue = _artToBase(vault_.baseId, balances_.art); // art * rate
         return inkValue.i256() - baseValue.wmul(ratio).i256();
     }
 }
