@@ -20,7 +20,6 @@ contract VYTokenTest is VYTokenZeroState {
     // Test that the storage can't be initialized again
     function testFail_InitializeRevertsIfInitialized() public {
         vyToken.grantRole(VYToken.initialize.selector, address(this));
-        // vm.expectRevert(bytes(""));
         vyToken.initialize(address(this), base.name(), base.symbol(), base.decimals());
     }
 
