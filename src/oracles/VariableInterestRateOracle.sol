@@ -66,9 +66,7 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
         ladle = ladle_;
     }
 
-    /** 
-    @notice Set a source
-     */
+    /// @notice Set parameters for the given base & kind
     function setInterestRateParameters(
         bytes6 baseId,
         bytes6 kindId,
@@ -105,6 +103,7 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
         );
     }
 
+    /// @dev Update the parameters for the given base & kind
     function updateParameters(
         bytes6 baseId,
         bytes6 kindId,
@@ -138,6 +137,7 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
         );
     }
 
+    /// @dev Return the accumulated for the given base & kind
     function peek(
         bytes32 base,
         bytes32 kind,
@@ -157,6 +157,7 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
         updateTime = source.lastUpdated;
     }
 
+    /// @dev Return the accumulated for the given base & kind
     function get(
         bytes32 base,
         bytes32 kind,
@@ -196,16 +197,15 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
             if (utilizationRate <= rateParameters.optimalUsageRate) {
                 interestRate =
                     rateParameters.baseVariableBorrowRate +
-                    utilizationRate.wmul(rateParameters.slope1).wdiv(
-                        rateParameters.optimalUsageRate
-                    );
+                    (utilizationRate * rateParameters.slope1) /
+                    rateParameters.optimalUsageRate;
             } else {
                 interestRate =
                     rateParameters.baseVariableBorrowRate +
                     rateParameters.slope1 +
-                    (utilizationRate - rateParameters.optimalUsageRate)
-                        .wmul(rateParameters.slope2)
-                        .wdiv(1e18 - rateParameters.optimalUsageRate);
+                    ((utilizationRate - rateParameters.optimalUsageRate) *
+                        rateParameters.slope2) /
+                    (1e18 - rateParameters.optimalUsageRate);
             }
             // Calculate per second rate
             interestRate = interestRate / 365 days;

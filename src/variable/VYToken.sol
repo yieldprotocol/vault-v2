@@ -17,7 +17,6 @@ contract VYToken is IERC3156FlashLender, UUPSUpgradeable, AccessControl, ERC20Pe
     using Math for uint256;
     using Cast for uint256;
 
-    event Point(bytes32 indexed param, address value);
     event FlashFeeFactorSet(uint256 indexed fee);
     event Redeemed(address indexed holder, address indexed receiver, uint256 principalAmount, uint256 underlyingAmount);
 
