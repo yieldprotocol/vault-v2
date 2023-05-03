@@ -7,11 +7,9 @@ contract VYTokenTest is VYTokenZeroState {
 
     // Test that the storage is initialized
     function testStorageInitialized() public {
-        assertTrue(vyToken.initialized());
-    }
-
-    function testInitialization() public {
         IERC20Metadata token = IERC20Metadata(vyToken.underlying());
+        
+        assertTrue(vyToken.initialized());
         assertEq(token.name(), vyToken.name());
         assertEq(token.decimals(), vyToken.decimals());
         assertEq(token.symbol(), vyToken.symbol());
