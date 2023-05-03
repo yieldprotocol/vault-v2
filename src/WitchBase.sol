@@ -49,7 +49,8 @@ contract WitchBase is AccessControl, IWitchEvents, IWitchErrors {
     mapping(bytes6 => mapping(bytes6 => DataTypes.Line)) public lines;
     mapping(bytes6 => mapping(bytes6 => DataTypes.Limits)) public limits;
     mapping(address => bool) public protected;
-
+    uint256[10] __gap;
+    
     constructor(ICauldron cauldron_, ILadle ladle_) {
         cauldron = cauldron_;
         ladle = ladle_;

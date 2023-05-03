@@ -47,6 +47,7 @@ contract VYToken is IERC3156FlashLender, UUPSUpgradeable, AccessControl, ERC20Pe
 
         // See https://medium.com/immunefi/wormhole-uninitialized-proxy-bugfix-review-90250c41a43a
         initialized = true; // Lock the implementation contract
+        _revokeRole(ROOT, msg.sender); // Remove the deployer's ROOT role
     }
 
     /// @dev Give the ROOT role and create a LOCK role with itself as the admin role and no members. 

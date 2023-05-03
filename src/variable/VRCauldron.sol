@@ -84,6 +84,7 @@ contract VRCauldron is UUPSUpgradeable, AccessControl, Constants {
     constructor() {
         // See https://medium.com/immunefi/wormhole-uninitialized-proxy-bugfix-review-90250c41a43a
         initialized = true; // Lock the implementation contract
+        _revokeRole(ROOT, msg.sender); // Remove the deployer's ROOT role
     }
 
     // ==== Upgradability ====
@@ -367,8 +368,8 @@ contract VRCauldron is UUPSUpgradeable, AccessControl, Constants {
         return (balancesFrom, balancesTo);
     }
 
-    /// @dev Add collateral and rate from vault, pull assets from and push rateed asset to user
-    /// Or, repay to vault and remove collateral, pull rateed asset from and push assets to user
+    /// @dev Add collateral and borrow from vault, pull assets from and push borrowed asset to user
+    /// Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
     function _pour(
         bytes12 vaultId,
         VRDataTypes.Vault memory vault_,

@@ -18,7 +18,7 @@ import "dss-interfaces/src/dss/DaiAbstract.sol";
 import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 /// @dev Ladle orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient user oriented features.
-contract VRLadle is UUPSUpgradeable, AccessControl() {
+contract VRLadle is UUPSUpgradeable, AccessControl {
     using Math for uint256;
     using Cast for uint256;
     using Cast for uint128;
@@ -48,6 +48,7 @@ contract VRLadle is UUPSUpgradeable, AccessControl() {
 
         // See https://medium.com/immunefi/wormhole-uninitialized-proxy-bugfix-review-90250c41a43a
         initialized = true; // Lock the implementation contract
+        _revokeRole(ROOT, msg.sender); // Remove the deployer's ROOT role
     }
 
     // ---- Upgradability ----
@@ -119,8 +120,7 @@ contract VRLadle is UUPSUpgradeable, AccessControl() {
         require(join.asset() == asset, "Mismatched asset and join");
         joins[assetId] = join;
 
-        bool set = (join != IJoin(address(0))) ? true : false;
-        _addToken(asset, set); // address(0) disables the token
+        _addToken(asset, true);
         emit JoinAdded(assetId, address(join));
     }
 
@@ -338,20 +338,19 @@ contract VRLadle is UUPSUpgradeable, AccessControl() {
         if (ink != 0) {
             IJoin ilkJoin = getJoin(vault.ilkId);
             if (ink > 0) ilkJoin.join(vault.owner, uint128(ink));
-            if (ink < 0) ilkJoin.exit(to, uint128(-ink));
+            else ilkJoin.exit(to, uint128(-ink));
         }
 
         // Manage base
         if (base != 0) {
             IJoin baseJoin = getJoin(vault.baseId);
             if (base < 0) baseJoin.join(vault.owner, uint128(-base));
-            if (base > 0) baseJoin.exit(to, uint128(base));
+            else baseJoin.exit(to, uint128(base));
         }
     }
 
     /// @dev Add collateral and borrow from vault, pull assets from and push borrowed asset to user
     /// Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
-    /// Borrow only before maturity.
     function pour(
         bytes12 vaultId_,
         address to,
