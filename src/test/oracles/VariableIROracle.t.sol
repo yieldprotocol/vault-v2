@@ -291,9 +291,9 @@ contract VariableInterestRateOracleOracleTest is ZeroState {
             sourceParameters.slope2,
             sourceParameters.ilks
         );
-        vm.expectRevert("Source not found");
+        vm.expectRevert("Accumulated rate is zero");
         variableInterestRateOracle.peek(bytes32(baseTwo), RATE, WAD);
-        vm.expectRevert("Source not found");
+        vm.expectRevert("Accumulated rate is zero");
         variableInterestRateOracle.peek(bytes32(baseOne), CHI, WAD);
     }
 }
