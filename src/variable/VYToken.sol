@@ -51,12 +51,15 @@ contract VYToken is IERC3156FlashLender, UUPSUpgradeable, AccessControl, ERC20Pe
 
     /// @dev Give the ROOT role and create a LOCK role with itself as the admin role and no members. 
     /// Calling setRoleAdmin(msg.sig, LOCK) means no one can grant that msg.sig role anymore.
-    function initialize (address root_) public {
+    function initialize (address root_, string memory name_, string memory symbol_, uint8 decimals_) public {
         require(!initialized, "Already initialized");
         initialized = true;             // On an uninitialized contract, no governance functions can be executed, because no one has permission to do so
         _grantRole(ROOT, root_);      // Grant ROOT
         _setRoleAdmin(LOCK, LOCK);      // Create the LOCK role by setting itself as its own admin, creating an independent role tree
         flashFeeFactor = FLASH_LOANS_DISABLED; // Flash loans disabled by default
+        name = name_;
+        symbol = symbol_;
+        decimals = decimals_;
     }
 
     /// @dev Allow to set a new implementation

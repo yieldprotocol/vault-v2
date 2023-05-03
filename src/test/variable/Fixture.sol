@@ -161,13 +161,6 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
         daiJoin = new FlashJoin(address(dai));
         baseJoin = new FlashJoin(address(base));
 
-        vyToken = new VYToken(
-            baseId,
-            IOracle(address(chiRateOracle)),
-            IJoin(baseJoin),
-            base.name(),
-            base.symbol()
-        );
         /// Orchestrating the protocol
         setUpOracles();
 
@@ -181,7 +174,7 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
 
         vyTokenProxy = new ERC1967Proxy(
             address(vyToken),
-            abi.encodeWithSignature("initialize(address)", address(this))
+            abi.encodeWithSignature("initialize(address,string,string,uint8)", address(this), base.name(), base.symbol(), base.decimals())
         );
 
         vyToken = VYToken(address(vyTokenProxy));

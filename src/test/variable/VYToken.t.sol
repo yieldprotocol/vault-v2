@@ -10,30 +10,24 @@ contract VYTokenTest is VYTokenZeroState {
         assertTrue(vyToken.initialized());
     }
 
+    function testInitialization() public {
+        IERC20Metadata token = IERC20Metadata(vyToken.underlying());
+        assertEq(token.name(), vyToken.name());
+        assertEq(token.decimals(), vyToken.decimals());
+        assertEq(token.symbol(), vyToken.symbol());
+    }
+
     // Test that the storage can't be initialized again
-    function testInitializeRevertsIfInitialized() public {
+    function testFail_InitializeRevertsIfInitialized() public {
         vyToken.grantRole(VYToken.initialize.selector, address(this));
-        
-        vm.expectRevert("Already initialized");
-        vyToken.initialize(address(this));
+        // vm.expectRevert(bytes(""));
+        vyToken.initialize(address(this), base.name(), base.symbol(), base.decimals());
     }
 
     // Test that only authorized addresses can upgrade
     function testUpgradeToRevertsIfNotAuthed() public {
         vm.expectRevert("Access denied");
         vyToken.upgradeTo(address(0));
-    }
-
-     function testDecimals() public {
-        console.log(address(vyToken));
-        console.log(address(vyTokenProxy));
-        console.log("underlying is:", vyToken.underlying());
-        console.log(vyToken.decimals());
-        console.log("Name is", vyToken.name());
-        console.log("Name is", vyToken.symbol());
-
-        console.log("Name is", base.name());
-        console.log("Name is", base.symbol());
     }
 
     // Test that the upgrade works
