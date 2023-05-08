@@ -243,9 +243,16 @@ contract AfterMaturityTest is AfterMaturity {
             unit, 
             unit
         );
+
+        uint256 chiAtMaturity;
+        (chiAtMaturity, ) = oracle.get(fyToken.underlyingId(), CHI, 0);        
+        vm.expectEmit(false, false, false, true);
+        emit SeriesMatured(chiAtMaturity);
+
         vm.prank(user);
         fyToken.redeem(unit, user, user);
 
+        assertEq(fyToken.chiAtMaturity(), chiAtMaturity);
         assertTrackPlusEq("userTokenBalance", unit, token.balanceOf(user));
         assertTrackMinusEq("userFYTokenBalance", unit, fyToken.balanceOf(user));
     }
