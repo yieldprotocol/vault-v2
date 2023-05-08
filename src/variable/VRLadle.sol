@@ -297,26 +297,6 @@ contract VRLadle is UUPSUpgradeable, AccessControl {
 
     // ---- Asset and debt management ----
 
-    /// @dev Move collateral and debt between vaults.
-    function stir(
-        bytes12 from,
-        bytes12 to,
-        uint128 ink,
-        uint128 art
-    ) external payable {
-        if (ink > 0)
-            require(
-                cauldron.vaults(from).owner == msg.sender,
-                "Only origin vault owner"
-            );
-        if (art > 0)
-            require(
-                cauldron.vaults(to).owner == msg.sender,
-                "Only destination vault owner"
-            );
-        cauldron.stir(from, to, ink, art);
-    }
-
     /// @dev Add collateral and borrow from vault, pull assets from and push borrowed asset to user
     /// Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
     /// Borrow only before maturity.

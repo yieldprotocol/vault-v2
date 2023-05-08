@@ -175,48 +175,47 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
 
         uint256 secondsSinceLastUpdate = (block.timestamp -
             rateParameters.lastUpdated);
-        if (secondsSinceLastUpdate > 0) {
-            // Calculate the total debt
-            uint128 totalDebt;
-            DataTypes.Debt memory debt_;
 
-            for (uint256 i = 0; i < rateParameters.ilks.length; i++) {
-                if (cauldron.ilks(base.b6(), rateParameters.ilks[i])) {
-                    debt_ = cauldron.debt(base.b6(), rateParameters.ilks[i]);
-                    totalDebt = totalDebt + debt_.sum;
-                }
+        // Calculate the total debt
+        uint128 totalDebt;
+        DataTypes.Debt memory debt_;
+
+        for (uint256 i = 0; i < rateParameters.ilks.length; i++) {
+            if (cauldron.ilks(base.b6(), rateParameters.ilks[i])) {
+                debt_ = cauldron.debt(base.b6(), rateParameters.ilks[i]);
+                totalDebt = totalDebt + debt_.sum;
             }
-
-            // Calculate utilization rate
-            // Total debt / Total Liquidity
-            uint256 utilizationRate = uint256(totalDebt).wdiv(
-                rateParameters.join.storedBalance()
-            );
-
-            uint256 interestRate;
-            if (utilizationRate <= rateParameters.optimalUsageRate) {
-                interestRate =
-                    rateParameters.baseVariableBorrowRate +
-                    (utilizationRate * rateParameters.slope1) /
-                    rateParameters.optimalUsageRate;
-            } else {
-                interestRate =
-                    rateParameters.baseVariableBorrowRate +
-                    rateParameters.slope1 +
-                    ((utilizationRate - rateParameters.optimalUsageRate) *
-                        rateParameters.slope2) /
-                    (1e18 - rateParameters.optimalUsageRate);
-            }
-            // Calculate per second rate
-            interestRate = interestRate / 365 days;
-            rateParameters.accumulated *= (1e18 + interestRate).wpow(
-                secondsSinceLastUpdate
-            );
-            rateParameters.accumulated /= 1e18;
-            rateParameters.lastUpdated = block.timestamp;
-
-            sources[base.b6()][kind.b6()] = rateParameters;
         }
+
+        // Calculate utilization rate
+        // Total debt / Total Liquidity
+        uint256 utilizationRate = uint256(totalDebt).wdiv(
+            rateParameters.join.storedBalance()
+        );
+
+        uint256 interestRate;
+        if (utilizationRate <= rateParameters.optimalUsageRate) {
+            interestRate =
+                rateParameters.baseVariableBorrowRate +
+                (utilizationRate * rateParameters.slope1) /
+                rateParameters.optimalUsageRate;
+        } else {
+            interestRate =
+                rateParameters.baseVariableBorrowRate +
+                rateParameters.slope1 +
+                ((utilizationRate - rateParameters.optimalUsageRate) *
+                    rateParameters.slope2) /
+                (1e18 - rateParameters.optimalUsageRate);
+        }
+        // Calculate per second rate
+        interestRate = interestRate / 365 days;
+        rateParameters.accumulated *= (1e18 + interestRate).wpow(
+            secondsSinceLastUpdate
+        );
+        rateParameters.accumulated /= 1e18;
+        rateParameters.lastUpdated = block.timestamp;
+
+        sources[base.b6()][kind.b6()] = rateParameters;
 
         accumulated = rateParameters.accumulated;
         require(accumulated > 0, "Accumulated rate is zero");
