@@ -90,7 +90,7 @@ contract AccumulatorMultiOracle is IOracle, AccessControl, Constants {
         accumulated = source.accumulated;
         require(accumulated > 0, "Accumulated rate is zero");
 
-        updateTime = block.timestamp;
+        updateTime = source.lastUpdated;
     }
 
     /**

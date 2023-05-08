@@ -15,12 +15,23 @@ contract ContangoWitch is Witch {
         contango = contango_;
     }
 
-    function _auctionStarted(
-        bytes12 vaultId,
-        DataTypes.Auction memory auction_,
-        DataTypes.Line memory line
-    ) internal override returns (DataTypes.Vault memory vault) {
-        vault = super._auctionStarted(vaultId, auction_, line);
+    /// @dev Put an under-collateralised vault up for liquidation
+    /// @param vaultId Id of the vault to liquidate
+    /// @param to Receiver of the auctioneer reward
+    /// @return auction_ Info associated to the auction itself
+    /// @return vault Vault that's being auctioned
+    /// @return series Series for the vault that's being auctioned
+    function auction(bytes12 vaultId, address to)
+        public
+        override
+        beforeAshes
+        returns (
+            DataTypes.Auction memory auction_,
+            DataTypes.Vault memory vault,
+            DataTypes.Series memory series
+        )
+    {
+        super.auction(vaultId, to);
         contango.auctionStarted(vaultId);
     }
 
