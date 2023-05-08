@@ -1,6 +1,6 @@
 {
   "name": "@yield-protocol/vault-v2",
-  "version": "0.18.13",
+  "version": "0.18.14",
   "description": "Yield Collateralized Debt Engine v2",
   "author": "Yield Inc.",
   "files": [

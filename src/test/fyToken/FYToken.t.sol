@@ -56,7 +56,7 @@ abstract contract ZeroState is Test, TestConstants, TestExtensions {
             mockIlkId,
             oracle,
             join,
-            1680427572,
+            1719583200,
             "",
             ""
         );
@@ -236,6 +236,11 @@ contract AfterMaturityTest is AfterMaturity {
         track("userTokenBalance", token.balanceOf(user));
         track("userFYTokenBalance", fyToken.balanceOf(user));
 
+        uint256 chiAtMaturity;
+        (chiAtMaturity, ) = oracle.get(fyToken.underlyingId(), CHI, 0);        
+        vm.expectEmit(false, false, false, true);
+        emit SeriesMatured(chiAtMaturity);
+        
         vm.expectEmit(true, true, false, true);
         emit Redeemed(
             user, 
@@ -243,9 +248,11 @@ contract AfterMaturityTest is AfterMaturity {
             unit, 
             unit
         );
+
         vm.prank(user);
         fyToken.redeem(unit, user, user);
 
+        assertEq(fyToken.chiAtMaturity(), chiAtMaturity);
         assertTrackPlusEq("userTokenBalance", unit, token.balanceOf(user));
         assertTrackMinusEq("userFYTokenBalance", unit, fyToken.balanceOf(user));
     }
