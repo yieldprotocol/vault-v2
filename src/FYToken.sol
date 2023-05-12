@@ -93,11 +93,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
     ///@dev Converts the amount of the principal to the underlying
     ///Before maturity, returns amount as if at maturity.
     function _convertToUnderlying(uint256 principalAmount) internal returns (uint256 underlyingAmount) {
-        if (chiAtMaturity == CHI_NOT_SET) {
-            return principalAmount;
-        } else {
-            return principalAmount.wmul(_accrual());
-        }
+        return principalAmount.wmul(_accrual());
     }
 
     ///@dev Converts the amount of the underlying to the principal
@@ -106,13 +102,9 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
     }
 
     ///@dev Converts the amount of the underlying to the principal
-    ///Before maturity, returns amount as if at maturity.
+    /// Before maturity, returns amount as if at maturity.
     function _convertToPrincipal(uint256 underlyingAmount) internal returns (uint256 princpalAmount) {
-        if (chiAtMaturity == CHI_NOT_SET) {
-            return underlyingAmount;
-        } else {
-            return underlyingAmount.wdivup(_accrual());
-        }
+        return underlyingAmount.wdivup(_accrual());
     }
 
     /// @dev Mature the fyToken by recording the chi.
@@ -135,17 +127,19 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
         return _accrual();
     }
 
-    /// @dev Retrieve the chi accrual since maturity, maturing if necessary.
-    /// Note: Call only after checking we are past maturity
+    /// @dev Retrieve the chi accrual since maturity, maturing if necessary. Return 1e18 if before maturity.
     function _accrual() internal returns (uint256 accrual_) {
-        if (chiAtMaturity == CHI_NOT_SET) {
-            // After maturity, but chi not yet recorded. Let's record it, and accrual is then 1.
-            _mature();
-        } else {
-            (uint256 chi, ) = oracle.get(underlyingId, CHI, 0); // The value returned is an accumulator, it doesn't need an input amount
-            accrual_ = chi.wdiv(chiAtMaturity);
+        if (block.timestamp >= maturity) {
+            if (chiAtMaturity == CHI_NOT_SET) {
+                // After maturity, but chi not yet recorded. Let's record it, and accrual is then 1.
+                _mature();
+            } else {
+                (uint256 chi, ) = oracle.get(underlyingId, CHI, 0); // The value returned is an accumulator, it doesn't need an input amount
+                accrual_ = chi.wdiv(chiAtMaturity);
+            }
         }
-        accrual_ = accrual_ >= 1e18 ? accrual_ : 1e18; // The accrual can't be below 1 (with 18 decimals)
+        // Return 1e18 if accrual is less than 1e18, including when accrual_ was not set.
+        accrual_ = accrual_ < 1e18 ? 1e18 : accrual_;
     }
 
     ///@dev returns the maximum redeemable amount for the address holder in terms of the principal

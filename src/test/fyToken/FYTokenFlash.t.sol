@@ -52,7 +52,7 @@ abstract contract ZeroState is Test, TestConstants, TestExtensions {
             mockIlkId,
             IOracle(address(mockOracle)),
             join,
-            block.timestamp + 365 days,
+            1719583200,
             "",
             ""
         );
