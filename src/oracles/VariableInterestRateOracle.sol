@@ -60,6 +60,7 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
         uint256 slope2,
         IJoin join
     );
+    event AccumulationUpdated(bytes6 indexed baseId, bytes6 indexed kind, uint256 accumulated, uint256 lastUpdateTimestamp, uint256 utilizationRate);
 
     constructor(IVRCauldron cauldron_, ILadle ladle_) {
         cauldron = cauldron_;
@@ -220,5 +221,13 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
         accumulated = rateParameters.accumulated;
         require(accumulated > 0, "Accumulated rate is zero");
         updateTime = block.timestamp;
+
+        emit AccumulationUpdated(
+            base.b6(),
+            kind.b6(),
+            accumulated,
+            updateTime,
+            utilizationRate
+        );
     }
 }

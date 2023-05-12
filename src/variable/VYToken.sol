@@ -16,6 +16,7 @@ contract VYToken is UUPSUpgradeable, AccessControl, ERC20Permit, Constants {
     using Cast for uint256;
 
     event Redeemed(address indexed holder, address indexed receiver, uint256 principalAmount, uint256 underlyingAmount);
+    event Deposited(address indexed sender,address indexed receiver, uint256 underlyingAmount, uint256 principalAmount);
 
     bool public initialized;
 
@@ -151,7 +152,11 @@ contract VYToken is UUPSUpgradeable, AccessControl, ERC20Permit, Constants {
     /// @dev Mint vyTokens.
     function deposit(address receiver, uint256 underlyingAmount) external auth {
         join.join(msg.sender, underlyingAmount.u128());
-        _mint(receiver, _convertToPrincipal(underlyingAmount));
+        
+        uint256 principalAmount = _convertToPrincipal(underlyingAmount);
+        _mint(receiver, principalAmount);
+        
+        emit Deposited(msg.sender, receiver, underlyingAmount, principalAmount);
     }
 
     ///@dev returns the maximum depositable amount for the address holder in terms of the underlying
