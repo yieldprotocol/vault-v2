@@ -66,7 +66,7 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
         uint256 slope2,
         IJoin join
     );
-    event AccumulationUpdated(bytes6 indexed baseId, bytes6 indexed kind, uint256 accumulated, uint256 lastUpdateTimestamp, uint256 utilizationRate);
+    event AccumulatorUpdated(bytes6 indexed baseId, bytes6 indexed kind, uint256 accumulated, uint256 lastUpdateTimestamp, uint256 utilizationRate);
 
     constructor(IVRCauldron cauldron_, ILadle ladle_) {
         cauldron = cauldron_;
@@ -188,10 +188,8 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
         DataTypes.Debt memory debt_;
 
         for (uint256 i = 0; i < rateParameters.ilks.length; i++) {
-            if (cauldron.ilks(base.b6(), rateParameters.ilks[i])) {
-                debt_ = cauldron.debt(base.b6(), rateParameters.ilks[i]);
-                totalDebt = totalDebt + debt_.sum;
-            }
+            debt_ = cauldron.debt(base.b6(), rateParameters.ilks[i]);
+            totalDebt = totalDebt + debt_.sum;
         }
 
         // Calculate utilization rate
@@ -228,7 +226,7 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
         require(accumulated > 0, "Accumulated rate is zero");
         updateTime = block.timestamp;
 
-        emit AccumulationUpdated(
+        emit AccumulatorUpdated(
             base.b6(),
             kind.b6(),
             accumulated,

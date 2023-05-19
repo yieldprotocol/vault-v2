@@ -223,7 +223,6 @@ contract VRLadle is UUPSUpgradeable, AccessControl {
 
     /// @dev Accept Ether, wrap it and forward it to the provided address
     /// This function should be called first in a batch, and the Join should keep track of stored reserves
-    /// Passing the id for a join that doesn't link to a contract implementing IWETH9 will fail
     function wrapEther(
         address to
     ) external payable returns (uint256 ethTransferred) {
