@@ -1,10 +1,16 @@
 // SPDX-License-Identifier: BUSL-1.1
+// Audited as of 15 May 2023. 
+// Reports:
+// https://github.com/yieldprotocol/variable-rate-audit-gogoauditor/issues/1
+// https://github.com/yieldprotocol/variable-rate-audit-parth-15/issues?q=is%3Aissue+is%3Aclosed
+// https://github.com/yieldprotocol/variable-rate-audit-obheda12/issues
+// https://github.com/yieldprotocol/variable-rate-audit-DecorativePineapple/issues/19
 pragma solidity >=0.8.13;
 
 import "@yield-protocol/utils-v2/src/utils/Cast.sol";
 import "./interfaces/IVRCauldron.sol";
 import "../WitchBase.sol";
-import { UUPSUpgradeable } from "openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 /// @title  The Witch is a DataTypes.Auction/Liquidation Engine for the Yield protocol
 /// @notice The Witch grabs under-collateralised vaults, replacing the owner by itself. Then it sells
@@ -23,6 +29,7 @@ contract VRWitch is WitchBase, UUPSUpgradeable {
     constructor(ICauldron cauldron_, ILadle ladle_) WitchBase(cauldron_, ladle_) {
         // See https://medium.com/immunefi/wormhole-uninitialized-proxy-bugfix-review-90250c41a43a
         initialized = true; // Lock the implementation contract
+        _revokeRole(ROOT, msg.sender); // Remove the deployer's ROOT role
     }
 
     // ======================================================================

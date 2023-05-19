@@ -1,4 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
+// Audited as of 15 May 2023. 
+// Reports:
+// https://github.com/yieldprotocol/variable-rate-audit-gogoauditor/issues/1
+// https://github.com/yieldprotocol/variable-rate-audit-parth-15/issues?q=is%3Aissue+is%3Aclosed
+// https://github.com/yieldprotocol/variable-rate-audit-obheda12/issues
+// https://github.com/yieldprotocol/variable-rate-audit-DecorativePineapple/issues/19
 pragma solidity >=0.8.13;
 import "../constants/Constants.sol";
 import "../interfaces/IOracle.sol";
@@ -7,7 +13,7 @@ import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/src/utils/Math.sol";
 import "@yield-protocol/utils-v2/src/utils/Cast.sol";
 import { CauldronMath } from "../Cauldron.sol";
-import { UUPSUpgradeable } from "openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 
 contract VRCauldron is UUPSUpgradeable, AccessControl, Constants {
@@ -84,6 +90,7 @@ contract VRCauldron is UUPSUpgradeable, AccessControl, Constants {
     constructor() {
         // See https://medium.com/immunefi/wormhole-uninitialized-proxy-bugfix-review-90250c41a43a
         initialized = true; // Lock the implementation contract
+        _revokeRole(ROOT, msg.sender); // Remove the deployer's ROOT role
     }
 
     // ==== Upgradability ====
@@ -103,11 +110,12 @@ contract VRCauldron is UUPSUpgradeable, AccessControl, Constants {
     // ==== Administration ====
 
     /// @dev Add a new Asset.
+    /// @notice Only ERC20 support has been tested thoroughly. Any other tokens would have to be tested.
     function addAsset(bytes6 assetId, address asset) external auth {
         require(assetId != bytes6(0), "Asset id is zero");
         require(assets[assetId] == address(0), "Id already used");
         assets[assetId] = asset;
-        emit AssetAdded(assetId, address(asset));
+        emit AssetAdded(assetId, asset);
     }
 
     /// @dev Set the maximum and minimum debt for an underlying and ilk pair. Can be reset.
@@ -286,12 +294,12 @@ contract VRCauldron is UUPSUpgradeable, AccessControl, Constants {
         external
         returns (uint128 art)
     {
-        art = _debtFromBase(baseId, base);
+        art = _baseToArt(baseId, base);
     }
 
     /// @dev Convert a base amount to debt terms.
     /// @notice Think about rounding up if using, since we are dividing.
-    function _debtFromBase(bytes6 baseId, uint128 base)
+    function _baseToArt(bytes6 baseId, uint128 base)
         internal
         returns (uint128 art)
     {
@@ -299,16 +307,17 @@ contract VRCauldron is UUPSUpgradeable, AccessControl, Constants {
         art = uint256(base).wdivup(rate).u128();
     }
 
-    /// @dev Convert a debt amount for a to base terms
+    /// @dev Convert a debt amount to base terms
     function debtToBase(bytes6 baseId, uint128 art)
         external
         returns (uint128 base)
     {
-        base = _debtToBase(baseId, art);
+        base = _artToBase(baseId, art);
     }
 
-    /// @dev Convert a debt amount for a to base terms
-    function _debtToBase(bytes6 baseId, uint128 art)
+    /// @dev Convert a debt amount to base terms
+    /// @return base is the current debt of a position, and is obtained by multiplying the normalized debt (art) by the current rate
+    function _artToBase(bytes6 baseId, uint128 art)
         internal
         returns (uint128 base)
     {
@@ -366,8 +375,8 @@ contract VRCauldron is UUPSUpgradeable, AccessControl, Constants {
         return (balancesFrom, balancesTo);
     }
 
-    /// @dev Add collateral and rate from vault, pull assets from and push rateed asset to user
-    /// Or, repay to vault and remove collateral, pull rateed asset from and push assets to user
+    /// @dev Add collateral and borrow from vault, pull assets from and push borrowed asset to user
+    /// Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
     function _pour(
         bytes12 vaultId,
         VRDataTypes.Vault memory vault_,
@@ -417,8 +426,8 @@ contract VRCauldron is UUPSUpgradeable, AccessControl, Constants {
 
         if (base != 0)
             art = base > 0
-                ? _debtFromBase(vault_.baseId, base.u128()).i128()
-                : -_debtFromBase(vault_.baseId, (-base).u128()).i128();
+                ? _baseToArt(vault_.baseId, base.u128()).i128()
+                : -_baseToArt(vault_.baseId, (-base).u128()).i128();
 
         balances_ = _pour(vaultId, vault_, balances_, ink, art);
 
@@ -441,7 +450,7 @@ contract VRCauldron is UUPSUpgradeable, AccessControl, Constants {
         ) = vaultData(vaultId);
 
         // Normalize the base amount to debt terms
-        int128 art = _debtFromBase(vault_.baseId, base).i128();
+        int128 art = _baseToArt(vault_.baseId, base).i128();
 
         balances_ = _pour(vaultId, vault_, balances_, -(ink.i128()), -art);
 
@@ -474,7 +483,7 @@ contract VRCauldron is UUPSUpgradeable, AccessControl, Constants {
             vault_.baseId,
             balances_.ink
         ); // ink * spot
-        uint256 baseValue = _debtToBase(vault_.baseId, balances_.art); // art * rate
+        uint256 baseValue = _artToBase(vault_.baseId, balances_.art); // art * rate
         return inkValue.i256() - baseValue.wmul(ratio).i256();
     }
 }

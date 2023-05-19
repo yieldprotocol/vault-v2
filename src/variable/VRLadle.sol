@@ -1,4 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
+// Audited as of 15 May 2023. 
+// Reports:
+// https://github.com/yieldprotocol/variable-rate-audit-gogoauditor/issues/1
+// https://github.com/yieldprotocol/variable-rate-audit-parth-15/issues?q=is%3Aissue+is%3Aclosed
+// https://github.com/yieldprotocol/variable-rate-audit-obheda12/issues
+// https://github.com/yieldprotocol/variable-rate-audit-DecorativePineapple/issues/19
 pragma solidity >=0.8.13;
 import "../interfaces/IFYToken.sol";
 import "../interfaces/IJoin.sol";
@@ -15,10 +21,10 @@ import "@yield-protocol/utils-v2/src/token/TransferHelper.sol";
 import "@yield-protocol/utils-v2/src/utils/Math.sol";
 import "@yield-protocol/utils-v2/src/utils/Cast.sol";
 import "dss-interfaces/src/dss/DaiAbstract.sol";
-import { UUPSUpgradeable } from "openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 /// @dev Ladle orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient user oriented features.
-contract VRLadle is UUPSUpgradeable, AccessControl() {
+contract VRLadle is UUPSUpgradeable, AccessControl {
     using Math for uint256;
     using Cast for uint256;
     using Cast for uint128;
@@ -48,6 +54,7 @@ contract VRLadle is UUPSUpgradeable, AccessControl() {
 
         // See https://medium.com/immunefi/wormhole-uninitialized-proxy-bugfix-review-90250c41a43a
         initialized = true; // Lock the implementation contract
+        _revokeRole(ROOT, msg.sender); // Remove the deployer's ROOT role
     }
 
     // ---- Upgradability ----
@@ -119,8 +126,7 @@ contract VRLadle is UUPSUpgradeable, AccessControl() {
         require(join.asset() == asset, "Mismatched asset and join");
         joins[assetId] = join;
 
-        bool set = (join != IJoin(address(0))) ? true : false;
-        _addToken(asset, set); // address(0) disables the token
+        _addToken(asset, true);
         emit JoinAdded(assetId, address(join));
     }
 
@@ -217,7 +223,6 @@ contract VRLadle is UUPSUpgradeable, AccessControl() {
 
     /// @dev Accept Ether, wrap it and forward it to the provided address
     /// This function should be called first in a batch, and the Join should keep track of stored reserves
-    /// Passing the id for a join that doesn't link to a contract implemnting IWETH9 will fail
     function wrapEther(
         address to
     ) external payable returns (uint256 ethTransferred) {
@@ -297,26 +302,6 @@ contract VRLadle is UUPSUpgradeable, AccessControl() {
 
     // ---- Asset and debt management ----
 
-    /// @dev Move collateral and debt between vaults.
-    function stir(
-        bytes12 from,
-        bytes12 to,
-        uint128 ink,
-        uint128 art
-    ) external payable {
-        if (ink > 0)
-            require(
-                cauldron.vaults(from).owner == msg.sender,
-                "Only origin vault owner"
-            );
-        if (art > 0)
-            require(
-                cauldron.vaults(to).owner == msg.sender,
-                "Only destination vault owner"
-            );
-        cauldron.stir(from, to, ink, art);
-    }
-
     /// @dev Add collateral and borrow from vault, pull assets from and push borrowed asset to user
     /// Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
     /// Borrow only before maturity.
@@ -338,20 +323,19 @@ contract VRLadle is UUPSUpgradeable, AccessControl() {
         if (ink != 0) {
             IJoin ilkJoin = getJoin(vault.ilkId);
             if (ink > 0) ilkJoin.join(vault.owner, uint128(ink));
-            if (ink < 0) ilkJoin.exit(to, uint128(-ink));
+            else ilkJoin.exit(to, uint128(-ink));
         }
 
         // Manage base
         if (base != 0) {
             IJoin baseJoin = getJoin(vault.baseId);
             if (base < 0) baseJoin.join(vault.owner, uint128(-base));
-            if (base > 0) baseJoin.exit(to, uint128(base));
+            else baseJoin.exit(to, uint128(base));
         }
     }
 
     /// @dev Add collateral and borrow from vault, pull assets from and push borrowed asset to user
     /// Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
-    /// Borrow only before maturity.
     function pour(
         bytes12 vaultId_,
         address to,
@@ -363,7 +347,8 @@ contract VRLadle is UUPSUpgradeable, AccessControl() {
     }
 
     /// @dev Repay all debt in a vault.
-    /// The base tokens need to be already in the join, unaccounted for. The surplus base will be returned to msg.sender.
+    /// The base tokens need to be already in the join, unaccounted for.
+    /// The surplus base will be returned to refundTo address, if refundTo is different than address(0).
     function repay(
         bytes12 vaultId_,
         address inkTo,

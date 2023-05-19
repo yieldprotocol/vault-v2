@@ -1,4 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
+// Audited as of 15 May 2023. 
+// Reports:
+// https://github.com/yieldprotocol/variable-rate-audit-gogoauditor/issues/1
+// https://github.com/yieldprotocol/variable-rate-audit-parth-15/issues?q=is%3Aissue+is%3Aclosed
+// https://github.com/yieldprotocol/variable-rate-audit-obheda12/issues
+// https://github.com/yieldprotocol/variable-rate-audit-DecorativePineapple/issues/19
 pragma solidity >=0.8.13;
 
 import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
@@ -42,7 +48,7 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
 
     /* Events
      ******************************************************************************************************************/
-    event SourceSet(
+    event InterestRateParamSet(
         bytes6 indexed baseId,
         bytes6 indexed kind,
         uint256 optimalUsageRate,
@@ -51,7 +57,7 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
         uint256 slope2,
         IJoin join
     );
-    event PerSecondRateUpdated(
+    event InterestRateParamUpdated(
         bytes6 indexed baseId,
         bytes6 indexed kind,
         uint256 optimalUsageRate,
@@ -60,16 +66,15 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
         uint256 slope2,
         IJoin join
     );
+    event AccumulatorUpdated(bytes6 indexed baseId, bytes6 indexed kind, uint256 accumulated, uint256 lastUpdateTimestamp, uint256 utilizationRate);
 
     constructor(IVRCauldron cauldron_, ILadle ladle_) {
         cauldron = cauldron_;
         ladle = ladle_;
     }
 
-    /** 
-    @notice Set a source
-     */
-    function setSource(
+    /// @notice Set parameters for the given base & kind
+    function setInterestRateParameters(
         bytes6 baseId,
         bytes6 kindId,
         uint256 optimalUsageRate,
@@ -94,7 +99,7 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
             ilks: ilks
         });
 
-        emit SourceSet(
+        emit InterestRateParamSet(
             baseId,
             kindId,
             optimalUsageRate,
@@ -105,6 +110,7 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
         );
     }
 
+    /// @dev Update the parameters for the given base & kind
     function updateParameters(
         bytes6 baseId,
         bytes6 kindId,
@@ -127,7 +133,7 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
         sources[baseId][kindId].slope2 = slope2;
         sources[baseId][kindId].join = join;
 
-        emit PerSecondRateUpdated(
+        emit InterestRateParamUpdated(
             baseId,
             kindId,
             optimalUsageRate,
@@ -138,6 +144,7 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
         );
     }
 
+    /// @dev Return the accumulated for the given base & kind
     function peek(
         bytes32 base,
         bytes32 kind,
@@ -150,14 +157,14 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
         returns (uint256 accumulated, uint256 updateTime)
     {
         InterestRateParameter memory source = sources[base.b6()][kind.b6()];
-        require(source.accumulated != 0, "Source not found");
+        require(source.accumulated != 0, "Accumulated rate is zero");
 
         accumulated = source.accumulated;
-        require(accumulated > 0, "Accumulated rate is zero");
 
         updateTime = source.lastUpdated;
     }
 
+    /// @dev Return the accumulated for the given base & kind
     function get(
         bytes32 base,
         bytes32 kind,
@@ -175,54 +182,56 @@ contract VariableInterestRateOracle is IOracle, AccessControl, Constants {
 
         uint256 secondsSinceLastUpdate = (block.timestamp -
             rateParameters.lastUpdated);
-        if (secondsSinceLastUpdate > 0) {
-            // Calculate the total debt
-            uint128 totalDebt;
-            DataTypes.Debt memory debt_;
-            debt_ = cauldron.debt(base.b6(), base.b6());
+
+        // Calculate the total debt
+        uint128 totalDebt;
+        DataTypes.Debt memory debt_;
+
+        for (uint256 i = 0; i < rateParameters.ilks.length; i++) {
+            debt_ = cauldron.debt(base.b6(), rateParameters.ilks[i]);
             totalDebt = totalDebt + debt_.sum;
-
-            for (uint256 i = 0; i < rateParameters.ilks.length; i++) {
-                if (cauldron.ilks(base.b6(), rateParameters.ilks[i])) {
-                    debt_ = cauldron.debt(base.b6(), rateParameters.ilks[i]);
-                    totalDebt = totalDebt + debt_.sum;
-                }
-            }
-
-            // Calculate utilization rate
-            // Total debt / Total Liquidity
-            uint256 utilizationRate = uint256(totalDebt).wdiv(
-                rateParameters.join.storedBalance()
-            );
-
-            uint256 interestRate;
-            if (utilizationRate <= rateParameters.optimalUsageRate) {
-                interestRate =
-                    rateParameters.baseVariableBorrowRate +
-                    utilizationRate.wmul(rateParameters.slope1).wdiv(
-                        rateParameters.optimalUsageRate
-                    );
-            } else {
-                interestRate =
-                    rateParameters.baseVariableBorrowRate +
-                    rateParameters.slope1 +
-                    (utilizationRate - rateParameters.optimalUsageRate)
-                        .wmul(rateParameters.slope2)
-                        .wdiv(1e18 - rateParameters.optimalUsageRate);
-            }
-            // Calculate per second rate
-            interestRate = interestRate / 365 days;
-            rateParameters.accumulated *= (1e18 + interestRate).wpow(
-                secondsSinceLastUpdate
-            );
-            rateParameters.accumulated /= 1e18;
-            rateParameters.lastUpdated = block.timestamp;
-
-            sources[base.b6()][kind.b6()] = rateParameters;
         }
+
+        // Calculate utilization rate
+        // Total debt / Total Liquidity
+        uint256 utilizationRate = uint256(totalDebt).wdiv(
+            rateParameters.join.storedBalance()
+        );
+
+        uint256 interestRate;
+        if (utilizationRate <= rateParameters.optimalUsageRate) {
+            interestRate =
+                rateParameters.baseVariableBorrowRate +
+                (utilizationRate * rateParameters.slope1) /
+                rateParameters.optimalUsageRate;
+        } else {
+            interestRate =
+                rateParameters.baseVariableBorrowRate +
+                rateParameters.slope1 +
+                ((utilizationRate - rateParameters.optimalUsageRate) *
+                    rateParameters.slope2) /
+                (1e18 - rateParameters.optimalUsageRate);
+        }
+        // Calculate per second rate
+        interestRate = interestRate / 365 days;
+        rateParameters.accumulated *= (1e18 + interestRate).wpow(
+            secondsSinceLastUpdate
+        );
+        rateParameters.accumulated /= 1e18;
+        rateParameters.lastUpdated = block.timestamp;
+
+        sources[base.b6()][kind.b6()] = rateParameters;
 
         accumulated = rateParameters.accumulated;
         require(accumulated > 0, "Accumulated rate is zero");
         updateTime = block.timestamp;
+
+        emit AccumulatorUpdated(
+            base.b6(),
+            kind.b6(),
+            accumulated,
+            updateTime,
+            utilizationRate
+        );
     }
 }

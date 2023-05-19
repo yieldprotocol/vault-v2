@@ -9,7 +9,7 @@ import "../../variable/interfaces/IVRWitch.sol";
 import "../../interfaces/IWitchEvents.sol";
 import "../../interfaces/IWitchErrors.sol";
 import "../../variable/VRWitch.sol";
-import "openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 abstract contract WitchStateZero is Test, TestConstants, IWitchEvents, IWitchErrors {
     using Mocks for *;

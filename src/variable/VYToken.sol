@@ -1,8 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
+// Audited as of 15 May 2023. 
+// Reports:
+// https://github.com/yieldprotocol/variable-rate-audit-gogoauditor/issues/1
+// https://github.com/yieldprotocol/variable-rate-audit-parth-15/issues?q=is%3Aissue+is%3Aclosed
+// https://github.com/yieldprotocol/variable-rate-audit-obheda12/issues
+// https://github.com/yieldprotocol/variable-rate-audit-DecorativePineapple/issues/19
+
 pragma solidity >=0.8.13;
 
-import "erc3156/contracts/interfaces/IERC3156FlashBorrower.sol";
-import "erc3156/contracts/interfaces/IERC3156FlashLender.sol";
 import "@yield-protocol/utils-v2/src/token/ERC20Permit.sol";
 import "@yield-protocol/utils-v2/src/token/SafeERC20Namer.sol";
 import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
@@ -11,21 +16,16 @@ import "@yield-protocol/utils-v2/src/utils/Cast.sol";
 import "../interfaces/IJoin.sol";
 import "../interfaces/IOracle.sol";
 import "../constants/Constants.sol";
-import { UUPSUpgradeable } from "openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
-contract VYToken is IERC3156FlashLender, UUPSUpgradeable, AccessControl, ERC20Permit, Constants {
+contract VYToken is UUPSUpgradeable, AccessControl, ERC20Permit, Constants {
     using Math for uint256;
     using Cast for uint256;
 
-    event Point(bytes32 indexed param, address value);
-    event FlashFeeFactorSet(uint256 indexed fee);
     event Redeemed(address indexed holder, address indexed receiver, uint256 principalAmount, uint256 underlyingAmount);
+    event Deposited(address indexed sender,address indexed receiver, uint256 underlyingAmount, uint256 principalAmount);
 
     bool public initialized;
-
-    bytes32 internal constant FLASH_LOAN_RETURN = keccak256("ERC3156FlashBorrower.onFlashLoan");
-    uint256 constant FLASH_LOANS_DISABLED = type(uint256).max;
-    uint256 public flashFeeFactor = FLASH_LOANS_DISABLED; // Fee on flash loans, as a percentage in fixed point with 18 decimals. Flash loans disabled by default by overflow from `flashFee`.
 
     IOracle public immutable oracle; // Oracle for the savings rate.
     IJoin public immutable join; // Source of redemption funds.
@@ -47,26 +47,23 @@ contract VYToken is IERC3156FlashLender, UUPSUpgradeable, AccessControl, ERC20Pe
 
         // See https://medium.com/immunefi/wormhole-uninitialized-proxy-bugfix-review-90250c41a43a
         initialized = true; // Lock the implementation contract
+        _revokeRole(ROOT, msg.sender); // Remove the deployer's ROOT role
     }
 
     /// @dev Give the ROOT role and create a LOCK role with itself as the admin role and no members. 
     /// Calling setRoleAdmin(msg.sig, LOCK) means no one can grant that msg.sig role anymore.
-    function initialize (address root_) public {
+    function initialize (address root_, string memory name_, string memory symbol_, uint8 decimals_) public {
         require(!initialized, "Already initialized");
         initialized = true;             // On an uninitialized contract, no governance functions can be executed, because no one has permission to do so
         _grantRole(ROOT, root_);      // Grant ROOT
         _setRoleAdmin(LOCK, LOCK);      // Create the LOCK role by setting itself as its own admin, creating an independent role tree
-        flashFeeFactor = FLASH_LOANS_DISABLED; // Flash loans disabled by default
+        name = name_;
+        symbol = symbol_;
+        decimals = decimals_;
     }
 
     /// @dev Allow to set a new implementation
     function _authorizeUpgrade(address newImplementation) internal override auth {}
-
-    /// @dev Set the flash loan fee factor
-    function setFlashFeeFactor(uint256 flashFeeFactor_) external auth {
-        flashFeeFactor = flashFeeFactor_;
-        emit FlashFeeFactorSet(flashFeeFactor_);
-    }
 
     ///@dev Converts the amount of the principal to the underlying
     function convertToUnderlying(uint256 principalAmount) external returns (uint256 underlyingAmount) {
@@ -162,7 +159,11 @@ contract VYToken is IERC3156FlashLender, UUPSUpgradeable, AccessControl, ERC20Pe
     /// @dev Mint vyTokens.
     function deposit(address receiver, uint256 underlyingAmount) external auth {
         join.join(msg.sender, underlyingAmount.u128());
-        _mint(receiver, _convertToPrincipal(underlyingAmount));
+        
+        uint256 principalAmount = _convertToPrincipal(underlyingAmount);
+        _mint(receiver, principalAmount);
+        
+        emit Deposited(msg.sender, receiver, underlyingAmount, principalAmount);
     }
 
     ///@dev returns the maximum depositable amount for the address holder in terms of the underlying
@@ -192,60 +193,5 @@ contract VYToken is IERC3156FlashLender, UUPSUpgradeable, AccessControl, ERC20Pe
                 return super._burn(holder, principalAmount - available);
             }
         }
-    }
-
-    /**
-     * @dev From ERC-3156. The amount of currency available to be lended.
-     * @param token The loan currency. It must be a VYToken contract.
-     * @return The amount of `token` that can be borrowed.
-     */
-    function maxFlashLoan(address token) external view returns (uint256) {
-        return token == address(this) ? type(uint256).max - _totalSupply : 0;
-    }
-
-    /**
-     * @dev From ERC-3156. The fee to be charged for a given loan.
-     * @param token The loan currency. It must be the asset.
-     * @param principalAmount The amount of tokens lent.
-     * @return The amount of `token` to be charged for the loan, on top of the returned principal.
-     */
-    function flashFee(address token, uint256 principalAmount) external view returns (uint256) {
-        require(token == address(this), "Unsupported currency");
-        return _flashFee(principalAmount);
-    }
-
-    /**
-     * @dev The fee to be charged for a given loan.
-     * @param principalAmount The amount of tokens lent.
-     * @return The amount of `token` to be charged for the loan, on top of the returned principal.
-     */
-    function _flashFee(uint256 principalAmount) internal view returns (uint256) {
-        return principalAmount.wmul(flashFeeFactor);
-    }
-
-    /**
-     * @dev From ERC-3156. Loan `amount` vyDai to `receiver`, which needs to return them plus fee to this contract within the same transaction.
-     * Note that if the initiator and the borrower are the same address, no approval is needed for this contract to take the principal + fee from the borrower.
-     * If the borrower transfers the principal + fee to this contract, they will be burnt here instead of pulled from the borrower.
-     * @param receiver The contract receiving the tokens, needs to implement the `onFlashLoan(address user, uint256 amount, uint256 fee, bytes calldata)` interface.
-     * @param token The loan currency. Must be a vyDai contract.
-     * @param principalAmount The amount of tokens lent.
-     * @param data A data parameter to be passed on to the `receiver` for any custom use.
-     */
-    function flashLoan(
-        IERC3156FlashBorrower receiver,
-        address token,
-        uint256 principalAmount,
-        bytes memory data
-    ) external returns (bool) {
-        require(token == address(this), "Unsupported currency");
-        _mint(address(receiver), principalAmount);
-        uint128 fee = _flashFee(principalAmount).u128();
-        require(
-            receiver.onFlashLoan(msg.sender, token, principalAmount, fee, data) == FLASH_LOAN_RETURN,
-            "Non-compliant borrower"
-        );
-        _burn(address(receiver), principalAmount + fee);
-        return true;
     }
 }

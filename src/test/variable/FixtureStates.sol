@@ -152,27 +152,15 @@ abstract contract ETHVaultPouredAndDebtState is ETHVaultPouredState {
 
 abstract contract VYTokenZeroState is ZeroState {
     address public timelock;
-    FlashBorrower public borrower;
 
     function setUp() public virtual override {
         super.setUp();
         timelock = address(1);
         vyToken.grantRole(VYToken.mint.selector, address(this));
         vyToken.grantRole(VYToken.deposit.selector, address(this));
-        vyToken.grantRole(VYToken.setFlashFeeFactor.selector, address(this));
 
-        borrower = new FlashBorrower(vyToken);
         unit = uint128(10 ** ERC20Mock(address(vyToken)).decimals());
         deal(address(vyToken), address(this), unit);
         deal(address(vyToken.underlying()), address(this), unit);
-    }
-}
-
-abstract contract FlashLoanEnabledState is VYTokenZeroState {
-    event Transfer(address indexed src, address indexed dst, uint256 wad);
-
-    function setUp() public override {
-        super.setUp();
-        vyToken.setFlashFeeFactor(0);
     }
 }

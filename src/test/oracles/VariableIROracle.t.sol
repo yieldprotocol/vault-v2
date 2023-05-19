@@ -95,7 +95,7 @@ abstract contract ZeroState is Test, TestConstants {
 
         // Setting permissions
         variableInterestRateOracle.grantRole(
-            variableInterestRateOracle.setSource.selector,
+            variableInterestRateOracle.setInterestRateParameters.selector,
             address(this)
         );
         variableInterestRateOracle.grantRole(
@@ -145,7 +145,7 @@ abstract contract ZeroState is Test, TestConstants {
         underlying = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
 
         variableInterestRateOracle.grantRole(
-            variableInterestRateOracle.setSource.selector,
+            variableInterestRateOracle.setInterestRateParameters.selector,
             address(this)
         );
         variableInterestRateOracle.grantRole(
@@ -207,7 +207,7 @@ abstract contract ZeroState is Test, TestConstants {
 abstract contract WithSourceSet is ZeroState {
     function setUp() public override {
         super.setUp();
-        variableInterestRateOracle.setSource(
+        variableInterestRateOracle.setInterestRateParameters(
             baseOne,
             RATE,
             sourceParameters.optimalUsageRate,
@@ -221,8 +221,8 @@ abstract contract WithSourceSet is ZeroState {
 }
 
 contract VariableInterestRateOracleOracleTest is ZeroState {
-    function testSetSourceOnlyOnce() public {
-        variableInterestRateOracle.setSource(
+    function testsetInterestRateParametersOnlyOnce() public {
+        variableInterestRateOracle.setInterestRateParameters(
             baseOne,
             RATE,
             sourceParameters.optimalUsageRate,
@@ -233,7 +233,7 @@ contract VariableInterestRateOracleOracleTest is ZeroState {
             sourceParameters.ilks
         );
         vm.expectRevert("Source is already set");
-        variableInterestRateOracle.setSource(
+        variableInterestRateOracle.setInterestRateParameters(
             baseOne,
             RATE,
             sourceParameters.optimalUsageRate,
@@ -258,7 +258,7 @@ contract VariableInterestRateOracleOracleTest is ZeroState {
     }
 
     function testCannotCallStaleInterestRateParameter() public {
-        variableInterestRateOracle.setSource(
+        variableInterestRateOracle.setInterestRateParameters(
             baseOne,
             RATE,
             sourceParameters.optimalUsageRate,
@@ -281,7 +281,7 @@ contract VariableInterestRateOracleOracleTest is ZeroState {
     }
 
     function testRevertOnSourceUnknown() public {
-        variableInterestRateOracle.setSource(
+        variableInterestRateOracle.setInterestRateParameters(
             baseOne,
             RATE,
             sourceParameters.optimalUsageRate,
@@ -291,9 +291,9 @@ contract VariableInterestRateOracleOracleTest is ZeroState {
             sourceParameters.slope2,
             sourceParameters.ilks
         );
-        vm.expectRevert("Source not found");
+        vm.expectRevert("Accumulated rate is zero");
         variableInterestRateOracle.peek(bytes32(baseTwo), RATE, WAD);
-        vm.expectRevert("Source not found");
+        vm.expectRevert("Accumulated rate is zero");
         variableInterestRateOracle.peek(bytes32(baseOne), CHI, WAD);
     }
 }

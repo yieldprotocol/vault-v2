@@ -7,15 +7,18 @@ contract VYTokenTest is VYTokenZeroState {
 
     // Test that the storage is initialized
     function testStorageInitialized() public {
+        IERC20Metadata token = IERC20Metadata(vyToken.underlying());
+        
         assertTrue(vyToken.initialized());
+        assertEq(token.name(), vyToken.name());
+        assertEq(token.decimals(), vyToken.decimals());
+        assertEq(token.symbol(), vyToken.symbol());
     }
 
     // Test that the storage can't be initialized again
-    function testInitializeRevertsIfInitialized() public {
+    function testFail_InitializeRevertsIfInitialized() public {
         vyToken.grantRole(VYToken.initialize.selector, address(this));
-        
-        vm.expectRevert("Already initialized");
-        vyToken.initialize(address(this));
+        vyToken.initialize(address(this), base.name(), base.symbol(), base.decimals());
     }
 
     // Test that only authorized addresses can upgrade
@@ -174,13 +177,6 @@ contract VYTokenTest is VYTokenZeroState {
         assertEq(unit, IERC20(vyToken.underlying()).balanceOf(user));
     }
 
-    function testFlashFeeFactor() public {
-        console.log("can set the flash fee factor");
-        assertEq(vyToken.flashFeeFactor(), type(uint256).max);
-        vyToken.setFlashFeeFactor(1);
-        assertEq(vyToken.flashFeeFactor(), 1);
-    }
-
     function testFuzz_convertToUnderlyingWithIncreasingRates(uint128 newRate)
         public
     {
@@ -257,77 +253,5 @@ contract VYTokenTest is VYTokenZeroState {
         chiRateOracle.get(vyToken.underlyingId(), CHI, 0);
 
         assertLe(principalAmount, vyToken.convertToPrincipal(INK));
-    }
-}
-
-contract FlashLoanEnabledStateTests is FlashLoanEnabledState {
-    function testReturnsCorrectMaxFlashLoan() public {
-        console.log("can return the correct max flash loan");
-        assertEq(vyToken.maxFlashLoan(address(vyToken)), type(uint256).max);
-    }
-
-    function testFlashBorrow() public {
-        console.log("can do a simple flash borrow");
-
-        borrower.flashBorrow(
-            address(vyToken),
-            unit,
-            FlashBorrower.Action.NORMAL
-        );
-
-        assertEq(vyToken.balanceOf(address(this)), unit);
-        assertEq(borrower.flashBalance(), unit);
-        assertEq(borrower.flashToken(), address(vyToken));
-        assertEq(borrower.flashAmount(), unit);
-        assertEq(borrower.flashInitiator(), address(borrower));
-    }
-
-    function testRepayWithTransfer() public {
-        vm.expectEmit(true, true, false, true);
-        emit Transfer(address(vyToken), address(0), unit);
-
-        borrower.flashBorrow(
-            address(vyToken),
-            unit,
-            FlashBorrower.Action.TRANSFER
-        );
-
-        assertEq(vyToken.balanceOf(address(this)), unit);
-        assertEq(borrower.flashBalance(), unit);
-        assertEq(borrower.flashToken(), address(vyToken));
-        assertEq(borrower.flashAmount(), unit);
-        assertEq(borrower.flashFee(), 0);
-        assertEq(borrower.flashInitiator(), address(borrower));
-    }
-
-    function testApproveNonInitiator() public {
-        vm.expectRevert("ERC20: Insufficient approval");
-        vm.prank(address(this));
-        vyToken.flashLoan(
-            borrower,
-            address(vyToken),
-            unit,
-            bytes(abi.encode(0))
-        );
-    }
-
-    function testEnoughFundsForLoanRepay() public {
-        vm.expectRevert("ERC20: Insufficient balance");
-        vm.prank(address(this));
-        borrower.flashBorrow(
-            address(vyToken),
-            unit,
-            FlashBorrower.Action.STEAL
-        );
-    }
-
-    function testNestedFlashLoans() public {
-        borrower.flashBorrow(
-            address(vyToken),
-            unit,
-            FlashBorrower.Action.REENTER
-        );
-        vm.prank(address(this));
-        assertEq(borrower.flashBalance(), unit * 3);
     }
 }

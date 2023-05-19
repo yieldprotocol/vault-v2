@@ -58,4 +58,11 @@ contract Join is IJoin, AccessControl {
         require(address(token) != address(asset), "Use exit for asset");
         token.safeTransfer(to, token.balanceOf(address(this)));
     }
+
+    /// @dev Used to skim the amount of asset token which is the difference between the actual balance and the stored balance.
+    /// @notice Since fund goes to the `to` address, this function should only be called by authorised accounts.
+    function skim(address to) external virtual auth {
+        IERC20 token = IERC20(asset);
+        token.safeTransfer(to, token.balanceOf(address(this)) - storedBalance);
+    }
 }
