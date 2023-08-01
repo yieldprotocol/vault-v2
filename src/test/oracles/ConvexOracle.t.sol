@@ -74,14 +74,16 @@ contract ConvexOracleTest is Test, TestConstants, TestExtensions {
             ERC20(dai), 
             ETH, 
             ERC20(weth), 
-            address(daiEthAggregator)
+            address(daiEthAggregator),
+            1 days
         );
         chainlinkMultiOracle.setSource(
             USDC, 
             ERC20(usdc), 
             ETH, 
             ERC20(weth), 
-            address(usdcEthAggregator)
+            address(usdcEthAggregator),
+            1 days
         );
 
         bytes4[] memory roles = new bytes4[](2);

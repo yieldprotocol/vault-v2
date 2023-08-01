@@ -52,19 +52,20 @@ contract LidoOracleTest is Test, TestConstants, AccessControl {
         weth = new WETH9Mock();
         usdc = new USDCMock();
         steth = new ERC20Mock("Liquid staked Ether 2.0", "STETH");
-        chainlinkMultiOracle = new ChainlinkMultiOracle();
-        chainlinkMultiOracle.grantRole(0xef532f2e, address(this));
+        
         stethEthAggregator = new ChainlinkAggregatorV3Mock();
         usdcEthAggregator = new ChainlinkAggregatorV3Mock();
-        chainlinkMultiOracle.setSource(STETH, steth, ETH, weth, address(stethEthAggregator));
-        chainlinkMultiOracle.setSource(USDC, usdc, ETH, weth, address(usdcEthAggregator));
-        vm.warp(uint256(bytes32(mockBytes6)));
         // amount of ETH that you get for 1e18 stETH
         uint256 stethToEthPrice = 992415619690099500;
         stethEthAggregator.set(stethToEthPrice);
         // amount of ETH that you get for 1 USDC
         uint256 usdcToEthPrice = WAD / 4000;
         usdcEthAggregator.set(usdcToEthPrice);
+
+        chainlinkMultiOracle = new ChainlinkMultiOracle();
+        chainlinkMultiOracle.grantRole(0xe3e3c622, address(this));
+        chainlinkMultiOracle.setSource(STETH, steth, ETH, weth, address(stethEthAggregator), 1 days);
+        chainlinkMultiOracle.setSource(USDC, usdc, ETH, weth, address(usdcEthAggregator), 1 days);
         lidoOracle = new LidoOracle(WSTETH, STETH);
         lidoOracle.grantRole(0xa8026912, address(this));
         lidoOracle.setSource(IWstETH(address(lidoMock)));

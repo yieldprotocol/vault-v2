@@ -24,7 +24,7 @@ contract VRLadleAdminTests is ZeroState {
     // Test that only authorized addresses can upgrade
     function testUpgradeToRevertsIfNotAuthed() public {
         vm.expectRevert("Access denied");
-        ladle.upgradeTo(address(0));
+        ladle.upgradeToAndCall(address(0), "");
     }
 
     // Test that the upgrade works
@@ -35,8 +35,8 @@ contract VRLadleAdminTests is ZeroState {
             IWETH9(address(weth))
         );
 
-        ladle.grantRole(0x3659cfe6, address(this)); // upgradeTo(address)
-        ladle.upgradeTo(address(ladleV2));
+        ladle.grantRole(0x4f1ef286, address(this)); // upgradeToAndCall(address,bytes)
+        ladle.upgradeToAndCall(address(ladleV2), "");
 
         assertEq(address(ladle.router()), address(0));
         assertTrue(ladle.hasRole(ladle.ROOT(), address(this)));

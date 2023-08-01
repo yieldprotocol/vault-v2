@@ -21,15 +21,15 @@ contract VYTokenTest is VYTokenZeroState {
     // Test that only authorized addresses can upgrade
     function testUpgradeToRevertsIfNotAuthed() public {
         vm.expectRevert("Access denied");
-        vyToken.upgradeTo(address(0));
+        vyToken.upgradeToAndCall(address(0), "");
     }
 
     // Test that the upgrade works
     function testUpgradeTo() public {
         VYToken vyTokenV2 = new VYToken(0x303100000000, IOracle(address(1)), baseJoin, base.name(), base.symbol());
 
-        vyToken.grantRole(0x3659cfe6, address(this)); // upgradeTo(address)
-        vyToken.upgradeTo(address(vyTokenV2));
+        vyToken.grantRole(0x4f1ef286, address(this)); // upgradeToAndCall(address,bytes)
+        vyToken.upgradeToAndCall(address(vyTokenV2), "");
 
         assertEq(address(vyToken.oracle()), address(1));
         assertTrue(vyToken.hasRole(vyToken.ROOT(), address(this)));
