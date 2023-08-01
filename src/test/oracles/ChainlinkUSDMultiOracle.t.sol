@@ -73,7 +73,7 @@ contract ChainlinkUSDMultiOracleTest is Test, TestConstants, TestExtensions {
     function testSourceMustBeSet() public onlyMock {
         vm.expectRevert("Source not found");
         oracleL1.peek(bytes32(DAI), bytes32(FRAX), WAD);
-        oracleL1.setSource(DAI, ERC20(dai), address(daiUsdAggregator));
+        oracleL1.setSource(DAI, ERC20(dai), address(daiUsdAggregator), 1 days);
         vm.expectRevert("Source not found");
         oracleL1.peek(bytes32(DAI), bytes32(FRAX), WAD);
         vm.expectRevert("Source not found");
@@ -81,7 +81,7 @@ contract ChainlinkUSDMultiOracleTest is Test, TestConstants, TestExtensions {
         
         vm.expectRevert("Source not found");
         oracleL2.peek(bytes32(DAI), bytes32(FRAX), WAD);
-        oracleL2.setSource(DAI, ERC20(dai), address(daiUsdAggregator));
+        oracleL2.setSource(DAI, ERC20(dai), address(daiUsdAggregator), 1 days);
         vm.expectRevert("Source not found");
         oracleL2.peek(bytes32(DAI), bytes32(FRAX), WAD);
         vm.expectRevert("Source not found");
@@ -90,24 +90,24 @@ contract ChainlinkUSDMultiOracleTest is Test, TestConstants, TestExtensions {
 
     function testDoesNotAllowNon8DigitSource() public onlyMock {
         vm.expectRevert("Non-8-decimals USD source");
-        oracleL1.setSource(DAI, ERC20(dai), address(aggregator));
+        oracleL1.setSource(DAI, ERC20(dai), address(aggregator), 1 days);
 
         vm.expectRevert("Non-8-decimals USD source");
-        oracleL2.setSource(DAI, ERC20(dai), address(aggregator));
+        oracleL2.setSource(DAI, ERC20(dai), address(aggregator), 1 days);
     }
 
     function testGetConversion() public onlyMock {
         uint256 amount;
 
-        oracleL1.setSource(DAI, ERC20(dai), address(daiUsdAggregator));
-        oracleL1.setSource(FRAX, ERC20(frax), address(fraxUsdAggregator));
+        oracleL1.setSource(DAI, ERC20(dai), address(daiUsdAggregator), 1 days);
+        oracleL1.setSource(FRAX, ERC20(frax), address(fraxUsdAggregator), 1 days);
         (amount,) = oracleL1.peek(bytes32(DAI), bytes32(FRAX), WAD);
         assertEq(amount, 1001719244434696556, "Conversion unsuccessful");
         (amount,) = oracleL1.peek(bytes32(FRAX), bytes32(DAI), WAD);
         assertEq(amount, 998283706293706293, "Conversion unsuccessful");
 
-        oracleL2.setSource(DAI, ERC20(dai), address(daiUsdAggregator));
-        oracleL2.setSource(FRAX, ERC20(frax), address(fraxUsdAggregator));
+        oracleL2.setSource(DAI, ERC20(dai), address(daiUsdAggregator), 1 days);
+        oracleL2.setSource(FRAX, ERC20(frax), address(fraxUsdAggregator), 1 days);
         (amount,) = oracleL2.peek(bytes32(DAI), bytes32(FRAX), WAD);
         assertEq(amount, 1001719244434696556, "Conversion unsuccessful");
         (amount,) = oracleL2.peek(bytes32(FRAX), bytes32(DAI), WAD);
@@ -115,8 +115,8 @@ contract ChainlinkUSDMultiOracleTest is Test, TestConstants, TestExtensions {
     }
 
     function testCannotGetConversionIfSequencerDown() public onlyMock {
-        oracleL2.setSource(DAI, ERC20(dai), address(daiUsdAggregator));
-        oracleL2.setSource(FRAX, ERC20(frax), address(fraxUsdAggregator));
+        oracleL2.setSource(DAI, ERC20(dai), address(daiUsdAggregator), 1 days);
+        oracleL2.setSource(FRAX, ERC20(frax), address(fraxUsdAggregator), 1 days);
         flagsL2.flagSetArbitrumSeqOffline(true);
         vm.expectRevert("Chainlink feeds are not being updated");
         oracleL2.peek(bytes32(DAI), bytes32(FRAX), WAD);

@@ -80,7 +80,7 @@ contract WitchUpgradableTests is WitchStateZero {
     // Test that only authorized addresses can upgrade
     function testUpgradeToRevertsIfNotAuthed() public {
         vm.expectRevert("Access denied");
-        witch.upgradeTo(address(0));
+        witch.upgradeToAndCall(address(0), "");
     }
 
     // Test that the upgrade works
@@ -91,8 +91,8 @@ contract WitchUpgradableTests is WitchStateZero {
             ILadle(address(0))
         );
 
-        witch.grantRole(0x3659cfe6, ada); // upgradeTo(address)
-        witch.upgradeTo(address(witchV2));
+        witch.grantRole(0x4f1ef286, ada); // upgradeToAndCall(address,bytes)
+        witch.upgradeToAndCall(address(witchV2), "");
 
         assertEq(address(witch.cauldron()), address(0));
         assertTrue(witch.hasRole(witch.ROOT(), ada));

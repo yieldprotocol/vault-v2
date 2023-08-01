@@ -6,7 +6,7 @@ out = 'out'
 libs = ['lib']
 block_timestamp = 1651743369 # Arbitrary Thursday, 5 May 2022 09:36:09
 verbosity = 3
-solc_version = '0.8.15'
+solc_version = '0.8.20'
 rpc_endpoints = { MAINNET = "${MAINNET_RPC}", ARBITRUM = "${ARBITRUM_RPC}", HARNESS = "" }
 
 [profile.dev]

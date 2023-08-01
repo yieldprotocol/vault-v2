@@ -7,16 +7,17 @@ import "@yield-protocol/utils-v2/src/token/IERC20Metadata.sol";
 import "../../interfaces/IOracle.sol";
 import "../../constants/Constants.sol";
 import "./AggregatorV3Interface.sol";
-
+import "./OffchainAggregatorInterface.sol";
 
 /**
  * @title ChainlinkMultiOracle
  * @notice Chainlink only uses USD or ETH as a quote in the aggregators, and we will use only ETH
  */
 contract ChainlinkMultiOracle is IOracle, AccessControl, Constants {
-    using Cast for bytes32;
+    using Cast for *;
 
     event SourceSet(bytes6 indexed baseId, IERC20Metadata base, bytes6 indexed quoteId, IERC20Metadata quote, address indexed source);
+    event LimitsSet(bytes6 indexed baseId, bytes6 indexed quoteId, uint96 minAnswer, uint128 maxAnswer, uint32 heartbeat);
 
     struct Source {
         address source;
@@ -25,11 +26,27 @@ contract ChainlinkMultiOracle is IOracle, AccessControl, Constants {
         bool inverse;
     }
 
+    struct Limits {
+        uint32 heartbeat;  // Max time in seconds between updates
+        uint96 minAnswer;  // Min answer below which the aggregator stops reporting
+        uint128 maxAnswer; // Max answer above which the aggregator stops reporting
+    }
+
     mapping(bytes6 => mapping(bytes6 => Source)) public sources;
+    mapping(bytes6 => mapping(bytes6 => Limits)) public limits;
+
+    /// @dev Set or reset an oracle source and its inverse. The heartbeat can only be set with this function. The `minAnswer` and `maxAnswer` are set from the aggregator..
+    function setSource(bytes6 baseId, IERC20Metadata base, bytes6 quoteId, IERC20Metadata quote, address source, uint32 heartbeat)
+        external auth
+    {
+        _setSource(baseId, base, quoteId, quote, source);
+        (uint96 minAnswer, uint128 maxAnswer) = _calculateLimits(source, heartbeat);
+        _setLimits(baseId, quoteId, minAnswer, maxAnswer, heartbeat);
+    }
 
     /// @dev Set or reset an oracle source and its inverse
-    function setSource(bytes6 baseId, IERC20Metadata base, bytes6 quoteId, IERC20Metadata quote, address source)
-        external auth
+    function _setSource(bytes6 baseId, IERC20Metadata base, bytes6 quoteId, IERC20Metadata quote, address source)
+        internal
     {
         sources[baseId][quoteId] = Source({
             source: source,
@@ -47,6 +64,54 @@ contract ChainlinkMultiOracle is IOracle, AccessControl, Constants {
                 inverse: true
             });
             emit SourceSet(quoteId, quote, baseId, base, source);
+        }
+    }
+
+    /// @dev Set limits manually
+    function setLimits(bytes6 baseId, bytes6 quoteId, uint96 minAnswer, uint128 maxAnswer, uint32 heartbeat)
+        external auth
+    {
+        _setLimits(baseId, quoteId, minAnswer, maxAnswer, heartbeat);
+    }
+
+    function _calculateLimits(address source, uint32 heartbeat) internal view returns(uint96 minAnswer, uint128 maxAnswer) {
+        OffchainAggregatorInterface aggregator = OffchainAggregatorInterface(AggregatorV3Interface(source).aggregator());
+
+        (, int256 price,, uint256 updateTime,) = AggregatorV3Interface(source).latestRoundData();
+        require(price > 0, "Chainlink price <= 0");
+
+        // Make sure blocktime - updateTime is below heartbeat
+        require(block.timestamp - updateTime <= heartbeat, "Heartbeat exceeded");
+
+        // Deal with the limits being to large to be casted into uint96 and uint128 respectively
+        minAnswer = int256(aggregator.minAnswer()).u256().u96(); // If the minAnswer is above 2^96, we are better off reverting
+        uint256 maxAnswer_ = int256(aggregator.maxAnswer()).u256();
+        maxAnswer = maxAnswer_ > type(uint128).max ? type(uint128).max : maxAnswer_.u128(); // If the maxAnswer is above 2^128, we are better off truncating
+
+        // Increase minAnswer by a 10% of the distance to the current price
+        minAnswer = minAnswer + ((price.u256() - uint256(minAnswer)) / 10).u96();
+        // Decrease maxAnswer by a 10% of the distance to the current price
+        maxAnswer = maxAnswer - ((uint256(maxAnswer) - price.u256()) / 10).u128();
+    }
+
+    /// @dev Set or reset the `minAnswer` and `maxAnswer`. The original values are taken from the aggregator, and the distance between them is reduced by a 20%.
+    function _setLimits(bytes6 baseId, bytes6 quoteId, uint96 minAnswer, uint128 maxAnswer, uint32 heartbeat)
+        internal
+    {
+        limits[baseId][quoteId] = Limits({
+            heartbeat: heartbeat,
+            minAnswer: minAnswer, 
+            maxAnswer: maxAnswer
+        });
+        emit LimitsSet(baseId, quoteId, minAnswer, maxAnswer, heartbeat);
+
+        if (baseId != quoteId) {
+            limits[quoteId][baseId] = Limits({
+                heartbeat: heartbeat,
+                minAnswer: minAnswer, // There is no need to reverse it
+                maxAnswer: maxAnswer // There is no need to reverse it
+            });
+            emit LimitsSet(quoteId, baseId, minAnswer, maxAnswer, heartbeat);
         }
     }
 
@@ -80,21 +145,26 @@ contract ChainlinkMultiOracle is IOracle, AccessControl, Constants {
         returns (uint amountQuote, uint updateTime)
     {
         int price;
-        uint80 roundId;
-        uint80 answeredInRound;
         Source memory source = sources[baseId][quoteId];
         require (source.source != address(0), "Source not found");
-        (roundId, price,, updateTime, answeredInRound) = AggregatorV3Interface(source.source).latestRoundData();
+        (, price,, updateTime,) = AggregatorV3Interface(source.source).latestRoundData();
         require(price > 0, "Chainlink price <= 0");
-        require(updateTime != 0, "Incomplete round");
-        require(answeredInRound >= roundId, "Stale price");
+
+        Limits memory limit = limits[baseId][quoteId];
+        // Make sure blocktime - updateTime is below heartbeat
+        require(block.timestamp - updateTime <= limit.heartbeat, "Heartbeat exceeded");
+        // Check that answer is above `minAnswer`
+        require(uint(price) >= limit.minAnswer, "Below minAnswer");
+        // Check that answer is below `maxAnswer`
+        require(uint(price) <= limit.maxAnswer, "Above maxAnswer");
+        
         if (source.inverse == true) {
             // ETH/USDC: 1 ETH (*10^18) * (1^6)/(286253688799857 ETH per USDC) = 3493404763 USDC wei
             amountQuote = amountBase * (10 ** source.quoteDecimals) / uint(price);
         } else {
             // USDC/ETH: 3000 USDC (*10^6) * 286253688799857 ETH per USDC / 10^6 = 858761066399571000 ETH wei
             amountQuote = amountBase * uint(price) / (10 ** source.baseDecimals);
-        }  
+        }
     }
 
     /// @dev Convert amountBase base into quote at the latest oracle price, using ETH as an intermediate step.

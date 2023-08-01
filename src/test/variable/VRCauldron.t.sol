@@ -29,15 +29,15 @@ contract UpgradeTests is ZeroState {
     // Test that only authorized addresses can upgrade
     function testUpgradeToRevertsIfNotAuthed() public {
         vm.expectRevert("Access denied");
-        cauldron.upgradeTo(address(0));
+        cauldron.upgradeToAndCall(address(0), "");
     }
 
     // Test that the upgrade works
     function testUpgradeTo() public {
         VRCauldronV2 cauldronV2 = new VRCauldronV2();
 
-        cauldron.grantRole(0x3659cfe6, address(this)); // upgradeTo(address)
-        cauldron.upgradeTo(address(cauldronV2));
+        cauldron.grantRole(0x4f1ef286, address(this)); // upgradeToAndCall(address,bytes)
+        cauldron.upgradeToAndCall(address(cauldronV2), "");
 
         assertTrue(cauldron.initialized());
         assertEq(VRCauldronV2(address(cauldron)).storageCheck(), keccak256("alcueca wuz here"));
@@ -484,7 +484,7 @@ contract FuzzLevelTestsOnBorrowedState is BorrowedState {
         assertLt(startLevel, cauldron.level(vaultId));
     }
 
-    function testFuzz_levelGoesDownAsPriceGoesUp(int256 price) public {
+    function testFuzz_levelGoesDownAsPriceGoesUp(int128 price) public {
         vm.assume(price > 0);
         (, bytes6 baseId, ) = cauldron.vaults(vaultId);
         (, int256 currentPrice, , ,) = usdcAggregator.latestRoundData();
@@ -492,11 +492,11 @@ contract FuzzLevelTestsOnBorrowedState is BorrowedState {
         // Level goes down as price goes up
         vm.assume(price > currentPrice);
         int256 startLevel = cauldron.level(vaultId);
-        usdcAggregator.set(uint256(price));
+        usdcAggregator.set(uint128(price));
         assertGt(startLevel,cauldron.level(vaultId));
     }
 
-    function testFuzz_levelGoesupAsPriceGoesDown(int256 price) public {
+    function testFuzz_levelGoesupAsPriceGoesDown(int128 price) public {
         // Level goes up as price goes down
         vm.assume(price > 0);
         (, bytes6 baseId, ) = cauldron.vaults(vaultId);
@@ -504,7 +504,7 @@ contract FuzzLevelTestsOnBorrowedState is BorrowedState {
         
         vm.assume(price < currentPrice);
         int256 startLevel = cauldron.level(vaultId);
-        usdcAggregator.set(uint256(price));
+        usdcAggregator.set(uint128(price));
         console.logInt(startLevel);
         console.logInt(cauldron.level(vaultId));
         assertLt(startLevel,cauldron.level(vaultId));

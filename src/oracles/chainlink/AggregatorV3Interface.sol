@@ -31,4 +31,8 @@ interface AggregatorV3Interface {
       uint80 answeredInRound
     );
 
+  function aggregator()
+    external
+    view
+    returns (address);
 }

@@ -8,6 +8,7 @@ import { ChainlinkMultiOracle } from "../../oracles/chainlink/ChainlinkMultiOrac
 import { WETH9Mock } from "../../mocks/WETH9Mock.sol";
 import { DAIMock } from "../../mocks/DAIMock.sol";
 import { USDCMock } from "../../mocks/USDCMock.sol";
+import { OffchainAggregatorMock } from "../../mocks/oracles/chainlink/OffchainAggregatorMock.sol";
 import { ChainlinkAggregatorV3Mock } from "../../mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol";
 import { OracleMock } from "../../mocks/oracles/OracleMock.sol";
 import { ERC20Mock } from "../../mocks/ERC20Mock.sol";
@@ -47,16 +48,18 @@ contract ChainlinkMultiOracleTest is Test, TestConstants {
         dai = new DAIMock();
         usdc = new USDCMock();
         weth = new WETH9Mock();
+        
         daiEthAggregator = new ChainlinkAggregatorV3Mock();
         usdcEthAggregator = new ChainlinkAggregatorV3Mock();
-        chainlinkMultiOracle = new ChainlinkMultiOracle();
-        chainlinkMultiOracle.grantRole(0xef532f2e, address(this));
-        chainlinkMultiOracle.setSource(DAI, dai, ETH, weth, address(daiEthAggregator));
-        chainlinkMultiOracle.setSource(USDC, usdc, ETH, weth, address(usdcEthAggregator));
-        vm.warp(uint256(mockBytes32));
         // WAD / 2500 here represents the amount of ETH received for either 1 DAI or 1 USDC
         daiEthAggregator.set(WAD / 2500);
-        usdcEthAggregator.set(WAD / 2500);    }
+        usdcEthAggregator.set(WAD / 2500);
+
+        chainlinkMultiOracle = new ChainlinkMultiOracle();
+        chainlinkMultiOracle.grantRole(0xe3e3c622, address(this));
+        chainlinkMultiOracle.setSource(DAI, dai, ETH, weth, address(daiEthAggregator), 1 days);
+        chainlinkMultiOracle.setSource(USDC, usdc, ETH, weth, address(usdcEthAggregator), 1 days);
+    }
 
     function setUpHarness() public {
         string memory rpc = vm.envOr(RPC, MAINNET);
@@ -83,6 +86,25 @@ contract ChainlinkMultiOracleTest is Test, TestConstants {
     function testRevertOnUnknownSource() public onlyMock {
         vm.expectRevert("Source not found");
         chainlinkMultiOracle.get(bytes32(DAI), bytes32(mockBytes6), WAD);
+    }
+
+    function testRevertPastHeartbeat() public onlyMock {
+        daiEthAggregator.setTimestamp(0);
+        vm.warp(2 days);
+        vm.expectRevert("Heartbeat exceeded");
+        chainlinkMultiOracle.get(bytes32(DAI), bytes32(ETH), WAD);
+    }
+
+    function testRevertBelowMinAnswer() public onlyMock {
+        daiEthAggregator.set(1);
+        vm.expectRevert("Below minAnswer");
+        chainlinkMultiOracle.get(bytes32(DAI), bytes32(ETH), WAD);
+    }
+
+    function testRevertAboveMaxAnswer() public onlyMock {
+        daiEthAggregator.set(type(uint128).max);
+        vm.expectRevert("Above maxAnswer");
+        chainlinkMultiOracle.get(bytes32(DAI), bytes32(ETH), WAD);
     }
 
     function testChainlinkMultiOracleConversion() public onlyMock {

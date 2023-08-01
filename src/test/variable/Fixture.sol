@@ -211,6 +211,10 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
             ChainlinkMultiOracle.setSource.selector,
             address(this)
         );
+        spotOracle.grantRole(
+            ChainlinkMultiOracle.setLimits.selector,
+            address(this)
+        );
         // Setting up the rate oracle
         chiRateOracle.setSource(baseId, RATE, WAD, WAD * 2); // Borrowing rate
         chiRateOracle.setSource(baseId, CHI, WAD, WAD * 2); // Lending rate
@@ -218,7 +222,7 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
         ethAggregator.set(1e18 / 2);
         daiAggregator.set(1e18 / 2);
         usdcAggregator.set(1e18 / 2);
-        baseAggregator.set(1e18 / 2);
+        baseAggregator.set(1e18 / 2);        
 
         // Setting up the spot oracle
         spotOracle.setSource(
@@ -226,21 +230,47 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
             IERC20Metadata(address(weth)),
             usdcId,
             IERC20Metadata(address(usdc)),
-            address(usdcAggregator)
+            address(usdcAggregator),
+            1 days
         );
         spotOracle.setSource(
             ETH,
             IERC20Metadata(address(weth)),
             baseId,
             IERC20Metadata(address(base)),
-            address(ethAggregator)
+            address(ethAggregator),
+            1 days
         );
         spotOracle.setSource(
             ETH,
             IERC20Metadata(address(weth)),
             daiId,
             IERC20Metadata(address(dai)),
-            address(daiAggregator)
+            address(daiAggregator),
+            1 days
+        );
+
+        // Disabling the minAnswer and maxAnswer limits
+        spotOracle.setLimits(
+            ETH,
+            usdcId,
+            0,
+            type(uint128).max,
+            1 days
+        );
+        spotOracle.setLimits(
+            ETH,
+            baseId,
+            0,
+            type(uint128).max,
+            1 days
+        );
+        spotOracle.setLimits(
+            ETH,
+            daiId,
+            0,
+            type(uint128).max,
+            1 days
         );
     }
 
